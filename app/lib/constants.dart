@@ -30,9 +30,17 @@ const TextStyle headingStyle = TextStyle(
   fontWeight: FontWeight.bold,
 );
 
+const double minimumReasonableWidth = 500.0;
 const double indent = 20.0;
 const double spacing = 8.0;
 
 const Duration animationDuration = Duration(milliseconds: 150);
 
 const TextStyle bold = TextStyle(fontWeight: FontWeight.bold);
+
+const double teamListElevation = 3.0;
+const ShapeBorder teamListCardShape = BeveledRectangleBorder(
+  borderRadius: BorderRadius.all(
+    Radius.circular(4.0),
+  ),
+);

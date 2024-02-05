@@ -1,1 +1,9 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    todo: ignore
+
+linter:
+  rules:
+    file_names: false

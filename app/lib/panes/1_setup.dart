@@ -29,33 +29,11 @@ class SetupPane extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: indent),
-          ConstrainedBox(
-            // This stretches the Wrap across the Column as if the mainAxisAlignment was MainAxisAlignment.stretch.
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(indent, 0.0, 0.0, 0.0),
-                  child: Heading('1. Setup'),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
-                  child: FilledButton(
-                    onPressed: null, // TODO: Import ZIP
-                    child: Text(
-                      competition.teamsView.isEmpty || competition.awardsView.isEmpty
-                          ? 'Import event state (ZIP)'
-                          : 'Reset everything from saved event state (ZIP)',
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          PaneHeader(
+            title: '1. Setup',
+            headerButtonLabel:
+                competition.teamsView.isEmpty || competition.awardsView.isEmpty ? 'Import event state (ZIP)' : 'Reset everything from saved event state (ZIP)',
+            onHeaderButtonPressed: null, // TODO: Import ZIP
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -81,7 +59,7 @@ class SetupPane extends StatelessWidget {
           ),
           if (competition.teamsView.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, indent),
+              padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, spacing),
               child: HorizontalScrollbar(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -107,9 +85,9 @@ class SetupPane extends StatelessWidget {
                             Cell(Text(team?.city ?? '...')),
                             Cell(Text(
                               team != null
-                                  ? team.inspireWins > 0
-                                      ? 'Yes'
-                                      : ''
+                                  ? team.inspireEligible
+                                      ? ''
+                                      : 'Yes'
                                   : '...',
                             )),
                           ],
@@ -120,7 +98,7 @@ class SetupPane extends StatelessWidget {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
             child: FilledButton(
               child: Text(
                 competition.teamsView.isEmpty || competition.awardsView.isEmpty ? 'Import awards (CSV)' : 'Reset all rankings and import new awards (CSV)',
@@ -141,7 +119,7 @@ class SetupPane extends StatelessWidget {
           ),
           if (competition.awardsView.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, 0.0),
+              padding: const EdgeInsets.fromLTRB(indent, spacing, 0.0, 0.0),
               child: HorizontalScrollbar(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -180,7 +158,7 @@ class SetupPane extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            Cell(Text(award.advancing ? 'Advancing' : 'Non-Advancing')),
+                            Cell(Text(award.isAdvancing ? 'Advancing' : 'Non-Advancing')),
                             Cell(Text('${award.rank}')),
                             Cell(Text('${award.count}')),
                             Cell(Text(award.category)),
@@ -198,6 +176,7 @@ class SetupPane extends StatelessWidget {
                 ),
               ),
             ),
+          const SizedBox(height: indent),
         ],
       ),
     );

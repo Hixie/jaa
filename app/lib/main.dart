@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:jaa/panes/shortlists.dart';
-import 'package:jaa/panes/showthelove.dart';
+import 'package:jaa/panes/6_finalists.dart';
+
 import 'constants.dart';
-import 'panes/setup.dart';
 import 'model/competition.dart';
+import 'panes/5_inspire.dart';
+import 'panes/4_ranks.dart';
+import 'panes/2_shortlists.dart';
+import 'panes/3_showthelove.dart';
+import 'panes/1_setup.dart';
 import 'widgets.dart';
 
 void main() {
@@ -25,8 +29,7 @@ enum Pane {
   shortlists,
   showTheLove,
   ranks,
-  inspireCandidate,
-  inspireWinners,
+  inspire,
   awardFinalists,
   export,
 }
@@ -201,17 +204,10 @@ class _MainAppState extends State<MainApp> {
                           ),
                           const SizedBox(width: spacing),
                           SelectableButton<Pane>(
-                            value: Pane.inspireCandidate,
+                            value: Pane.inspire,
                             selection: _pane,
                             onChanged: _selectPane,
-                            child: const Text('5. Inspire Candidate'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.inspireWinners,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('6. Inspire Winners'),
+                            child: const Text('5. Inspire'),
                           ),
                           const SizedBox(width: spacing),
                           SelectableButton<Pane>(
@@ -246,8 +242,7 @@ class _MainAppState extends State<MainApp> {
                             Pane.shortlists => ShortlistsPane(competition: widget.competition),
                             Pane.showTheLove => ShowTheLovePane(competition: widget.competition),
                             Pane.ranks => RanksPane(competition: widget.competition),
-                            Pane.inspireCandidate => InspireCandidatePane(competition: widget.competition),
-                            Pane.inspireWinners => InspireWinnersPane(competition: widget.competition),
+                            Pane.inspire => InspirePane(competition: widget.competition),
                             Pane.awardFinalists => AwardFinalistsPane(competition: widget.competition),
                             Pane.export => ExportPane(competition: widget.competition),
                           },
@@ -278,50 +273,6 @@ class ConfigurePane extends StatelessWidget {
         Text('There is nothing to configure currently.'),
       ],
     );
-  }
-}
-
-class RanksPane extends StatelessWidget {
-  const RanksPane({super.key, required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-
-class InspireCandidatePane extends StatelessWidget {
-  const InspireCandidatePane({super.key, required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-
-class InspireWinnersPane extends StatelessWidget {
-  const InspireWinnersPane({super.key, required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-
-class AwardFinalistsPane extends StatelessWidget {
-  const AwardFinalistsPane({super.key, required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
   }
 }
 
