@@ -44,3 +44,13 @@ const ShapeBorder teamListCardShape = BeveledRectangleBorder(
     Radius.circular(4.0),
   ),
 );
+
+const String css = '''
+table { border-collapse: collapse; border: hidden; }
+th, td { border: solid thin; padding: 0.25em; text-align: left; }
+h1 { margin: 0 0 0.25rem 0; }
+h2 { margin: 1rem 0 0.5rem 0; }
+h3 { margin: 0 0 0.5rem 0; }
+p { margin: 0 0 1rem 0; }
+li:not([value]) { list-style-type: disc; }
+''';

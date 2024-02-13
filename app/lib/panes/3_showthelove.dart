@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import '../io.dart';
 import '../model/competition.dart';
 import '../widgets.dart';
 
@@ -14,16 +15,16 @@ class ShowTheLovePane extends StatelessWidget {
     return ListenableBuilder(
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
-        final List<Team> teams =
-            competition.teamsView.where((Team team) => !team.shortlistsView.keys.any((Award award) => award.pitVisits == PitVisit.yes)).toList();
+        final List<Team> teams = computeAffectedTeams(competition);
+        final List<Award> showTheLoveAwards = computeAffectedAwards(competition);
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const PaneHeader(
+            PaneHeader(
               title: '3. Show The Love (STL)',
-              onHeaderButtonPressed: null, // TODO: exports the show-the-love table
+              onHeaderButtonPressed: () => exportShowTheLoveHTML(context, competition),
             ),
             if (competition.teamsView.isEmpty)
               const Padding(
@@ -40,7 +41,12 @@ class ShowTheLovePane extends StatelessWidget {
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text('All of the teams have been shortlisted for awards that involve pit visits.'),
               ),
-            if (competition.teamsView.isNotEmpty)
+            if (teams.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text('The following teams have not been shortlisted for any awards that always involve pit visits:'),
+              ),
+            if (teams.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, 0.0, indent),
                 child: HorizontalScrollbar(
@@ -57,7 +63,7 @@ class ShowTheLovePane extends StatelessWidget {
                         TableRow(
                           children: [
                             const Cell(Text('#', style: bold)),
-                            for (final Award award in competition.awardsView.where(Award.needsShowTheLovePredicate))
+                            for (final Award award in showTheLoveAwards)
                               ColoredBox(
                                 color: award.color,
                                 child: Cell(
@@ -72,7 +78,7 @@ class ShowTheLovePane extends StatelessWidget {
                             const Cell(Text('Visited? ✎_', style: bold)),
                           ],
                         ),
-                        for (final Team team in competition.teamsView)
+                        for (final Team team in teams)
                           TableRow(
                             children: [
                               Tooltip(
@@ -81,8 +87,7 @@ class ShowTheLovePane extends StatelessWidget {
                                   Text('${team.number}'),
                                 ),
                               ),
-                              for (final Award award in competition.awardsView.where(Award.needsShowTheLovePredicate))
-                                Cell(Text(team.shortlistsView.keys.contains(award) ? 'Yes' : '')),
+                              for (final Award award in showTheLoveAwards) Cell(Text(team.shortlistsView.keys.contains(award) ? 'Yes' : '')),
                               VisitedCell(team),
                             ],
                           ),
@@ -95,6 +100,44 @@ class ShowTheLovePane extends StatelessWidget {
         );
       },
     );
+  }
+
+  static List<Team> computeAffectedTeams(Competition competition) {
+    return competition.teamsView
+        .where((Team team) => !team.shortlistsView.keys.any(
+              (Award award) => award.pitVisits == PitVisit.yes,
+            ))
+        .toList();
+  }
+
+  static List<Award> computeAffectedAwards(Competition competition) {
+    return competition.awardsView.where(Award.needsShowTheLovePredicate).toList();
+  }
+
+  static Future<void> exportShowTheLoveHTML(BuildContext context, Competition competition) async {
+    final DateTime now = DateTime.now();
+    final List<Award> showTheLoveAwards = computeAffectedAwards(competition);
+    final StringBuffer page = createHtmlPage('Show The Love', now);
+    page.writeln('<table>');
+    page.writeln('<thead>');
+    page.writeln('<tr>');
+    page.writeln('<th>Team');
+    for (final Award award in showTheLoveAwards) {
+      page.writeln('<th>${escapeHtml(award.name)}');
+    }
+    page.writeln('<th>Notes');
+    page.writeln('<tbody>');
+    for (final Team team in computeAffectedTeams(competition)) {
+      page.writeln('<tr>');
+      page.writeln('<td>${team.number} <i>${escapeHtml(team.name)}</i>');
+
+      for (final Award award in showTheLoveAwards) {
+        page.writeln('<td>${team.shortlistsView.keys.contains(award) ? "Yes" : ""}');
+      }
+      page.writeln('<td>${team.visited ? "Visited." : ""} ${escapeHtml(team.visitingJudgesNotes)}');
+    }
+    page.writeln('</table>');
+    return exportHTML(competition, 'show_the_love', now, page.toString());
   }
 }
 

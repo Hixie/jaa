@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:jaa/panes/6_finalists.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:elapsed_time_display/elapsed_time_display.dart';
 
 import 'constants.dart';
 import 'model/competition.dart';
-import 'panes/5_inspire.dart';
-import 'panes/4_ranks.dart';
+import 'panes/1_setup.dart';
 import 'panes/2_shortlists.dart';
 import 'panes/3_showthelove.dart';
-import 'panes/1_setup.dart';
+import 'panes/4_ranks.dart';
+import 'panes/5_inspire.dart';
+import 'panes/6_finalists.dart';
+import 'panes/7_export.dart';
 import 'widgets.dart';
 
-void main() {
-  runApp(MainApp(competition: Competition()));
+void main() async {
+  // TODO: autoload the autosave if any
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(MainApp(
+    competition: Competition(
+      autosaveDirectory: await getApplicationDocumentsDirectory(),
+      exportDirectory: await (await getDownloadsDirectory())!.createTemp('jaa.'),
+    ),
+  ));
 }
 
 class MainApp extends StatefulWidget {
@@ -24,7 +34,7 @@ class MainApp extends StatefulWidget {
 }
 
 enum Pane {
-  configure,
+  about,
   setup,
   shortlists,
   showTheLove,
@@ -81,22 +91,19 @@ class _MainAppState extends State<MainApp> {
                         ConstrainedBox(
                           constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 2.0),
                           child: FilledButton(
-                            onPressed: () => _selectPane(Pane.configure),
+                            onPressed: () => _selectPane(Pane.about),
                             child: const Text(
-                              'Configure',
+                              'About',
                               softWrap: false,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
                         const SizedBox(width: indent),
-                        const Expanded(
+                        Expanded(
                           child: Padding(
-                            padding: EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
-                            child: Text(
-                              'FTC Weekend Support # 1-800-555-1212', // TODO: replace this with something real
-                              textAlign: TextAlign.right,
-                            ),
+                            padding: const EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
+                            child: Text(AboutPane.currentHelp, textAlign: TextAlign.right),
                           ),
                         ),
                       ],
@@ -214,14 +221,14 @@ class _MainAppState extends State<MainApp> {
                             value: Pane.awardFinalists,
                             selection: _pane,
                             onChanged: _selectPane,
-                            child: const Text('7. Award Finalists'),
+                            child: const Text('6. Award Finalists'),
                           ),
                           const SizedBox(width: spacing),
                           SelectableButton<Pane>(
                             value: Pane.export,
                             selection: _pane,
                             onChanged: _selectPane,
-                            child: const Text('8. Export'),
+                            child: const Text('7. Export'),
                           ),
                         ],
                       ),
@@ -237,7 +244,7 @@ class _MainAppState extends State<MainApp> {
                         child: ConstrainedBox(
                           constraints: BoxConstraints(minHeight: constraints.maxHeight, minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth),
                           child: switch (_pane) {
-                            Pane.configure => ConfigurePane(competition: widget.competition),
+                            Pane.about => AboutPane(competition: widget.competition),
                             Pane.setup => SetupPane(competition: widget.competition),
                             Pane.shortlists => ShortlistsPane(competition: widget.competition),
                             Pane.showTheLove => ShowTheLovePane(competition: widget.competition),
@@ -260,29 +267,61 @@ class _MainAppState extends State<MainApp> {
   }
 }
 
-class ConfigurePane extends StatelessWidget {
-  const ConfigurePane({super.key, required this.competition});
+class AboutPane extends StatelessWidget {
+  const AboutPane({super.key, required this.competition});
 
   final Competition competition;
 
+  // TODO: replace this with something real
+  static String get currentHelp => 'FTC Weekend Support # 1-800-555-1212';
+
   @override
   Widget build(BuildContext context) {
-    return const ListBody(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Heading('Configuration'),
-        Text('There is nothing to configure currently.'),
+        const Heading('About'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+          child: Text(currentHelp),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+          child: ListenableBuilder(
+            listenable: competition,
+            builder: (BuildContext context, Widget? child) => ListBody(
+              children: [
+                Text(competition.lastAutosaveMessage),
+                if (competition.lastAutosave != null && competition.needsAutosave)
+                  Wrap(
+                    children: [
+                      const Text('Time since last autosave: '),
+                      ElapsedTimeDisplay(startTime: competition.lastAutosave!),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+          child: FilledButton(
+            child: const Text(
+              'Show Licenses',
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onPressed: () {
+              showLicensePage(
+                context: context,
+                applicationName: 'FIRST Tech Challenge Judge Advisor Assistant',
+                applicationVersion: 'Version 1.0',
+                applicationLegalese: 'Created for Playing at Learning\n© copyright 2024 Ian Hickson',
+              );
+            },
+          ),
+        ),
       ],
     );
-  }
-}
-
-class ExportPane extends StatelessWidget {
-  const ExportPane({super.key, required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
   }
 }

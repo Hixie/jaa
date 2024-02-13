@@ -1,12 +1,18 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' show Color;
 
-import 'package:flutter/foundation.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:archive/archive_io.dart';
 import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as path;
 
-// TODO: this should save the current state to disk regularly so that it can be reloaded on startup automatically
+import '../widgets.dart';
+
+typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied});
 
 enum PitVisit { yes, no, maybe }
 
@@ -19,8 +25,8 @@ class Award {
     required this.rank,
     required this.count,
     required this.category,
-    required this.spreadTheWealth,
-    required this.placement,
+    required this.isSpreadTheWealth,
+    required this.isPlacement,
     required this.pitVisits,
     required this.color,
   });
@@ -31,8 +37,8 @@ class Award {
   final int rank;
   final int count;
   final String category;
-  final bool spreadTheWealth;
-  final bool placement;
+  final bool isSpreadTheWealth;
+  final bool isPlacement;
   final PitVisit pitVisits;
   final Color color;
 
@@ -305,6 +311,11 @@ class Shortlist extends ChangeNotifier {
 }
 
 class Competition extends ChangeNotifier {
+  Competition({required this.autosaveDirectory, required this.exportDirectory});
+
+  final Directory autosaveDirectory;
+  final Directory exportDirectory;
+
   final List<Team> _teams = <Team>[];
   final List<Team> _previousInspireWinners = <Team>[];
   final List<Award> _awards = <Award>[];
@@ -319,6 +330,82 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableListView<Award> nonAdvancingAwardsView = UnmodifiableListView<Award>(_nonAdvancingAwards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
 
+  Award? _inspireAward;
+  Award? get inspireAward => _inspireAward;
+
+  (Map<int, Map<Team, Set<String>>>, List<String>) computeInspireCandidates() {
+    final Map<int, Map<Team, Set<String>>> candidates = <int, Map<Team, Set<String>>>{};
+    for (final Team team in teamsView) {
+      final Set<String> categories = team.shortlistedAdvancingCategories;
+      if (categories.length > 1) {
+        final Map<Team, Set<String>> group = candidates.putIfAbsent(categories.length, () => <Team, Set<String>>{});
+        group[team] = categories;
+      }
+    }
+    final List<String> categories = awardsView.where(Award.isRankedPredicate).map((Award award) => award.category).toSet().toList()..sort();
+    return (candidates, categories);
+  }
+
+  List<(Award, List<AwardFinalistEntry>)> computeFinalists() {
+    final Map<Team, (Award, int)> placedTeams = {};
+    final Map<Award, List<Set<Team>>> awardCandidates = {};
+    final Map<Award, List<AwardFinalistEntry>> finalists = {};
+    for (final Award award in awardsView) {
+      awardCandidates[award] = shortlistsView[award]?.asRankedList() ?? [];
+      finalists[award] = [];
+    }
+    int rank = 1;
+    bool stillPlacing = true;
+    while (stillPlacing) {
+      stillPlacing = false;
+      for (final Award award in awardsView) {
+        if (rank <= award.count) {
+          final List<Set<Team>> candidatesList = awardCandidates[award]!;
+          bool placedTeam = false;
+          while (candidatesList.isNotEmpty && !placedTeam) {
+            final Set<Team> candidates = candidatesList.removeAt(0);
+            final Set<Team> alreadyPlaced = award.isSpreadTheWealth && !award.isInspire ? placedTeams.keys.toSet() : {};
+            final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
+            final Set<Team> winners = candidates.difference(ineligible);
+            if (ineligible.isNotEmpty) {
+              for (Team team in ineligible) {
+                final (Award oldAward, int oldRank) = placedTeams[team]!;
+                finalists[award]!.add((team, oldAward, oldRank, tied: false));
+              }
+            }
+            if (winners.isNotEmpty) {
+              placedTeam = true;
+              for (Team team in winners) {
+                finalists[award]!.add((team, null, rank, tied: winners.length > 1));
+                if (!award.isInspire || rank == 1) {
+                  if (award.isSpreadTheWealth) {
+                    placedTeams[team] = (award, rank);
+                  }
+                }
+              }
+            }
+          }
+          if (!placedTeam) {
+            finalists[award]!.add((null, null, rank, tied: false));
+          }
+          if (rank < award.count) {
+            stillPlacing = true;
+          }
+        }
+      }
+      rank += 1;
+    }
+    List<(Award, List<AwardFinalistEntry>)> result = [];
+    for (Award award in awardsView) {
+      result.add((award, finalists[award]!));
+    }
+    return result;
+  }
+
+  // IMPORT/EXPORT
+
+  // Data model
+
   void _clearTeams() {
     _teams.clear();
     _previousInspireWinners.clear();
@@ -331,9 +418,9 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> importTeams(PlatformFile csvFile) async {
+  Future<void> importTeams(List<int> csvFile) async {
     _clearTeams();
-    final String csvText = (await utf8.decodeStream(csvFile.readStream!)).replaceAll('\r\n', '\n');
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
     if (csvData.length <= 1) {
       throw const FormatException('File does not contain any teams.');
@@ -341,13 +428,13 @@ class Competition extends ChangeNotifier {
     try {
       for (List<dynamic> row in csvData.skip(1)) {
         if (row.length < 4) {
-          throw const FormatException('File contains a row with less than four cells.');
+          throw const FormatException('Teams file contains a row with less than four cells.');
         }
         if (row[0] is! int || (row[0] < 0)) {
-          throw FormatException('Parse error: "${row[0]}" is not a valid team number.');
+          throw FormatException('Parse error in team file: "${row[0]}" is not a valid team number.');
         }
         if ((row[3] is! int || (row[3] < 0)) && row[3] != 'y' && row[3] != 'n') {
-          throw FormatException('Parse error: "${row[3]}" is not a valid number of Inspire award wins.');
+          throw FormatException('Parse error in team file: "${row[3]}" is not a valid number of Inspire award wins.');
         }
         final bool pastInspireWinner;
         if (row[3] == 'y') {
@@ -357,7 +444,12 @@ class Competition extends ChangeNotifier {
         } else {
           pastInspireWinner = row[3] as int > 0;
         }
-        final Team team = Team(number: row[0] as int, name: '${row[1]}', city: '${row[2]}', inspireEligible: !pastInspireWinner);
+        final Team team = Team(
+          number: row[0] as int,
+          name: '${row[1]}',
+          city: '${row[2]}',
+          inspireEligible: !pastInspireWinner,
+        );
         _teams.add(team);
         if (pastInspireWinner) {
           _previousInspireWinners.add(team);
@@ -370,10 +462,25 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
+  String teamsToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Team number', // numeric
+      'Team name', // string
+      'Team city', // string
+      'Previous Inspire winner', // 'y' or 'n'
+    ]);
+    for (final Team team in _teams) {
+      data.add(['${team.number}', team.name, team.city, !team.inspireEligible ? "y" : "n"]);
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
   void _clearAwards() {
     _awards.clear();
     _advancingAwards.clear();
     _nonAdvancingAwards.clear();
+    _inspireAward = null;
     _shortlists.clear();
     for (final Team team in _teams) {
       team._clearShortlists();
@@ -381,9 +488,9 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> importAwards(PlatformFile csvFile) async {
+  Future<void> importAwards(List<int> csvFile) async {
     _clearAwards();
-    final String csvText = (await utf8.decodeStream(csvFile.readStream!)).replaceAll('\r\n', '\n');
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
     if (csvData.length <= 1) {
       throw const FormatException('File does not contain any awards.');
@@ -394,40 +501,51 @@ class Competition extends ChangeNotifier {
       final Set<String> names = <String>{};
       for (List<dynamic> row in csvData.skip(1)) {
         if (row.length < 8) {
-          throw const FormatException('File contains a row with less than eight cells.');
+          throw const FormatException('Awards file contains a row with less than eight cells.');
         }
         final String name = '${row[0]}';
         if (name.isEmpty) {
-          throw const FormatException('Parse error: An award has no name.');
+          throw const FormatException('Parse error in awards file: An award has no name.');
         }
         if (names.contains(name)) {
-          throw FormatException('Parse error: There are multiple awards named "$name".');
+          throw FormatException('Parse error in awards file: There are multiple awards named "$name".');
         }
         names.add(name);
-        if (row[2] is! int || (row[2] < 0)) {
-          throw FormatException('Parse error: "${row[2]}" is not a valid award count.');
+        if (row[1] != 'Advancing' && row[1] != 'Non-Advancing') {
+          throw FormatException('Parse error in awards file: Unknown value for "Advancing" column: "${row[1]}".');
         }
-        final int count = row[2] as int;
         final bool isAdvancing = row[1] == 'Advancing';
         final bool isInspire = !seenInspire && isAdvancing;
         seenInspire = seenInspire || isInspire;
+        if (row[2] is! int || (row[2] < 0)) {
+          throw FormatException('Parse error in awards file: "${row[2]}" is not a valid award count.');
+        }
+        final int count = row[2] as int;
         final String category = '${row[3]}';
         if (isAdvancing && !isInspire && category.isEmpty) {
-          throw FormatException('Parse error: "${row[0]}" is an advancing award but has no specified category.');
+          throw FormatException('Parse error in awards file: "${row[0]}" is an Advancing award but has no specified category.');
         }
-        PitVisit pitVisit = switch ('${row[6]}') {
+        if (row[4] != 'y' && row[4] != 'n') {
+          throw FormatException('Parse error in awards file: Unknown value for "spread the wealth" column: "${row[4]}".');
+        }
+        final bool isSpreadTheWealth = row[4] == 'y';
+        if (row[5] != 'y' && row[5] != 'n') {
+          throw FormatException('Parse error in awards file: Unknown value for "placement" column: "${row[5]}".');
+        }
+        final bool isPlacement = row[5] == 'y';
+        final PitVisit pitVisit = switch ('${row[6]}') {
           'y' => PitVisit.yes,
           'n' => PitVisit.no,
           'maybe' => PitVisit.maybe,
-          final String s => throw FormatException('Parse error: "$s" is not a valid value for the Pit Visits column.'),
+          final String s => throw FormatException('Parse error in awards file: "$s" is not a valid value for the Pit Visits column.'),
         };
         final String colorAsString = '${row[7]}';
         if (!colorAsString.startsWith('#') || colorAsString.length != 7) {
-          throw FormatException('Parse error: "$colorAsString" is not a valid color (e.g. "#FFFF00").');
+          throw FormatException('Parse error in awards file: "$colorAsString" is not a valid color (e.g. "#FFFF00").');
         }
         int? colorAsInt = int.tryParse(colorAsString.substring(1), radix: 16);
         if (colorAsInt == null) {
-          throw FormatException('Parse error: "$colorAsString" is not a valid color (e.g. "#00FFFF").');
+          throw FormatException('Parse error in awards file: "$colorAsString" is not a valid color (e.g. "#00FFFF").');
         }
         final Award award = Award(
           name: name,
@@ -436,8 +554,8 @@ class Competition extends ChangeNotifier {
           rank: rank,
           count: count,
           category: category,
-          spreadTheWealth: row[4] == 'y',
-          placement: row[5] == 'y',
+          isSpreadTheWealth: isSpreadTheWealth,
+          isPlacement: isPlacement,
           pitVisits: pitVisit,
           color: Color(0xFF000000 | colorAsInt),
         );
@@ -447,17 +565,93 @@ class Competition extends ChangeNotifier {
         } else {
           _nonAdvancingAwards.add(award);
         }
+        if (isInspire) {
+          _inspireAward = award;
+        }
         _shortlists[award] = Shortlist();
         rank += 1;
       }
       if (!seenInspire) {
-        throw const FormatException('Parse error: None of the awards are advancing awards.');
+        throw const FormatException('Parse error in awards file: None of the awards are advancing awards.');
       }
     } catch (e) {
       _clearAwards();
       rethrow;
     }
     notifyListeners();
+  }
+
+  String awardsToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Award name', // string
+      'Award type', // 'Advancing' or 'Non-Advancing'
+      'Award count', // numeric
+      'Award category', // string
+      'Spread the wealth', // 'y' or 'n'
+      'Placement', // 'y' or 'n'
+      'Pit visits', // 'y', 'n', 'maybe'
+      'Color', // #XXXXXX
+    ]);
+    for (final Award award in _awards) {
+      data.add([
+        award.name,
+        award.isAdvancing ? 'Advancing' : 'Non-Advancing',
+        award.count,
+        award.category,
+        award.isSpreadTheWealth ? 'y' : 'n',
+        award.isPlacement ? 'y' : 'n',
+        switch (award.pitVisits) { PitVisit.yes => 'y', PitVisit.no => 'n', PitVisit.maybe => 'maybe' },
+        '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}',
+      ]);
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
+  Future<void> importPitVisitNotes(List<int> csvFile) async {
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
+    final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
+    if (csvData.length <= 1) {
+      throw const FormatException('Pit visit notes are corrupted or missing.');
+    }
+    Map<int, Team> teamMap = {
+      for (final Team team in _teams) team.number: team,
+    };
+    for (List<dynamic> row in csvData.skip(1)) {
+      if (row.length < 3) {
+        throw const FormatException('Pit visits notes file contains a row with less than three cells.');
+      }
+      if (row[0] is! int || (row[0] < 0)) {
+        throw FormatException('Parse error in pit visits notes file: "${row[0]}" is not a valid team number.');
+      }
+      if (!teamMap.containsKey(row[0] as int)) {
+        throw FormatException('Parse error in pit visits notes file: team "${row[0]}" not recognised.');
+      }
+      Team team = teamMap[row[0] as int]!;
+      if (row[1] != 'y' && row[1] != 'n') {
+        throw FormatException('Parse error in pit visits notes file: "${row[1]}" is not either "y" or "n".');
+      }
+      team.visited = row[1] == 'y';
+      team.visitingJudgesNotes = row[2];
+    }
+    notifyListeners();
+  }
+
+  String pitVisitNotesToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Team number', // numeric
+      'Visited?', // 'y' or 'n'
+      'Assigned judging team', // string
+    ]);
+    for (final Team team in _teams) {
+      data.add([
+        team.number,
+        team.visited ? 'y' : 'n',
+        team.visitingJudgesNotes,
+      ]);
+    }
+    return const ListToCsvConverter().convert(data);
   }
 
   void addToShortlist(Award award, Team team, ShortlistEntry entry) {
@@ -470,6 +664,262 @@ class Competition extends ChangeNotifier {
     _shortlists[award]!._remove(team);
     team._removeFromShortlist(award);
     notifyListeners();
+  }
+
+  Future<void> importShortlists(List<int> csvFile) async {
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
+    final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
+    if (csvData.length <= 1) {
+      throw const FormatException('Shortlists file corrupted or missing.');
+    }
+    Map<int, Team> teamMap = {
+      for (final Team team in _teams) team.number: team,
+    };
+    Map<String, Award> awardMap = {
+      for (final Award award in _awards) award.name: award,
+    };
+    for (List<dynamic> row in csvData.skip(1)) {
+      if (row.length < 5) {
+        throw const FormatException('Shortlists file contains a row with less than five cells.');
+      }
+      if (!awardMap.containsKey('${row[0]}')) {
+        throw FormatException('Parse error in shortlists file: award "${row[0]}" not recognized.');
+      }
+      final Award award = awardMap['${row[0]}']!;
+      if (row[1] is! int || (row[1] < 0)) {
+        throw FormatException('Parse error in shortlists file: "${row[1]}" is not a valid team number.');
+      }
+      if (!teamMap.containsKey(row[1] as int)) {
+        throw FormatException('Parse error in shortlists file: team "${row[1]}" not recognised.');
+      }
+      final Team team = teamMap[row[1] as int]!;
+      if (row[3] != '' && (row[3] is! int || (row[3] < 0))) {
+        throw FormatException('Parse error in shortlists file: "${row[3]}" is not a valid rank.');
+      }
+      final int? rank = row[3] == '' ? null : row[3] as int;
+      if (row[4] != 'y' && row[4] != 'n') {
+        throw FormatException('Parse error in shortlists file: "${row[4]}" is not either "y" or "n".');
+      }
+      addToShortlist(award, team, ShortlistEntry(lateEntry: row[4] == 'y', nominator: '${row[2]}', rank: rank));
+    }
+    notifyListeners();
+  }
+
+  String shortlistsToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Award name', // string
+      'Team number', // numeric
+      'Nominator', // string
+      'Rank', // numeric or empty
+      'Late entry', // 'y' or 'n'
+    ]);
+    for (final Award award in _awards) {
+      for (final Team team in _shortlists[award]!.entriesView.keys) {
+        final ShortlistEntry entry = _shortlists[award]!.entriesView[team]!;
+        data.add([award.name, team.number, entry.nominator, entry.rank ?? '', entry.lateEntry ? 'y' : 'n']);
+      }
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
+  // Derived artifacts
+
+  String inspireCandiatesToCsv() {
+    final List<List<Object?>> data = [];
+    final List<Award> awards = awardsView.where(Award.isRankedPredicate).toList();
+    for (final Team team in teamsView.toList()..sort(Team.inspireCandidateComparator)) {
+      final Set<String> categories = team.shortlistedAdvancingCategories;
+      data.add([
+        team.number,
+        for (final Award award in awards)
+          if (team.shortlistsView.containsKey(award)) team.shortlistsView[award]!.rank ?? "" else "",
+        categories.length,
+        team.rankScore ?? "",
+        team.inspireEligible ? '' : 'Ineligible',
+      ]);
+    }
+    data.insert(0, [
+      'Team', // numeric
+      for (final Award award in awards) award.name, // numeric (rank) or ""
+      'Category Count',
+      'Rank Score',
+      'Eligibility',
+    ]);
+    data.insert(1, [
+      '',
+      for (final Award award in awards) award.category,
+      '',
+      '',
+      '',
+    ]);
+    return const ListToCsvConverter().convert(data);
+  }
+
+  String finalistTablesToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Award name', // string
+      'Team number', // numeric, or empty if nobody won at the given rank (in which case the Result is numeric)
+      'Result', // see below
+    ]);
+    // The Result is one of the following:
+    //  - a number (giving the rank of the win)
+    //  - a number followed by the string " (tied)", indicating the win is currently shared by multiple teams
+    //  - a string consisting of an award name, a space, and a rank (giving the award that the team won that disqualified them from winning this one)
+    for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in finalists) {
+        data.add([
+          award.name,
+          team?.number ?? '',
+          '${otherAward != null ? "${otherAward.name} " : ""}$rank${tied ? " (tied)" : ""}',
+        ]);
+      }
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
+  String finalistListsToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Rank', // string (1st, 2nd, etc)
+      for (final Award award in awardsView) award.name, // team number (numeric), or "tied", or ""
+    ]);
+    int maxRank = 0;
+    final Map<Award, List<Set<Team>?>> placedAwards = {};
+    for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
+      final List<Set<Team>?> placedTeams = [];
+      placedAwards[award] = placedTeams;
+      // ignore: unused_local_variable
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in finalists) {
+        if (otherAward != null) {
+          continue;
+        }
+        if (rank > maxRank) {
+          maxRank = rank;
+        }
+        if (placedTeams.length < rank) {
+          placedTeams.length = rank;
+        }
+        if (team != null) {
+          (placedTeams[rank - 1] ??= {}).add(team);
+        }
+      }
+    }
+    for (int rank = 1; rank <= maxRank; rank += 1) {
+      final List<Object?> row = [placementDescriptor(rank)];
+      for (final Award award in awardsView) {
+        final List<Set<Team>?> placedTeams = placedAwards[award]!;
+        if (placedTeams.length < rank || placedTeams[rank - 1] == null) {
+          row.add('');
+        } else if (placedTeams[rank - 1]!.length > 1) {
+          row.add('tied');
+        } else {
+          row.add(placedTeams[rank - 1]!.single.number);
+        }
+      }
+      data.add(row);
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
+  static const String filenameTeams = 'teams.csv';
+  static const String filenameAwards = 'awards.csv';
+  static const String filenamePitVisitNotes = 'pit visit notes.csv';
+  static const String filenameShortlists = 'shortlists.csv';
+  static const String filenameFinalists = 'finalists.csv';
+
+  Future<void> importEventState(PlatformFile zipFile) async {
+    // TODO: move this to another thread if necessary
+    _clearTeams();
+    _clearAwards();
+    try {
+      final Archive zip = ZipDecoder().decodeBytes(await zipFile.readStream!.expand<int>((List<int> fragment) => fragment).toList());
+      if (zip.findFile(filenameTeams) == null) {
+        throw const FormatException('Archive is not a complete event state description (does not contain "$filenameTeams" file).');
+      }
+      if (zip.findFile(filenameAwards) == null) {
+        throw const FormatException('Archive is not a complete event state description (does not contain "$filenameAwards" file).');
+      }
+      if (zip.findFile(filenamePitVisitNotes) == null) {
+        throw const FormatException('Archive is not a complete event state description (does not contain "$filenamePitVisitNotes" file).');
+      }
+      if (zip.findFile(filenameShortlists) == null) {
+        throw const FormatException('Archive is not a complete event state description (does not contain "$filenameShortlists" file).');
+      }
+      await importTeams(zip.findFile(filenameTeams)!.content);
+      await importAwards(zip.findFile(filenameAwards)!.content);
+      await importPitVisitNotes(zip.findFile(filenamePitVisitNotes)!.content);
+      await importShortlists(zip.findFile(filenameShortlists)!.content);
+    } catch (e) {
+      _clearTeams();
+      _clearAwards();
+      rethrow;
+    }
+  }
+
+  void exportEventState(String filename) {
+    // TODO: move this to another thread if necessary
+    final String timestamp = DateTime.now().toIso8601String();
+    final ZipEncoder zip = ZipEncoder();
+    final OutputFileStream output = OutputFileStream(filename);
+    zip.startEncode(output);
+    zip.addFile(ArchiveFile.string(
+      'README',
+      'This file contains the judging and award nomination state for a FIRST Tech Challenge event.'
+          'The event state was saved on $timestamp.\n'
+          'This archive contains data that can be opened by the FIRST Tech Challenge Judge Advisor Assistant.\n'
+          'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenamePitVisitNotes", "$filenameFinalists".\n'
+          'Other files (such as this one) are included for information purposes only.\n'
+          'The "$filenameFinalists" file contains the computed finalists at the time of the export. (It is not used when reimporting the event state.)\n'
+          'For more information see: https://github.com/Hixie/jaa/',
+    ));
+    zip.addFile(ArchiveFile.string(filenameTeams, teamsToCsv()));
+    zip.addFile(ArchiveFile.string(filenameAwards, awardsToCsv()));
+    zip.addFile(ArchiveFile.string(filenamePitVisitNotes, pitVisitNotesToCsv()));
+    zip.addFile(ArchiveFile.string(filenameShortlists, shortlistsToCsv()));
+    zip.addFile(ArchiveFile.string(filenameFinalists, finalistTablesToCsv()));
+    zip.endEncode();
+  }
+
+  Timer? _autosaveTimer;
+  bool _autosaving = false;
+  bool get needsAutosave => _autosaveTimer != null;
+  DateTime? _lastAutosave;
+  DateTime? get lastAutosave => _lastAutosave;
+  String _lastAutosaveMessage = 'Not yet autosaved.';
+  String get lastAutosaveMessage => _lastAutosaveMessage;
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    if (!_autosaving) {
+      _autosaveTimer?.cancel();
+      _autosaveTimer = Timer(const Duration(seconds: 5), _autosave);
+    }
+  }
+
+  // TODO: this should be async
+  void _autosave() {
+    _autosaving = true;
+    _autosaveTimer = null;
+    try {
+      final String tempAutosave = path.join(autosaveDirectory.path, r'jaa_autosave.$$$');
+      final String finalAutosave = path.join(autosaveDirectory.path, r'jaa_autosave.zip');
+      exportEventState(tempAutosave);
+      if (File(finalAutosave).existsSync()) {
+        File(finalAutosave).deleteSync();
+      }
+      File(tempAutosave).renameSync(finalAutosave);
+      _lastAutosave = DateTime.now();
+      _lastAutosaveMessage = 'Autosaved to: $finalAutosave';
+    } catch (e) {
+      _lastAutosaveMessage = 'Autosave failed: $e';
+      rethrow;
+    } finally {
+      notifyListeners();
+      _autosaving = false;
+    }
   }
 }
 

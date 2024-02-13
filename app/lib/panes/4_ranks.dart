@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../constants.dart';
+import '../io.dart';
 import '../widgets.dart';
 import '../model/competition.dart';
 
@@ -15,7 +16,7 @@ class RanksPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = competition.awardsView.where(Award.isRankedPredicate).toList()..sort(Award.categoryBasedComparator);
+        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(Award.categoryBasedComparator);
         final int lowRoughRank = (competition.teamsView.length * 5.0 / 6.0).round();
         final int middleRoughRank = (competition.teamsView.length * 3.0 / 6.0).round();
         final int highRoughRank = (competition.teamsView.length * 1.0 / 6.0).round();
@@ -24,19 +25,20 @@ class RanksPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const PaneHeader(
+            PaneHeader(
               title: '4. Rank Lists',
-              onHeaderButtonPressed: null, // TODO: exports the ranked tables
+              onHeaderButtonPressed: () => exportRanksHTML(context, competition),
             ),
             ShortlistEditor(
               competition: competition,
               sortedAwards: awards,
               lateEntry: true,
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-              child: Text('Rankings:'),
-            ),
+            if (awards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Rankings:'),
+              ),
             AwardBuilder(
               sortedAwards: awards,
               competition: competition,
@@ -113,21 +115,72 @@ class RanksPane extends StatelessWidget {
                 );
               },
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
-              child: Text(
-                'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
-                'Red ranks indicates invalid or duplicate ranks. '
-                'Bold team numbers indicate missing or duplicate ranks. '
-                'Italics indicates late entry nominations.',
-                softWrap: true,
-                overflow: TextOverflow.visible,
+            if (awards.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
+                child: Text(
+                  'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
+                  'Red ranks indicates invalid or duplicate ranks. '
+                  'Bold team numbers indicate missing or duplicate ranks. '
+                  'Italics indicates late entry nominations.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
               ),
-            ),
           ],
         );
       },
     );
+  }
+
+  static Future<void> exportRanksHTML(BuildContext context, Competition competition) async {
+    final DateTime now = DateTime.now();
+    final StringBuffer page = createHtmlPage('Ranks', now);
+    for (final Award award in competition.awardsView.where(Award.isNotInspirePredicate)) {
+      page.writeln('<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
+      final String pitVisits = switch (award.pitVisits) {
+        PitVisit.yes => 'does involve',
+        PitVisit.no => 'does not involve',
+        PitVisit.maybe => 'may involve',
+      };
+      page.writeln(
+        '<p>'
+        'Category: ${award.category.isEmpty ? "<i>none</i>" : escapeHtml(award.category)}. '
+        '${award.count} ${award.isPlacement ? 'ranked places to be awarded.' : 'equal winners to be awarded.'} '
+        'Judging ${escapeHtml(pitVisits)} a pit visit.'
+        '</p>',
+      );
+      Map<Team, ShortlistEntry> shortlist = competition.shortlistsView[award]!.entriesView;
+      final List<Team> teams = shortlist.keys.toList();
+      teams.sort((Team a, Team b) {
+        if (shortlist[a]!.rank == shortlist[b]!.rank) {
+          return a.number - b.number;
+        }
+        if (shortlist[a]!.rank == null) {
+          return 1;
+        }
+        if (shortlist[b]!.rank == null) {
+          return -1;
+        }
+        return shortlist[a]!.rank! - shortlist[b]!.rank!;
+      });
+      if (teams.isEmpty) {
+        page.writeln('<p>No nominees.</p>');
+      } else {
+        page.writeln('<h3>Nominees:</h3>');
+        page.writeln('<ol>');
+        for (final Team team in teams) {
+          final String nominator = competition.shortlistsView[award]!.entriesView[team]!.nominator;
+          page.writeln(
+            '<li${shortlist[team]!.rank != null ? " value=${shortlist[team]!.rank!}" : ""}>'
+            '${team.number} <i>${escapeHtml(team.name)}</i>'
+            '${nominator.isEmpty ? "" : " (nominated by ${escapeHtml(nominator)})"}',
+          );
+        }
+        page.writeln('</ol>');
+      }
+    }
+    return exportHTML(competition, 'ranks', now, page.toString());
   }
 }
 

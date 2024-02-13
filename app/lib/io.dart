@@ -1,15 +1,14 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'constants.dart';
+import 'package:path/path.dart' as path;
+import 'package:url_launcher/url_launcher.dart';
 
-Future<PlatformFile?> openFile(
-  BuildContext context, {
-  required String title,
-  required String extension,
-}) async {
-  Navigator.push(
-    context,
-    PageRouteBuilder<void>(
+import 'constants.dart';
+import 'model/competition.dart';
+
+Route _createModalBackdrop() => PageRouteBuilder<void>(
       opaque: false,
       pageBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
         return const ModalBarrier(
@@ -20,18 +19,71 @@ Future<PlatformFile?> openFile(
       transitionsBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
         return FadeTransition(opacity: animation, child: child);
       },
-    ),
-  );
-  FilePickerResult? result = await FilePicker.platform.pickFiles(
-    dialogTitle: title,
-    type: FileType.custom,
-    allowedExtensions: [extension],
-    withReadStream: true,
-    lockParentWindow: true,
-  );
-  // ignore: use_build_context_synchronously
-  Navigator.pop(context);
-  return result?.files.single;
+    );
+
+Future<void> exportHTML(Competition competition, String prefix, DateTime now, String body) async {
+  final String filename = path.join(competition.exportDirectory.path, '$prefix.${now.millisecondsSinceEpoch}.html');
+  await File(filename).writeAsString(body);
+  await launchUrl(Uri.file(filename));
+}
+
+StringBuffer createHtmlPage(String header, DateTime now) {
+  return StringBuffer()
+    ..writeln('<!DOCTYPE HTML>')
+    ..writeln('<style>$css</style>')
+    ..writeln('<title>${escapeHtml(header)}</title>')
+    ..writeln('<h1>${escapeHtml(header)}</h1>')
+    ..writeln('<p>Exported at: <time>${escapeHtml(now.toIso8601String())}</time></p>');
+}
+
+String escapeHtml(String raw) {
+  return raw.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+Future<PlatformFile?> openFile(
+  BuildContext context, {
+  required String title,
+  required String extension,
+}) async {
+  Navigator.push(context, _createModalBackdrop());
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      dialogTitle: title,
+      type: FileType.custom,
+      allowedExtensions: [extension],
+      withReadStream: true,
+      lockParentWindow: true,
+    );
+    return result?.files.single;
+  } finally {
+    // ignore: use_build_context_synchronously
+    Navigator.pop(context);
+  }
+}
+
+Future<String?> saveFile(
+  BuildContext context, {
+  required String title,
+  required String extension,
+}) async {
+  Navigator.push(context, _createModalBackdrop());
+  try {
+    String? result = await FilePicker.platform.saveFile(
+      dialogTitle: title,
+      type: FileType.custom,
+      allowedExtensions: [extension],
+      lockParentWindow: true,
+    );
+    if (result != null) {
+      if (path.extension(result) == '') {
+        result += '.$extension';
+      }
+    }
+    return result;
+  } finally {
+    // ignore: use_build_context_synchronously
+    Navigator.pop(context);
+  }
 }
 
 Future<T> showProgress<T>(

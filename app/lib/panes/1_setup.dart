@@ -33,7 +33,16 @@ class SetupPane extends StatelessWidget {
             title: '1. Setup',
             headerButtonLabel:
                 competition.teamsView.isEmpty || competition.awardsView.isEmpty ? 'Import event state (ZIP)' : 'Reset everything from saved event state (ZIP)',
-            onHeaderButtonPressed: null, // TODO: Import ZIP
+            onHeaderButtonPressed: () async {
+              final PlatformFile? zipFile = await openFile(context, title: 'Import Event State (ZIP)', extension: 'zip');
+              if (zipFile != null) {
+                await showProgress(
+                  context, // ignore: use_build_context_synchronously
+                  message: 'Importing event state...',
+                  task: () => competition.importEventState(zipFile),
+                );
+              }
+            },
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -51,7 +60,7 @@ class SetupPane extends StatelessWidget {
                   await showProgress(
                     context, // ignore: use_build_context_synchronously
                     message: 'Importing teams...',
-                    task: () => competition.importTeams(csvFile),
+                    task: () async => competition.importTeams(await csvFile.readStream!.expand((List<int> fragment) => fragment).toList()),
                   );
                 }
               },
@@ -111,7 +120,7 @@ class SetupPane extends StatelessWidget {
                   await showProgress(
                     context, // ignore: use_build_context_synchronously
                     message: 'Importing awards...',
-                    task: () => competition.importAwards(csvFile),
+                    task: () async => competition.importAwards(await csvFile.readStream!.expand((List<int> fragment) => fragment).toList()),
                   );
                 }
               },
@@ -162,8 +171,8 @@ class SetupPane extends StatelessWidget {
                             Cell(Text('${award.rank}')),
                             Cell(Text('${award.count}')),
                             Cell(Text(award.category)),
-                            Cell(Text(award.spreadTheWealth ? 'Yes' : '')),
-                            Cell(Text(award.placement ? 'Yes' : '')),
+                            Cell(Text(award.isSpreadTheWealth ? 'Yes' : '')),
+                            Cell(Text(award.isPlacement ? 'Yes' : '')),
                             Cell(Text(switch (award.pitVisits) {
                               PitVisit.yes => 'Yes',
                               PitVisit.no => 'No',

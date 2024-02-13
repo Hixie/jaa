@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import '../io.dart';
 import '../widgets.dart';
 import '../model/competition.dart';
 
@@ -20,9 +21,9 @@ class ShortlistsPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const PaneHeader(
+            PaneHeader(
               title: '2. Enter Shortlists',
-              onHeaderButtonPressed: null, // TODO: exports the shortlists per award
+              onHeaderButtonPressed: () => exportShortlistsHTML(context, competition),
             ),
             if (competition.teamsView.isEmpty)
               const Padding(
@@ -54,6 +55,41 @@ class ShortlistsPane extends StatelessWidget {
         );
       },
     );
+  }
+
+  static Future<void> exportShortlistsHTML(BuildContext context, Competition competition) async {
+    final DateTime now = DateTime.now();
+    final StringBuffer page = createHtmlPage('Shortlists', now);
+    for (final Award award in competition.awardsView) {
+      page.writeln('<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
+      final String pitVisits = switch (award.pitVisits) {
+        PitVisit.yes => 'does involve',
+        PitVisit.no => 'does not involve',
+        PitVisit.maybe => 'may involve',
+      };
+      page.writeln(
+        '<p>'
+        'Category: ${award.category.isEmpty ? "<i>none</i>" : escapeHtml(award.category)}. '
+        '${award.count} ${award.isPlacement ? 'ranked places to be awarded.' : 'equal winners to be awarded.'} '
+        'Judging ${escapeHtml(pitVisits)} a pit visit.'
+        '</p>',
+      );
+      List<Team> teams = competition.shortlistsView[award]!.entriesView.keys.toList();
+      if (teams.isEmpty) {
+        page.writeln('<p>No nominees.</p>');
+      } else {
+        page.writeln('<h3>Nominees:</h3>');
+        page.writeln('<ul>');
+        for (final Team team in teams) {
+          final String nominator = competition.shortlistsView[award]!.entriesView[team]!.nominator;
+          page.writeln(
+            '<li>' '${team.number} <i>${escapeHtml(team.name)}</i>' '${nominator.isEmpty ? "" : " (nominated by ${escapeHtml(nominator)})"}',
+          );
+        }
+        page.writeln('</ul>');
+      }
+    }
+    return exportHTML(competition, 'shortlists', now, page.toString());
   }
 }
 

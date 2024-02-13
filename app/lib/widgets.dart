@@ -133,9 +133,9 @@ class PaneHeader extends StatelessWidget {
           alignment: WrapAlignment.spaceBetween,
           crossAxisAlignment: WrapCrossAlignment.start,
           children: [
-            Padding(
+            Heading(
+              title,
               padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, 0.0),
-              child: Heading(title),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
@@ -159,14 +159,16 @@ class Heading extends StatelessWidget {
   const Heading(
     this.text, {
     super.key,
+    this.padding = const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
   });
 
   final String text;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 4.0),
+      padding: padding,
       child: Text(
         text,
         style: const TextStyle(
@@ -291,29 +293,36 @@ class AwardCard extends StatelessWidget {
       elevation: teamListElevation,
       color: award.color,
       shape: teamListCardShape,
-      child: DefaultTextStyle.merge(
-        style: TextStyle(color: foregroundColor),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(spacing),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    if (showAwardRanks && award.isAdvancing) TextSpan(text: '#${award.rank}: '),
-                    TextSpan(text: award.name, style: bold),
-                    if (award.category.isNotEmpty)
-                      TextSpan(
-                        text: ' (${award.category})',
-                      ),
-                  ],
+      child: FocusTraversalGroup(
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: foregroundColor),
+          child: IntrinsicWidth(
+            // A quick performance improvement would be to remove
+            // the IntrinsicWidth and change "stretch" to "center"
+            // in the crossAxisAligment below.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(spacing),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        if (showAwardRanks && award.isAdvancing) TextSpan(text: '#${award.rank}: '),
+                        TextSpan(text: award.name, style: bold),
+                        if (award.category.isNotEmpty)
+                          TextSpan(
+                            text: ' (${award.category})',
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                child,
+              ],
             ),
-            child,
-          ],
+          ),
         ),
       ),
     );
