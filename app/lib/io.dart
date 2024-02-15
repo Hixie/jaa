@@ -22,7 +22,7 @@ Route _createModalBackdrop() => PageRouteBuilder<void>(
     );
 
 Future<void> exportHTML(Competition competition, String prefix, DateTime now, String body) async {
-  final String filename = path.join(competition.exportDirectory.path, '$prefix.${now.millisecondsSinceEpoch}.html');
+  final String filename = path.join((await competition.exportDirectory).path, '$prefix.${now.millisecondsSinceEpoch}.html');
   await File(filename).writeAsString(body);
   await launchUrl(Uri.file(filename));
 }

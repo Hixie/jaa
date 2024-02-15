@@ -435,6 +435,12 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   Team? _team;
 
   @override
+  void initState() {
+    super.initState();
+    _teamController.addListener(_handleTeamTextChange);
+  }
+
+  @override
   void dispose() {
     _teamController.dispose();
     _nominatorController.dispose();
@@ -461,6 +467,26 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
         }
       });
       _teamFocusNode.requestFocus();
+    }
+  }
+
+  void _handleTeamChange(Team? team) {
+    _nominatorFocusNode.requestFocus();
+    setState(() {
+      _team = team;
+    });
+  }
+
+  void _handleTeamTextChange() {
+    // Workaround for https://github.com/flutter/flutter/issues/143505
+    if (_teamController.text != (_team != null ? "${_team!.number} ${_team!.name}" : "")) {
+      Team? team = widget.competition.teamsView.cast<Team?>().singleWhere(
+            (Team? team) => "${team!.number} ${team.name}" == _teamController.text,
+            orElse: () => null,
+          );
+      setState(() {
+        _team = team;
+      });
     }
   }
 
@@ -580,14 +606,9 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           DropdownMenu<Team>(
-                                            // focusNode: _teamFocusNode,
+                                            focusNode: _teamFocusNode,
                                             controller: _teamController,
-                                            onSelected: (Team? team) {
-                                              _nominatorFocusNode.requestFocus();
-                                              setState(() {
-                                                _team = team;
-                                              });
-                                            },
+                                            onSelected: _handleTeamChange,
                                             requestFocusOnTap: true,
                                             enableFilter: true,
                                             menuStyle: MenuStyle(

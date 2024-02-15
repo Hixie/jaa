@@ -311,10 +311,14 @@ class Shortlist extends ChangeNotifier {
 }
 
 class Competition extends ChangeNotifier {
-  Competition({required this.autosaveDirectory, required this.exportDirectory});
+  Competition({required this.autosaveDirectory, required this.exportDirectoryBuilder});
 
   final Directory autosaveDirectory;
-  final Directory exportDirectory;
+
+  final ValueGetter<Future<Directory>> exportDirectoryBuilder;
+
+  Future<Directory>? _exportDirectory;
+  Future<Directory> get exportDirectory => _exportDirectory ?? exportDirectoryBuilder();
 
   final List<Team> _teams = <Team>[];
   final List<Team> _previousInspireWinners = <Team>[];

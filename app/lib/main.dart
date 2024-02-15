@@ -19,7 +19,7 @@ void main() async {
   runApp(MainApp(
     competition: Competition(
       autosaveDirectory: await getApplicationDocumentsDirectory(),
-      exportDirectory: await (await getDownloadsDirectory())!.createTemp('jaa.'),
+      exportDirectoryBuilder: () async => await (await getDownloadsDirectory())!.createTemp('jaa.'),
     ),
   ));
 }
