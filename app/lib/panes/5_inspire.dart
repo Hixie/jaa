@@ -136,7 +136,7 @@ class InspirePane extends StatelessWidget {
         if (team.inspireEligible) {
           page.writeln('<td>${team.shortlistsView[competition.inspireAward!]?.rank ?? "<i>Not placed</i>"}');
         } else {
-          page.writeln('<i>Not eligible</i>');
+          page.writeln('<td><i>Not eligible</i>');
         }
       }
       page.writeln('</table>');

@@ -6,7 +6,7 @@ import 'constants.dart';
 import 'model/competition.dart';
 import 'panes/1_setup.dart';
 import 'panes/2_shortlists.dart';
-import 'panes/3_showthelove.dart';
+import 'panes/3_pitvisits.dart';
 import 'panes/4_ranks.dart';
 import 'panes/5_inspire.dart';
 import 'panes/6_finalists.dart';
@@ -14,7 +14,6 @@ import 'panes/7_export.dart';
 import 'widgets.dart';
 
 void main() async {
-  // TODO: autoload the autosave if any
   WidgetsFlutterBinding.ensureInitialized();
   runApp(MainApp(
     competition: Competition(
@@ -37,7 +36,7 @@ enum Pane {
   about,
   setup,
   shortlists,
-  showTheLove,
+  pitVisits,
   ranks,
   inspire,
   awardFinalists,
@@ -160,7 +159,12 @@ class _MainAppState extends State<MainApp> {
                                     '${widget.competition.nonAdvancingAwardsView.length} Non-Advancing Awards.',
                                     style: bold,
                                   ),
-                                if (widget.competition.previousInspireWinnersView.isNotEmpty)
+                                if (widget.competition.previousInspireWinnersView.isEmpty)
+                                  const Text(
+                                    'No Previous Inspire Winners.',
+                                    style: bold,
+                                  )
+                                else
                                   Text(
                                     'Previous Inspire Winners: ${formTeamList(widget.competition.previousInspireWinnersView)}.',
                                     style: bold,
@@ -197,10 +201,10 @@ class _MainAppState extends State<MainApp> {
                           ),
                           const SizedBox(width: spacing),
                           SelectableButton<Pane>(
-                            value: Pane.showTheLove,
+                            value: Pane.pitVisits,
                             selection: _pane,
                             onChanged: _selectPane,
-                            child: const Text('3. Show The Love'),
+                            child: const Text('3. Pit Visits'),
                           ),
                           const SizedBox(width: spacing),
                           SelectableButton<Pane>(
@@ -247,7 +251,7 @@ class _MainAppState extends State<MainApp> {
                             Pane.about => AboutPane(competition: widget.competition),
                             Pane.setup => SetupPane(competition: widget.competition),
                             Pane.shortlists => ShortlistsPane(competition: widget.competition),
-                            Pane.showTheLove => ShowTheLovePane(competition: widget.competition),
+                            Pane.pitVisits => PitVisitsPane(competition: widget.competition),
                             Pane.ranks => RanksPane(competition: widget.competition),
                             Pane.inspire => InspirePane(competition: widget.competition),
                             Pane.awardFinalists => AwardFinalistsPane(competition: widget.competition),
@@ -272,8 +276,7 @@ class AboutPane extends StatelessWidget {
 
   final Competition competition;
 
-  // TODO: replace this with something real
-  static String get currentHelp => 'FTC Weekend Support # 1-800-555-1212';
+  static String get currentHelp => 'Event On-Call Support # 603-206-2412';
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +294,10 @@ class AboutPane extends StatelessWidget {
             listenable: competition,
             builder: (BuildContext context, Widget? child) => ListBody(
               children: [
-                Text(competition.lastAutosaveMessage),
+                Text(
+                  competition.lastAutosaveMessage,
+                  softWrap: true,
+                ),
                 if (competition.lastAutosave != null && competition.needsAutosave)
                   Wrap(
                     children: [

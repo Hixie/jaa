@@ -654,7 +654,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                           IconButton.filledTonal(
                                             onPressed: _team != null ? _addTeamToShortlist : null,
                                             icon: const Icon(
-                                              Icons.group_add,
+                                              Icons.group_add, // TODO: heart_plus
                                             ),
                                           ),
                                         ],

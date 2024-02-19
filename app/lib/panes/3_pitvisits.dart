@@ -5,8 +5,8 @@ import '../io.dart';
 import '../model/competition.dart';
 import '../widgets.dart';
 
-class ShowTheLovePane extends StatelessWidget {
-  const ShowTheLovePane({super.key, required this.competition});
+class PitVisitsPane extends StatelessWidget {
+  const PitVisitsPane({super.key, required this.competition});
 
   final Competition competition;
 
@@ -24,7 +24,7 @@ class ShowTheLovePane extends StatelessWidget {
           children: [
             PaneHeader(
               title: '3. Show The Love (STL)',
-              onHeaderButtonPressed: () => exportShowTheLoveHTML(context, competition),
+              onHeaderButtonPressed: () => exportPitVisitsHTML(context, competition),
             ),
             if (competition.teamsView.isEmpty)
               const Padding(
@@ -111,10 +111,10 @@ class ShowTheLovePane extends StatelessWidget {
   }
 
   static List<Award> computeAffectedAwards(Competition competition) {
-    return competition.awardsView.where(Award.needsShowTheLovePredicate).toList();
+    return competition.awardsView.where(Award.needsExtraPitVisitPredicate).toList();
   }
 
-  static Future<void> exportShowTheLoveHTML(BuildContext context, Competition competition) async {
+  static Future<void> exportPitVisitsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
     final List<Award> showTheLoveAwards = computeAffectedAwards(competition);
     final StringBuffer page = createHtmlPage('Show The Love', now);

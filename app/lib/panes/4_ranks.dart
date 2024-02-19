@@ -104,7 +104,7 @@ class RanksPane extends StatelessWidget {
                                       visualDensity: VisualDensity.compact,
                                       color: foregroundColor,
                                       icon: const Icon(
-                                        Icons.group_remove,
+                                        Icons.group_remove, // TODO: heart_minus
                                       ),
                                     ),
                                   ),

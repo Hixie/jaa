@@ -21,7 +21,7 @@ class AwardFinalistsPane extends StatelessWidget {
         for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
           // ignore: unused_local_variable
           for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in results) {
-            if (team == null && otherAward == null) {
+            if (team != null && otherAward == null) {
               continue award;
             }
           }

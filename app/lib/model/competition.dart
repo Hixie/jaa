@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
 import '../widgets.dart';
+import '../colors.dart';
 
 typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied});
 
@@ -43,7 +44,7 @@ class Award {
   final Color color;
 
   // predicate for List.where clauses
-  static bool needsShowTheLovePredicate(Award award) {
+  static bool needsExtraPitVisitPredicate(Award award) {
     return award.pitVisits != PitVisit.yes && !award.isInspire;
   }
 
@@ -408,6 +409,23 @@ class Competition extends ChangeNotifier {
 
   // IMPORT/EXPORT
 
+  static bool _parseBool(Object? cell) {
+    if (cell is int) {
+      return cell != 0;
+    }
+    if (cell is double) {
+      return cell != 0.0;
+    }
+    switch (cell) {
+      case true:
+      case 'y':
+      case 'yes':
+      case 'true':
+        return true;
+    }
+    return false;
+  }
+
   // Data model
 
   void _clearTeams() {
@@ -430,24 +448,15 @@ class Competition extends ChangeNotifier {
       throw const FormatException('File does not contain any teams.');
     }
     try {
+      int rowNumber = 2;
       for (List<dynamic> row in csvData.skip(1)) {
         if (row.length < 4) {
-          throw const FormatException('Teams file contains a row with less than four cells.');
+          throw FormatException('Teams file row $rowNumber has only ${row.length} cells but needs at least 4.');
         }
         if (row[0] is! int || (row[0] < 0)) {
-          throw FormatException('Parse error in team file: "${row[0]}" is not a valid team number.');
+          throw FormatException('Parse error in teams file row $rowNumber column 1: "${row[0]}" is not a valid team number.');
         }
-        if ((row[3] is! int || (row[3] < 0)) && row[3] != 'y' && row[3] != 'n') {
-          throw FormatException('Parse error in team file: "${row[3]}" is not a valid number of Inspire award wins.');
-        }
-        final bool pastInspireWinner;
-        if (row[3] == 'y') {
-          pastInspireWinner = true;
-        } else if (row[3] == 'n') {
-          pastInspireWinner = false;
-        } else {
-          pastInspireWinner = row[3] as int > 0;
-        }
+        final bool pastInspireWinner = _parseBool(row[3]);
         final Team team = Team(
           number: row[0] as int,
           name: '${row[1]}',
@@ -458,6 +467,7 @@ class Competition extends ChangeNotifier {
         if (pastInspireWinner) {
           _previousInspireWinners.add(team);
         }
+        rowNumber += 1;
       }
     } catch (e) {
       _clearTeams();
@@ -500,56 +510,55 @@ class Competition extends ChangeNotifier {
       throw const FormatException('File does not contain any awards.');
     }
     try {
-      int rank = 1;
+      int rank = 1; // also the row number
       bool seenInspire = false;
       final Set<String> names = <String>{};
       for (List<dynamic> row in csvData.skip(1)) {
         if (row.length < 8) {
-          throw const FormatException('Awards file contains a row with less than eight cells.');
+          throw FormatException('Awards file row $rank has only ${row.length} cells but needs at least 8.');
         }
         final String name = '${row[0]}';
         if (name.isEmpty) {
-          throw const FormatException('Parse error in awards file: An award has no name.');
+          throw FormatException('Parse error in awards file row $rank column 1: Award has no name.');
         }
         if (names.contains(name)) {
-          throw FormatException('Parse error in awards file: There are multiple awards named "$name".');
+          throw FormatException('Parse error in awards file row $rank column 1: There is already an award named "$name".');
         }
         names.add(name);
         if (row[1] != 'Advancing' && row[1] != 'Non-Advancing') {
-          throw FormatException('Parse error in awards file: Unknown value for "Advancing" column: "${row[1]}".');
+          throw FormatException('Parse error in awards file row $rank column 2: Unknown value for "Advancing" column: "${row[1]}".');
         }
         final bool isAdvancing = row[1] == 'Advancing';
         final bool isInspire = !seenInspire && isAdvancing;
         seenInspire = seenInspire || isInspire;
         if (row[2] is! int || (row[2] < 0)) {
-          throw FormatException('Parse error in awards file: "${row[2]}" is not a valid award count.');
+          throw FormatException('Parse error in awards file row $rank column 3: "${row[2]}" is not a valid award count.');
         }
         final int count = row[2] as int;
         final String category = '${row[3]}';
         if (isAdvancing && !isInspire && category.isEmpty) {
-          throw FormatException('Parse error in awards file: "${row[0]}" is an Advancing award but has no specified category.');
+          throw FormatException('Parse error in awards file row $rank column 4: "${row[0]}" is an Advancing award but has no specified category.');
         }
-        if (row[4] != 'y' && row[4] != 'n') {
-          throw FormatException('Parse error in awards file: Unknown value for "spread the wealth" column: "${row[4]}".');
-        }
-        final bool isSpreadTheWealth = row[4] == 'y';
-        if (row[5] != 'y' && row[5] != 'n') {
-          throw FormatException('Parse error in awards file: Unknown value for "placement" column: "${row[5]}".');
-        }
-        final bool isPlacement = row[5] == 'y';
-        final PitVisit pitVisit = switch ('${row[6]}') {
-          'y' => PitVisit.yes,
-          'n' => PitVisit.no,
-          'maybe' => PitVisit.maybe,
-          final String s => throw FormatException('Parse error in awards file: "$s" is not a valid value for the Pit Visits column.'),
-        };
+        final bool isSpreadTheWealth = _parseBool(row[4]);
+        final bool isPlacement = _parseBool(row[5]);
+        final PitVisit pitVisit = '${row[6]}' == 'maybe'
+            ? PitVisit.maybe
+            : _parseBool(row[6])
+                ? PitVisit.yes
+                : PitVisit.no;
         final String colorAsString = '${row[7]}';
-        if (!colorAsString.startsWith('#') || colorAsString.length != 7) {
-          throw FormatException('Parse error in awards file: "$colorAsString" is not a valid color (e.g. "#FFFF00").');
-        }
-        int? colorAsInt = int.tryParse(colorAsString.substring(1), radix: 16);
-        if (colorAsInt == null) {
-          throw FormatException('Parse error in awards file: "$colorAsString" is not a valid color (e.g. "#00FFFF").');
+        final Color color;
+        if (colors.containsKey(colorAsString)) {
+          color = colors[colorAsString]!;
+        } else {
+          if (!colorAsString.startsWith('#') || colorAsString.length != 7) {
+            throw FormatException('Parse error in awards file row $rank column 8: "$colorAsString" is not a valid color (e.g. "#FFFF00" or "yellow").');
+          }
+          int? colorAsInt = int.tryParse(colorAsString.substring(1), radix: 16);
+          if (colorAsInt == null) {
+            throw FormatException('Parse error in awards file row $rank column 8: "$colorAsString" is not a valid color (e.g. "#00FFFF" or "teal").');
+          }
+          color = Color(0xFF000000 | colorAsInt);
         }
         final Award award = Award(
           name: name,
@@ -561,7 +570,7 @@ class Competition extends ChangeNotifier {
           isSpreadTheWealth: isSpreadTheWealth,
           isPlacement: isPlacement,
           pitVisits: pitVisit,
-          color: Color(0xFF000000 | colorAsInt),
+          color: color,
         );
         _awards.add(award);
         if (award.isAdvancing) {

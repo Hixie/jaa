@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jaa/exporters.dart';
 
 import '2_shortlists.dart';
-import '3_showthelove.dart';
+import '3_pitvisits.dart';
 import '4_ranks.dart';
 import '5_inspire.dart';
 import '6_finalists.dart';
@@ -35,8 +35,8 @@ class ExportPane extends StatelessWidget {
               onPressed: () => ShortlistsPane.exportShortlistsHTML(context, competition),
             ),
             ExportButton(
-              label: 'Export show-the-love table (HTML)',
-              onPressed: () => ShowTheLovePane.exportShowTheLoveHTML(context, competition),
+              label: 'Export pit visits table (HTML)',
+              onPressed: () => PitVisitsPane.exportPitVisitsHTML(context, competition),
             ),
             ExportButton(
               label: 'Export ranked lists (HTML)',
