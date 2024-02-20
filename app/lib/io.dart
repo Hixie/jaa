@@ -50,7 +50,7 @@ Future<PlatformFile?> openFile(
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       dialogTitle: title,
       type: FileType.custom,
-      allowedExtensions: [extension],
+      allowedExtensions: [extension, '*'],
       withReadStream: true,
       lockParentWindow: true,
     );
@@ -71,7 +71,7 @@ Future<String?> saveFile(
     String? result = await FilePicker.platform.saveFile(
       dialogTitle: title,
       type: FileType.custom,
-      allowedExtensions: [extension],
+      allowedExtensions: [extension, '*'],
       lockParentWindow: true,
     );
     if (result != null) {

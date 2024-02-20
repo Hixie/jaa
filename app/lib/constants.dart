@@ -37,6 +37,7 @@ const double spacing = 8.0;
 const Duration animationDuration = Duration(milliseconds: 150);
 
 const TextStyle bold = TextStyle(fontWeight: FontWeight.bold);
+const TextStyle italic = TextStyle(fontStyle: FontStyle.italic);
 
 const double teamListElevation = 3.0;
 const ShapeBorder teamListCardShape = BeveledRectangleBorder(
@@ -54,3 +55,5 @@ h3 { margin: 0 0 0.5rem 0; }
 p { margin: 0 0 1rem 0; }
 li:not([value]) { list-style-type: disc; }
 ''';
+
+const String currentHelp = 'Event On-Call Support # 603-206-2412';

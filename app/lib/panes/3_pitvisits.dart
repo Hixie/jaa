@@ -16,7 +16,7 @@ class PitVisitsPane extends StatelessWidget {
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
         final List<Team> teams = computeAffectedTeams(competition);
-        final List<Award> showTheLoveAwards = computeAffectedAwards(competition);
+        final List<Award> relevantAwards = computeAffectedAwards(competition);
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +48,7 @@ class PitVisitsPane extends StatelessWidget {
               ),
             if (teams.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, 0.0, indent),
+                padding: const EdgeInsets.fromLTRB(indent, spacing, 0.0, 0.0),
                 child: HorizontalScrollbar(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -63,12 +63,12 @@ class PitVisitsPane extends StatelessWidget {
                         TableRow(
                           children: [
                             const Cell(Text('#', style: bold)),
-                            for (final Award award in showTheLoveAwards)
+                            for (final Award award in relevantAwards)
                               ColoredBox(
                                 color: award.color,
                                 child: Cell(
                                   Text(
-                                    award.name,
+                                    '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
                                     style: bold.copyWith(
                                       color: textColorForColor(award.color),
                                     ),
@@ -87,7 +87,7 @@ class PitVisitsPane extends StatelessWidget {
                                   Text('${team.number}'),
                                 ),
                               ),
-                              for (final Award award in showTheLoveAwards) Cell(Text(team.shortlistsView.keys.contains(award) ? 'Yes' : '')),
+                              for (final Award award in relevantAwards) Cell(Text(team.shortlistsView.keys.contains(award) ? 'Yes' : '')),
                               VisitedCell(team),
                             ],
                           ),
@@ -96,6 +96,12 @@ class PitVisitsPane extends StatelessWidget {
                   ),
                 ),
               ),
+            if (relevantAwards.where((Award award) => award.pitVisits == PitVisit.maybe).isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
+                child: Text('* This award may involve pit visits.', style: italic),
+              ),
+            const SizedBox(height: indent),
           ],
         );
       },
@@ -116,27 +122,35 @@ class PitVisitsPane extends StatelessWidget {
 
   static Future<void> exportPitVisitsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    final List<Award> showTheLoveAwards = computeAffectedAwards(competition);
-    final StringBuffer page = createHtmlPage('Show The Love', now);
-    page.writeln('<table>');
-    page.writeln('<thead>');
-    page.writeln('<tr>');
-    page.writeln('<th>Team');
-    for (final Award award in showTheLoveAwards) {
-      page.writeln('<th>${escapeHtml(award.name)}');
-    }
-    page.writeln('<th>Notes');
-    page.writeln('<tbody>');
-    for (final Team team in computeAffectedTeams(competition)) {
+    final List<Award> relevantAwards = computeAffectedAwards(competition);
+    final StringBuffer page = createHtmlPage('Pit Visits', now);
+    final List<Team> teams = computeAffectedTeams(competition);
+    if (teams.isEmpty) {
+      page.writeln('<p>All of the teams have been shortlisted for awards that involve pit visits.');
+    } else {
+      page.writeln('<table>');
+      page.writeln('<thead>');
       page.writeln('<tr>');
-      page.writeln('<td>${team.number} <i>${escapeHtml(team.name)}</i>');
-
-      for (final Award award in showTheLoveAwards) {
-        page.writeln('<td>${team.shortlistsView.keys.contains(award) ? "Yes" : ""}');
+      page.writeln('<th>Team');
+      for (final Award award in relevantAwards) {
+        page.writeln('<th>${escapeHtml(award.name)}${award.pitVisits == PitVisit.maybe ? "*" : ""}');
       }
-      page.writeln('<td>${team.visited ? "Visited." : ""} ${escapeHtml(team.visitingJudgesNotes)}');
+      page.writeln('<th>Notes');
+      page.writeln('<tbody>');
+      for (final Team team in teams) {
+        page.writeln('<tr>');
+        page.writeln('<td>${team.number} <i>${escapeHtml(team.name)}</i>');
+
+        for (final Award award in relevantAwards) {
+          page.writeln('<td>${team.shortlistsView.keys.contains(award) ? "Yes" : ""}');
+        }
+        page.writeln('<td>${team.visited ? "Visited." : ""} ${escapeHtml(team.visitingJudgesNotes)}');
+      }
+      page.writeln('</table>');
+      if (relevantAwards.where((Award award) => award.pitVisits == PitVisit.maybe).isNotEmpty) {
+        page.writeln('<p><small>* This award may involve pit visits.</small>');
+      }
     }
-    page.writeln('</table>');
     return exportHTML(competition, 'show_the_love', now, page.toString());
   }
 }

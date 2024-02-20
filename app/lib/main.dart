@@ -99,10 +99,10 @@ class _MainAppState extends State<MainApp> {
                           ),
                         ),
                         const SizedBox(width: indent),
-                        Expanded(
+                        const Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
-                            child: Text(AboutPane.currentHelp, textAlign: TextAlign.right),
+                            padding: EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
+                            child: Text(currentHelp, textAlign: TextAlign.right),
                           ),
                         ),
                       ],
@@ -276,16 +276,14 @@ class AboutPane extends StatelessWidget {
 
   final Competition competition;
 
-  static String get currentHelp => 'Event On-Call Support # 603-206-2412';
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Heading('About'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
           child: Text(currentHelp),
         ),
         Padding(
@@ -297,6 +295,7 @@ class AboutPane extends StatelessWidget {
                 Text(
                   competition.lastAutosaveMessage,
                   softWrap: true,
+                  overflow: TextOverflow.clip,
                 ),
                 if (competition.lastAutosave != null && competition.needsAutosave)
                   Wrap(

@@ -24,6 +24,36 @@ Future<void> exportEventState(BuildContext context, Competition competition) asy
   }
 }
 
+Future<void> exportPitVisitNotes(BuildContext context, Competition competition) async {
+  final String? filename = await saveFile(
+    context,
+    title: 'Export pit visit notes (CSV)',
+    extension: 'csv',
+  );
+  if (filename != null) {
+    await showProgress(
+      context, // ignore: use_build_context_synchronously
+      message: 'Exporting pit visit notes...',
+      task: () => File(filename).writeAsString(competition.pitVisitNotesToCsv()),
+    );
+  }
+}
+
+Future<void> exportInspireCandidatesTable(BuildContext context, Competition competition) async {
+  final String? filename = await saveFile(
+    context,
+    title: 'Export Inspire candidates table (CSV)',
+    extension: 'csv',
+  );
+  if (filename != null) {
+    await showProgress(
+      context, // ignore: use_build_context_synchronously
+      message: 'Exporting Inspire candidates...',
+      task: () => File(filename).writeAsString(competition.inspireCandiatesToCsv()),
+    );
+  }
+}
+
 Future<void> exportFinalistsTable(BuildContext context, Competition competition) async {
   final String? filename = await saveFile(
     context,
@@ -50,21 +80,6 @@ Future<void> exportFinalistsLists(BuildContext context, Competition competition)
       context, // ignore: use_build_context_synchronously
       message: 'Exporting finalists...',
       task: () => File(filename).writeAsString(competition.finalistListsToCsv()),
-    );
-  }
-}
-
-Future<void> exportInspireCandidatesTable(BuildContext context, Competition competition) async {
-  final String? filename = await saveFile(
-    context,
-    title: 'Export Inspire candidates table (CSV)',
-    extension: 'csv',
-  );
-  if (filename != null) {
-    await showProgress(
-      context, // ignore: use_build_context_synchronously
-      message: 'Exporting Inspire candidates...',
-      task: () => File(filename).writeAsString(competition.inspireCandiatesToCsv()),
     );
   }
 }

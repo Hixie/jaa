@@ -16,16 +16,26 @@ class AwardFinalistsPane extends StatelessWidget {
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
         final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
-        Set<Award> emptyAwards = {};
-        award:
+        final Set<Award> emptyAwards = {};
+        final Set<Award> tiedAwards = {};
+        final Set<Award> incompleteAwards = {};
         for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
+          bool hasAny = false;
           // ignore: unused_local_variable
           for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in results) {
             if (team != null && otherAward == null) {
-              continue award;
+              hasAny = true;
+            }
+            if (tied) {
+              tiedAwards.add(award);
+            }
+            if (team == null) {
+              incompleteAwards.add(award);
             }
           }
-          emptyAwards.add(award);
+          if (!hasAny) {
+            emptyAwards.add(award);
+          }
         }
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -66,7 +76,7 @@ class AwardFinalistsPane extends StatelessWidget {
               ),
             if (finalists.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
                 child: ScrollableWrap(
                   children: [
                     for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
@@ -102,26 +112,9 @@ class AwardFinalistsPane extends StatelessWidget {
                                       )),
                                     )
                                   else
-                                    const Cell(Text('—')),
+                                    const ErrorCell(message: 'missing'),
                                   if (tied)
-                                    TableCell(
-                                      verticalAlignment: TableCellVerticalAlignment.fill,
-                                      child: ColoredBox(
-                                        color: Colors.red,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: spacing),
-                                          child: Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              'Tied for ${placementDescriptor(rank)}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    )
+                                    ErrorCell(message: 'Tied for ${placementDescriptor(rank)}')
                                   else if (otherAward != null)
                                     Cell(Text('${otherAward.name} ${placementDescriptor(rank)}'))
                                   else
@@ -143,6 +136,18 @@ class AwardFinalistsPane extends StatelessWidget {
                   ],
                 ),
               ),
+            if (incompleteAwards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, 0),
+                child: Text(
+                  'Not all awards have had teams selected for all available places.\n'
+                  'For advice with handling difficult cases, consider calling FIRST:\n'
+                  '$currentHelp',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              ),
+            const SizedBox(height: indent)
           ],
         );
       },
@@ -212,5 +217,36 @@ class AwardFinalistsPane extends StatelessWidget {
       }
     }
     return exportHTML(competition, 'finalists_script', now, page.toString());
+  }
+}
+
+class ErrorCell extends StatelessWidget {
+  const ErrorCell({
+    super.key,
+    required this.message,
+  });
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.fill,
+      child: ColoredBox(
+        color: Colors.red,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: spacing),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -54,7 +54,7 @@ class Award {
   }
 
   // predicate for List.where clauses
-  static bool isRankedPredicate(Award award) {
+  static bool isInspireQualifyingPredicate(Award award) {
     return !award.isInspire && award.isAdvancing;
   }
 
@@ -347,7 +347,7 @@ class Competition extends ChangeNotifier {
         group[team] = categories;
       }
     }
-    final List<String> categories = awardsView.where(Award.isRankedPredicate).map((Award award) => award.category).toSet().toList()..sort();
+    final List<String> categories = awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet().toList()..sort();
     return (candidates, categories);
   }
 
@@ -656,12 +656,14 @@ class Competition extends ChangeNotifier {
       'Team number', // numeric
       'Visited?', // 'y' or 'n'
       'Assigned judging team', // string
+      'Pit visit nominations', // comma-separated string (ambiguous if any awards have commas in their name)
     ]);
     for (final Team team in _teams) {
       data.add([
         team.number,
         team.visited ? 'y' : 'n',
         team.visitingJudgesNotes,
+        team.shortlistsView.keys.where((Award award) => award.pitVisits == PitVisit.yes).map((Award award) => award.name).join(', '),
       ]);
     }
     return const ListToCsvConverter().convert(data);
@@ -740,15 +742,15 @@ class Competition extends ChangeNotifier {
 
   String inspireCandiatesToCsv() {
     final List<List<Object?>> data = [];
-    final List<Award> awards = awardsView.where(Award.isRankedPredicate).toList();
+    final List<Award> awards = awardsView.where(Award.isInspireQualifyingPredicate).toList();
     for (final Team team in teamsView.toList()..sort(Team.inspireCandidateComparator)) {
       final Set<String> categories = team.shortlistedAdvancingCategories;
       data.add([
         team.number,
         for (final Award award in awards)
-          if (team.shortlistsView.containsKey(award)) team.shortlistsView[award]!.rank ?? "" else "",
+          if (team.shortlistsView.containsKey(award)) team.shortlistsView[award]!.rank ?? "?" else "",
         categories.length,
-        team.rankScore ?? "",
+        team.rankScore ?? '',
         team.inspireEligible ? '' : 'Ineligible',
       ]);
     }
@@ -840,10 +842,11 @@ class Competition extends ChangeNotifier {
   static const String filenameAwards = 'awards.csv';
   static const String filenamePitVisitNotes = 'pit visit notes.csv';
   static const String filenameShortlists = 'shortlists.csv';
-  static const String filenameFinalists = 'finalists.csv';
+  static const String filenameInspireCandidates = 'inspire-candidates.csv';
+  static const String filenameFinalistsTable = 'finalists-table.csv';
+  static const String filenameFinalistsLists = 'finalists-lists.csv';
 
   Future<void> importEventState(PlatformFile zipFile) async {
-    // TODO: move this to another thread if necessary
     _clearTeams();
     _clearAwards();
     try {
@@ -872,7 +875,6 @@ class Competition extends ChangeNotifier {
   }
 
   void exportEventState(String filename) {
-    // TODO: move this to another thread if necessary
     final String timestamp = DateTime.now().toIso8601String();
     final ZipEncoder zip = ZipEncoder();
     final OutputFileStream output = OutputFileStream(filename);
@@ -880,18 +882,26 @@ class Competition extends ChangeNotifier {
     zip.addFile(ArchiveFile.string(
       'README',
       'This file contains the judging and award nomination state for a FIRST Tech Challenge event.'
+          '\n'
           'The event state was saved on $timestamp.\n'
+          '\n'
           'This archive contains data that can be opened by the FIRST Tech Challenge Judge Advisor Assistant.\n'
-          'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenamePitVisitNotes", "$filenameFinalists".\n'
-          'Other files (such as this one) are included for information purposes only.\n'
-          'The "$filenameFinalists" file contains the computed finalists at the time of the export. (It is not used when reimporting the event state.)\n'
+          '\n'
+          'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenameShortlists", and "$filenamePitVisitNotes".\n'
+          '\n'
+          'Other files (such as this one) are included for information purposes only. They are not used when reimporting the event state.\n'
+          'The "$filenameInspireCandidates" file contains a listing of each team\'s rankings for awards that contribute to Inspire award nominations.'
+          'The "$filenameFinalistsTable" and "$filenameFinalistsLists" files contain the computed finalists at the time of the export.\n'
+          '\n'
           'For more information see: https://github.com/Hixie/jaa/',
     ));
     zip.addFile(ArchiveFile.string(filenameTeams, teamsToCsv()));
     zip.addFile(ArchiveFile.string(filenameAwards, awardsToCsv()));
     zip.addFile(ArchiveFile.string(filenamePitVisitNotes, pitVisitNotesToCsv()));
     zip.addFile(ArchiveFile.string(filenameShortlists, shortlistsToCsv()));
-    zip.addFile(ArchiveFile.string(filenameFinalists, finalistTablesToCsv()));
+    zip.addFile(ArchiveFile.string(filenameInspireCandidates, inspireCandiatesToCsv()));
+    zip.addFile(ArchiveFile.string(filenameFinalistsTable, finalistTablesToCsv()));
+    zip.addFile(ArchiveFile.string(filenameFinalistsLists, finalistListsToCsv()));
     zip.endEncode();
   }
 
@@ -912,7 +922,6 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  // TODO: this should be async
   void _autosave() {
     _autosaving = true;
     _autosaveTimer = null;

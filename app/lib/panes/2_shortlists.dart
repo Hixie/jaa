@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../constants.dart';
 import '../io.dart';
@@ -159,7 +160,7 @@ class ShortlistTables extends StatelessWidget {
                               visualDensity: VisualDensity.compact,
                               color: foregroundColor,
                               icon: const Icon(
-                                Icons.group_remove, // TODO: heart_minus
+                                Symbols.heart_minus,
                               ),
                             ),
                           ),

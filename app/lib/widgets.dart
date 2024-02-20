@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import 'constants.dart';
 import 'model/competition.dart';
@@ -654,7 +655,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                           IconButton.filledTonal(
                                             onPressed: _team != null ? _addTeamToShortlist : null,
                                             icon: const Icon(
-                                              Icons.group_add, // TODO: heart_plus
+                                              Symbols.heart_plus,
                                             ),
                                           ),
                                         ],
