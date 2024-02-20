@@ -1,3 +1,4 @@
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -157,12 +158,52 @@ class SetupPane extends StatelessWidget {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Container(
-                                    width: 12.0,
-                                    height: 12.0,
-                                    margin: const EdgeInsets.fromLTRB(0.0, 0.0, spacing, 0.0),
-                                    decoration: BoxDecoration(border: Border.all(width: 0.0, color: const Color(0xFF000000)), color: award.color),
+                                  ListenableBuilder(
+                                    listenable: award,
+                                    builder: (BuildContext context, Widget? child) {
+                                      return ColorIndicator(
+                                        color: award.color,
+                                        width: 12.0,
+                                        height: 12.0,
+                                        borderRadius: 0.0,
+                                        onSelectFocus: false,
+                                        onSelect: () async {
+                                          Color selectedColor = award.color;
+                                          if (await ColorPicker(
+                                            heading: Text('${award.name} color', style: headingStyle),
+                                            color: selectedColor,
+                                            wheelWidth: indent,
+                                            wheelSquareBorderRadius: indent,
+                                            pickersEnabled: const <ColorPickerType, bool>{
+                                              ColorPickerType.accent: false,
+                                              ColorPickerType.both: false,
+                                              ColorPickerType.bw: false,
+                                              ColorPickerType.custom: false,
+                                              ColorPickerType.primary: false,
+                                              ColorPickerType.wheel: true,
+                                            },
+                                            enableShadesSelection: false,
+                                            showColorName: true,
+                                            showColorCode: true,
+                                            colorCodeHasColor: true,
+                                            copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+                                              parseShortHexCode: true,
+                                              copyFormat: ColorPickerCopyFormat.numHexRRGGBB,
+                                            ),
+                                            actionButtons: const ColorPickerActionButtons(
+                                              dialogActionOrder: ColorPickerActionButtonOrder.adaptive,
+                                            ),
+                                            onColorChanged: (Color color) {
+                                              selectedColor = color;
+                                            },
+                                          ).showPickerDialog(context)) {
+                                            award.updateColor(selectedColor);
+                                          }
+                                        },
+                                      );
+                                    },
                                   ),
+                                  const SizedBox(width: spacing),
                                   Text(award.name),
                                 ],
                               ),

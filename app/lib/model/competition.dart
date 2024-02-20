@@ -17,9 +17,9 @@ typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied});
 
 enum PitVisit { yes, no, maybe }
 
-@immutable
-class Award {
-  const Award({
+// change notifications are specifically for the color changing
+class Award extends ChangeNotifier {
+  Award({
     required this.name,
     required this.isInspire,
     required this.isAdvancing,
@@ -29,8 +29,8 @@ class Award {
     required this.isSpreadTheWealth,
     required this.isPlacement,
     required this.pitVisits,
-    required this.color,
-  });
+    required Color color,
+  }) : _color = color;
 
   final String name;
   final bool isInspire;
@@ -41,7 +41,14 @@ class Award {
   final bool isSpreadTheWealth;
   final bool isPlacement;
   final PitVisit pitVisits;
-  final Color color;
+
+  Color _color;
+  Color get color => _color;
+
+  void updateColor(Color color) {
+    _color = color;
+    notifyListeners();
+  }
 
   // predicate for List.where clauses
   static bool needsExtraPitVisitPredicate(Award award) {

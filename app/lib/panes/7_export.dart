@@ -73,7 +73,7 @@ class ExportPane extends StatelessWidget {
               label: 'Export event state (ZIP)',
               onPressed: () => exportEventState(context, competition),
             ),
-            SizedBox(height: indent),
+            const SizedBox(height: indent),
           ],
         );
       },

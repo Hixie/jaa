@@ -80,58 +80,63 @@ class AwardFinalistsPane extends StatelessWidget {
                 child: ScrollableWrap(
                   children: [
                     for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
-                      AwardCard(
-                        award: award,
-                        showAwardRanks: true,
-                        child: Table(
-                          border: TableBorder.symmetric(
-                            inside: BorderSide(color: textColorForColor(award.color)),
-                          ),
-                          defaultColumnWidth: MaxColumnWidth(
-                            const IntrinsicColumnWidth(),
-                            FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! * 5.0),
-                          ),
-                          defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            TableRow(
+                      ListenableBuilder(
+                        listenable: award,
+                        builder: (BuildContext context, Widget? child) {
+                          return AwardCard(
+                            award: award,
+                            showAwardRanks: true,
+                            child: Table(
+                              border: TableBorder.symmetric(
+                                inside: BorderSide(color: textColorForColor(award.color)),
+                              ),
+                              defaultColumnWidth: MaxColumnWidth(
+                                const IntrinsicColumnWidth(),
+                                FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! * 5.0),
+                              ),
+                              defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
                               children: [
-                                const Cell(Text('#', style: bold)),
-                                if (award.isPlacement) const Cell(Text('Ranks', style: bold)) else const Cell(Text('Results', style: bold)),
+                                TableRow(
+                                  children: [
+                                    const Cell(Text('#', style: bold)),
+                                    if (award.isPlacement) const Cell(Text('Ranks', style: bold)) else const Cell(Text('Results', style: bold)),
+                                  ],
+                                ),
+                                for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in awardFinalists)
+                                  TableRow(
+                                    children: [
+                                      if (team != null)
+                                        Tooltip(
+                                          message: team.name,
+                                          child: Cell(Text(
+                                            '${team.number}',
+                                            style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
+                                          )),
+                                        )
+                                      else
+                                        const ErrorCell(message: 'missing'),
+                                      if (tied)
+                                        ErrorCell(message: 'Tied for ${placementDescriptor(rank)}')
+                                      else if (otherAward != null)
+                                        Cell(Text('${otherAward.name} ${placementDescriptor(rank)}'))
+                                      else
+                                        Cell(
+                                          Text(
+                                            award.isPlacement
+                                                ? placementDescriptor(rank)
+                                                : rank <= award.count
+                                                    ? 'Win'
+                                                    : 'Runner-Up',
+                                            style: otherAward == null && rank <= (award.isInspire ? 1 : award.count) ? bold : null,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                               ],
                             ),
-                            for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in awardFinalists)
-                              TableRow(
-                                children: [
-                                  if (team != null)
-                                    Tooltip(
-                                      message: team.name,
-                                      child: Cell(Text(
-                                        '${team.number}',
-                                        style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
-                                      )),
-                                    )
-                                  else
-                                    const ErrorCell(message: 'missing'),
-                                  if (tied)
-                                    ErrorCell(message: 'Tied for ${placementDescriptor(rank)}')
-                                  else if (otherAward != null)
-                                    Cell(Text('${otherAward.name} ${placementDescriptor(rank)}'))
-                                  else
-                                    Cell(
-                                      Text(
-                                        award.isPlacement
-                                            ? placementDescriptor(rank)
-                                            : rank <= award.count
-                                                ? 'Win'
-                                                : 'Runner-Up',
-                                        style: otherAward == null && rank <= (award.isInspire ? 1 : award.count) ? bold : null,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                   ],
                 ),

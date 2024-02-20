@@ -289,43 +289,49 @@ class AwardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color foregroundColor = textColorForColor(award.color);
-    return Card(
-      elevation: teamListElevation,
-      color: award.color,
-      shape: teamListCardShape,
-      child: FocusTraversalGroup(
-        child: DefaultTextStyle.merge(
-          style: TextStyle(color: foregroundColor),
-          child: IntrinsicWidth(
-            // A quick performance improvement would be to remove
-            // the IntrinsicWidth and change "stretch" to "center"
-            // in the crossAxisAligment below.
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(spacing),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        if (showAwardRanks && award.isAdvancing) TextSpan(text: '#${award.rank}: '),
-                        TextSpan(text: award.name, style: bold),
-                        if (award.category.isNotEmpty)
-                          TextSpan(
-                            text: ' (${award.category})',
-                          ),
-                      ],
+    return ListenableBuilder(
+      listenable: award,
+      child: child,
+      builder: (BuildContext context, Widget? child) {
+        final Color foregroundColor = textColorForColor(award.color);
+        return Card(
+          elevation: teamListElevation,
+          color: award.color,
+          shape: teamListCardShape,
+          child: FocusTraversalGroup(
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: foregroundColor),
+              child: IntrinsicWidth(
+                // A quick performance improvement would be to remove
+                // the IntrinsicWidth and change "stretch" to "center"
+                // in the crossAxisAligment below.
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(spacing),
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            if (showAwardRanks && award.isAdvancing) TextSpan(text: '#${award.rank}: '),
+                            TextSpan(text: award.name, style: bold),
+                            if (award.category.isNotEmpty)
+                              TextSpan(
+                                text: ' (${award.category})',
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    child!,
+                  ],
                 ),
-                child,
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -525,18 +531,23 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                 const Text('Nominate for:'),
                 for (final Award award in widget.sortedAwards)
                   if (!award.isInspire)
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: award.color,
-                        foregroundColor: textColorForColor(award.color),
-                        side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
-                      ),
-                      onPressed: () => _handleAwardSelection(award),
+                    ListenableBuilder(
+                      listenable: award,
                       child: Text(
                         award.name,
                         softWrap: false,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      builder: (BuildContext context, Widget? child) {
+                        return FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: award.color,
+                              foregroundColor: textColorForColor(award.color),
+                              side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+                            ),
+                            onPressed: () => _handleAwardSelection(award),
+                            child: child);
+                      },
                     ),
               ],
             ),
@@ -545,10 +556,8 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
           Padding(
             key: _cardKey,
             padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-            child: Theme(
-              data: ThemeData.from(
-                colorScheme: ColorScheme.fromSeed(seedColor: _award!.color),
-              ),
+            child: ListenableBuilder(
+              listenable: _award!,
               child: Card(
                 child: Stack(
                   children: [
@@ -689,6 +698,14 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                   ],
                 ),
               ),
+              builder: (BuildContext context, Widget? child) {
+                return Theme(
+                  data: ThemeData.from(
+                    colorScheme: ColorScheme.fromSeed(seedColor: _award!.color),
+                  ),
+                  child: child!,
+                );
+              },
             ),
           ),
       ],

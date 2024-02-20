@@ -64,16 +64,21 @@ class PitVisitsPane extends StatelessWidget {
                           children: [
                             const Cell(Text('#', style: bold)),
                             for (final Award award in relevantAwards)
-                              ColoredBox(
-                                color: award.color,
-                                child: Cell(
-                                  Text(
-                                    '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
-                                    style: bold.copyWith(
-                                      color: textColorForColor(award.color),
+                              ListenableBuilder(
+                                listenable: award,
+                                builder: (BuildContext context, Widget? child) {
+                                  return ColoredBox(
+                                    color: award.color,
+                                    child: Cell(
+                                      Text(
+                                        '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
+                                        style: bold.copyWith(
+                                          color: textColorForColor(award.color),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
+                                  );
+                                },
                               ),
                             const Cell(Text('Visited? ✎_', style: bold)),
                           ],
