@@ -23,80 +23,105 @@ class PitVisitsPane extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             PaneHeader(
-              title: '3. Show The Love (STL)',
+              title: '3. Pit Visits',
               onHeaderButtonPressed: () => exportPitVisitsHTML(context, competition),
             ),
             if (competition.teamsView.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('No teams loaded. Use the Setup pane to import a teams list.'),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
               ),
             if (competition.awardsView.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('No awards loaded. Use the Setup pane to import an awards list.'),
+                child: Text(
+                  'No awards loaded. Use the Setup pane to import an awards list.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
               ),
             if (competition.teamsView.isNotEmpty && competition.awardsView.isNotEmpty && teams.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('All of the teams have been shortlisted for awards that involve pit visits.'),
+                child: Text(
+                  'All of the teams have been shortlisted for awards that involve pit visits.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
               ),
             if (teams.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('The following teams have not been shortlisted for any awards that always involve pit visits:'),
+                child: Text(
+                  'The following teams have not been shortlisted for any awards that always involve pit visits:',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
               ),
             if (teams.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, 0.0, 0.0),
+                padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
                 child: HorizontalScrollbar(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: Table(
-                      border: TableBorder.symmetric(
-                        inside: const BorderSide(),
-                      ),
-                      defaultColumnWidth: const IntrinsicColumnWidth(),
-                      defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        TableRow(
-                          children: [
-                            const Cell(Text('#', style: bold)),
-                            for (final Award award in relevantAwards)
-                              ListenableBuilder(
-                                listenable: award,
-                                builder: (BuildContext context, Widget? child) {
-                                  return ColoredBox(
-                                    color: award.color,
-                                    child: Cell(
-                                      Text(
-                                        '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
-                                        style: bold.copyWith(
-                                          color: textColorForColor(award.color),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            const Cell(Text('Visited? ✎_', style: bold)),
-                          ],
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+                      child: Table(
+                        border: TableBorder.symmetric(
+                          inside: const BorderSide(),
                         ),
-                        for (final Team team in teams)
+                        defaultColumnWidth: const IntrinsicColumnWidth(),
+                        defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
                           TableRow(
                             children: [
-                              Tooltip(
-                                message: team.name,
-                                child: Cell(
-                                  Text('${team.number}'),
+                              const Cell(Text('#', style: bold)),
+                              for (final Award award in relevantAwards)
+                                ListenableBuilder(
+                                  listenable: award,
+                                  builder: (BuildContext context, Widget? child) {
+                                    return ColoredBox(
+                                      color: award.color,
+                                      child: Cell(
+                                        Text(
+                                          '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
+                                          style: bold.copyWith(
+                                            color: textColorForColor(award.color),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                              for (final Award award in relevantAwards) Cell(Text(team.shortlistsView.keys.contains(award) ? 'Yes' : '')),
-                              VisitedCell(team),
+                              const Cell(Text('Visited? ✎_', style: bold)),
                             ],
                           ),
-                      ],
+                          for (final Team team in teams)
+                            TableRow(
+                              children: [
+                                Tooltip(
+                                  message: team.name,
+                                  child: Cell(
+                                    Text('${team.number}'),
+                                  ),
+                                ),
+                                for (final Award award in relevantAwards)
+                                  Cell(
+                                    Text(team.shortlistsView.keys.contains(award) ? 'Yes' : ''),
+                                  ),
+                                Material(
+                                  type: MaterialType.transparency,
+                                  child: VisitedCell(team: team),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -156,82 +181,6 @@ class PitVisitsPane extends StatelessWidget {
         page.writeln('<p><small>* This award may involve pit visits.</small>');
       }
     }
-    return exportHTML(competition, 'show_the_love', now, page.toString());
-  }
-}
-
-class VisitedCell extends StatefulWidget {
-  VisitedCell(this.team) : super(key: ObjectKey(team));
-
-  final Team team;
-
-  @override
-  State<VisitedCell> createState() => _VisitedCellState();
-}
-
-class _VisitedCellState extends State<VisitedCell> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    widget.team.addListener(_handleTeamUpdate);
-    _controller.addListener(_handleTextFieldUpdate);
-    _controller.text = widget.team.visitingJudgesNotes;
-  }
-
-  @override
-  void didUpdateWidget(VisitedCell oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    assert(widget.team == oldWidget.team);
-  }
-
-  @override
-  void dispose() {
-    widget.team.removeListener(_handleTeamUpdate);
-    super.dispose();
-  }
-
-  void _handleTeamUpdate() {
-    setState(() {
-      if (_controller.text != widget.team.visitingJudgesNotes) {
-        _controller.text = widget.team.visitingJudgesNotes;
-      }
-    });
-  }
-
-  void _handleTextFieldUpdate() {
-    widget.team.visitingJudgesNotes = _controller.text;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Checkbox(
-            value: widget.team.visited,
-            onChanged: (bool? value) {
-              widget.team.visited = value!;
-            },
-          ),
-          SizedBox(
-            width: DefaultTextStyle.of(context).style.fontSize! * 15.0,
-            child: TextField(
-              controller: _controller,
-              decoration: const InputDecoration.collapsed(
-                hintText: 'no judging team assigned',
-                hintStyle: TextStyle(
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              style: DefaultTextStyle.of(context).style,
-            ),
-          ),
-        ],
-      ),
-    );
+    return exportHTML(competition, 'pit_visits', now, page.toString());
   }
 }

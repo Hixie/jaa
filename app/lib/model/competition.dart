@@ -29,6 +29,7 @@ class Award extends ChangeNotifier {
     required this.isSpreadTheWealth,
     required this.isPlacement,
     required this.pitVisits,
+    required this.isEventSpecific,
     required Color color,
   }) : _color = color;
 
@@ -41,6 +42,7 @@ class Award extends ChangeNotifier {
   final bool isSpreadTheWealth;
   final bool isPlacement;
   final PitVisit pitVisits;
+  final bool isEventSpecific;
 
   Color _color;
   Color get color => _color;
@@ -82,15 +84,20 @@ class Award extends ChangeNotifier {
 class Team extends ChangeNotifier implements Comparable<Team> {
   Team({
     required this.number,
-    required this.name,
-    required this.city,
+    required String name,
+    required String city,
     required this.inspireEligible,
-  });
+  })  : _name = name,
+        _city = city;
 
   final int number;
-  final String name;
-  final String city;
   final bool inspireEligible;
+
+  String get name => _name;
+  String _name;
+
+  String get city => _city;
+  String _city;
 
   late final UnmodifiableMapView<Award, ShortlistEntry> shortlistsView = UnmodifiableMapView(_shortlists);
   final Map<Award, ShortlistEntry> _shortlists = <Award, ShortlistEntry>{};
@@ -342,6 +349,12 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableListView<Award> nonAdvancingAwardsView = UnmodifiableListView<Award>(_nonAdvancingAwards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
 
+  void updateTeam(Team team, String name, String city) {
+    team._name = name;
+    team._city = city;
+    notifyListeners();
+  }
+
   Award? _inspireAward;
   Award? get inspireAward => _inspireAward;
 
@@ -414,6 +427,44 @@ class Competition extends ChangeNotifier {
     return result;
   }
 
+  void addEventAward({
+    required String name,
+    required int count,
+    required bool isSpreadTheWealth,
+    required bool isPlacement,
+    required PitVisit pitVisit,
+  }) {
+    final Award award = Award(
+      name: name,
+      isInspire: false,
+      isAdvancing: false,
+      rank: _awards.isEmpty ? 1 : _awards.last.rank + 1,
+      count: count,
+      category: '',
+      isSpreadTheWealth: isSpreadTheWealth,
+      isPlacement: isPlacement,
+      pitVisits: pitVisit,
+      isEventSpecific: true,
+      color: const Color(0xFFFFFFFF),
+    );
+    _awards.add(award);
+    _shortlists[award] = Shortlist();
+    notifyListeners();
+  }
+
+  bool canDelete(Award award) {
+    assert(award.isEventSpecific);
+    return _shortlists[award]!.entriesView.isEmpty;
+  }
+
+  void deleteEventAward(Award award) {
+    assert(award.isEventSpecific);
+    assert(canDelete(award));
+    _awards.remove(award);
+    _shortlists.remove(award);
+    notifyListeners();
+  }
+
   // IMPORT/EXPORT
 
   static bool _parseBool(Object? cell) {
@@ -447,11 +498,11 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> importTeams(List<int> csvFile) async {
+  Future<void> importTeams(List<int> csvFile, {bool expectTeams = true}) async {
     _clearTeams();
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
-    if (csvData.length <= 1) {
+    if (expectTeams ? csvData.length <= 1 : csvData.isEmpty) {
       throw const FormatException('File does not contain any teams.');
     }
     try {
@@ -509,11 +560,11 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> importAwards(List<int> csvFile) async {
+  Future<void> importAwards(List<int> csvFile, {bool expectAwards = true}) async {
     _clearAwards();
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
-    if (csvData.length <= 1) {
+    if (expectAwards ? csvData.length <= 1 : csvData.isEmpty) {
       throw const FormatException('File does not contain any awards.');
     }
     try {
@@ -567,6 +618,7 @@ class Competition extends ChangeNotifier {
           }
           color = Color(0xFF000000 | colorAsInt);
         }
+        final bool isEventSpecific = row.length > 8 ? _parseBool(row[8]) : false;
         final Award award = Award(
           name: name,
           isInspire: isInspire,
@@ -577,6 +629,7 @@ class Competition extends ChangeNotifier {
           isSpreadTheWealth: isSpreadTheWealth,
           isPlacement: isPlacement,
           pitVisits: pitVisit,
+          isEventSpecific: isEventSpecific,
           color: color,
         );
         _awards.add(award);
@@ -591,7 +644,7 @@ class Competition extends ChangeNotifier {
         _shortlists[award] = Shortlist();
         rank += 1;
       }
-      if (!seenInspire) {
+      if (!seenInspire && expectAwards) {
         throw const FormatException('Parse error in awards file: None of the awards are advancing awards.');
       }
     } catch (e) {
@@ -612,6 +665,7 @@ class Competition extends ChangeNotifier {
       'Placement', // 'y' or 'n'
       'Pit visits', // 'y', 'n', 'maybe'
       'Color', // #XXXXXX
+      if (_awards.any((Award award) => award.isEventSpecific)) 'Event-Specific', // 'y', 'n'
     ]);
     for (final Award award in _awards) {
       data.add([
@@ -623,6 +677,7 @@ class Competition extends ChangeNotifier {
         award.isPlacement ? 'y' : 'n',
         switch (award.pitVisits) { PitVisit.yes => 'y', PitVisit.no => 'n', PitVisit.maybe => 'maybe' },
         '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}',
+        if (_awards.any((Award award) => award.isEventSpecific)) award.isEventSpecific ? 'y' : 'n'
       ]);
     }
     return const ListToCsvConverter().convert(data);
@@ -631,7 +686,7 @@ class Competition extends ChangeNotifier {
   Future<void> importPitVisitNotes(List<int> csvFile) async {
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
-    if (csvData.length <= 1) {
+    if (csvData.isEmpty) {
       throw const FormatException('Pit visit notes are corrupted or missing.');
     }
     Map<int, Team> teamMap = {
@@ -691,7 +746,7 @@ class Competition extends ChangeNotifier {
   Future<void> importShortlists(List<int> csvFile) async {
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
-    if (csvData.length <= 1) {
+    if (csvData.isEmpty) {
       throw const FormatException('Shortlists file corrupted or missing.');
     }
     Map<int, Team> teamMap = {
@@ -854,30 +909,42 @@ class Competition extends ChangeNotifier {
   static const String filenameFinalistsLists = 'finalists-lists.csv';
 
   Future<void> importEventState(PlatformFile zipFile) async {
-    _clearTeams();
-    _clearAwards();
+    _loading = true;
+    _autosaveTimer?.cancel();
+    _autosaveTimer = null;
     try {
-      final Archive zip = ZipDecoder().decodeBytes(await zipFile.readStream!.expand<int>((List<int> fragment) => fragment).toList());
-      if (zip.findFile(filenameTeams) == null) {
-        throw const FormatException('Archive is not a complete event state description (does not contain "$filenameTeams" file).');
-      }
-      if (zip.findFile(filenameAwards) == null) {
-        throw const FormatException('Archive is not a complete event state description (does not contain "$filenameAwards" file).');
-      }
-      if (zip.findFile(filenamePitVisitNotes) == null) {
-        throw const FormatException('Archive is not a complete event state description (does not contain "$filenamePitVisitNotes" file).');
-      }
-      if (zip.findFile(filenameShortlists) == null) {
-        throw const FormatException('Archive is not a complete event state description (does not contain "$filenameShortlists" file).');
-      }
-      await importTeams(zip.findFile(filenameTeams)!.content);
-      await importAwards(zip.findFile(filenameAwards)!.content);
-      await importPitVisitNotes(zip.findFile(filenamePitVisitNotes)!.content);
-      await importShortlists(zip.findFile(filenameShortlists)!.content);
-    } catch (e) {
       _clearTeams();
       _clearAwards();
-      rethrow;
+      try {
+        final Archive zip = ZipDecoder().decodeBytes(await zipFile.readStream!.expand<int>((List<int> fragment) => fragment).toList());
+        if (zip.findFile(filenameTeams) == null) {
+          throw const FormatException('Archive is not a complete event state description (does not contain "$filenameTeams" file).');
+        }
+        if (zip.findFile(filenameAwards) == null) {
+          throw const FormatException('Archive is not a complete event state description (does not contain "$filenameAwards" file).');
+        }
+        if (zip.findFile(filenamePitVisitNotes) == null) {
+          throw const FormatException('Archive is not a complete event state description (does not contain "$filenamePitVisitNotes" file).');
+        }
+        if (zip.findFile(filenameShortlists) == null) {
+          throw const FormatException('Archive is not a complete event state description (does not contain "$filenameShortlists" file).');
+        }
+        await importTeams(zip.findFile(filenameTeams)!.content, expectTeams: false);
+        await importAwards(zip.findFile(filenameAwards)!.content, expectAwards: false);
+        await importPitVisitNotes(zip.findFile(filenamePitVisitNotes)!.content);
+        await importShortlists(zip.findFile(filenameShortlists)!.content);
+        _lastAutosaveMessage = 'Imported event state.';
+      } catch (e) {
+        _clearTeams();
+        _clearAwards();
+        _lastAutosaveMessage = 'Failed to import event state.';
+        rethrow;
+      }
+    } finally {
+      notifyListeners();
+      _lastAutosave = null;
+      _loading = false;
+      _dirty = false;
     }
   }
 
@@ -912,36 +979,68 @@ class Competition extends ChangeNotifier {
     zip.endEncode();
   }
 
-  Timer? _autosaveTimer;
+  bool _dirty = false;
+  bool _loading = false; // blocks autosave
   bool _autosaving = false;
-  bool get needsAutosave => _autosaveTimer != null;
+  Timer? _autosaveTimer;
   DateTime? _lastAutosave;
-  DateTime? get lastAutosave => _lastAutosave;
-  String _lastAutosaveMessage = 'Not yet autosaved.';
+  String _lastAutosaveMessage = 'Changes will be autosaved.';
+
+  bool get dirty => _dirty;
+  bool get autosaveScheduled => _autosaveTimer != null;
+  bool get loading => _loading;
   String get lastAutosaveMessage => _lastAutosaveMessage;
+  DateTime? get lastAutosave => _lastAutosave;
 
   @override
   void notifyListeners() {
     super.notifyListeners();
-    if (!_autosaving) {
+    if (!_loading && !_autosaving) {
+      _dirty = true;
       _autosaveTimer?.cancel();
       _autosaveTimer = Timer(const Duration(seconds: 5), _autosave);
+      if (_lastAutosave == null) {
+        _lastAutosaveMessage = 'Not yet autosaved.';
+      }
+    }
+  }
+
+  String get _autosaveTempPath => path.join(autosaveDirectory.path, r'jaa_autosave.$$$');
+  String get _autosaveFinalPath => path.join(autosaveDirectory.path, r'jaa_autosave.zip');
+
+  PlatformFile get autosaveFile {
+    final File file = File(_autosaveFinalPath);
+    return PlatformFile(
+      path: file.path,
+      name: path.basename(file.path),
+      size: 0,
+      readStream: file.openRead(),
+    );
+  }
+
+  bool get hasAutosave {
+    try {
+      return File(_autosaveFinalPath).existsSync();
+    } on FileSystemException catch (e) {
+      debugPrint('Unexpected error checking autosave directory: $e');
+      return false;
     }
   }
 
   void _autosave() {
+    assert(!_autosaving);
+    assert(!_loading);
     _autosaving = true;
     _autosaveTimer = null;
     try {
-      final String tempAutosave = path.join(autosaveDirectory.path, r'jaa_autosave.$$$');
-      final String finalAutosave = path.join(autosaveDirectory.path, r'jaa_autosave.zip');
-      exportEventState(tempAutosave);
-      if (File(finalAutosave).existsSync()) {
-        File(finalAutosave).deleteSync();
+      exportEventState(_autosaveTempPath);
+      if (File(_autosaveFinalPath).existsSync()) {
+        File(_autosaveFinalPath).deleteSync();
       }
-      File(tempAutosave).renameSync(finalAutosave);
+      File(_autosaveTempPath).renameSync(_autosaveFinalPath);
       _lastAutosave = DateTime.now();
-      _lastAutosaveMessage = 'Autosaved to: $finalAutosave';
+      _lastAutosaveMessage = 'Autosaved to: $_autosaveFinalPath';
+      _dirty = false;
     } catch (e) {
       _lastAutosaveMessage = 'Autosave failed: $e';
       rethrow;

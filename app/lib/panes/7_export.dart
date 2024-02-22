@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jaa/exporters.dart';
+import 'package:jaa/panes/1_setup.dart';
 
 import '2_shortlists.dart';
 import '3_pitvisits.dart';
@@ -30,6 +31,10 @@ class ExportPane extends StatelessWidget {
             ExportButton(
               label: 'Export awards ceremony script (HTML)',
               onPressed: () => AwardFinalistsPane.exportFinalistsScriptHTML(context, competition),
+            ),
+            ExportButton(
+              label: 'Export team list (HTML)',
+              onPressed: () => SetupPane.exportTeamsHTML(context, competition),
             ),
             ExportButton(
               label: 'Export shortlists (HTML)',

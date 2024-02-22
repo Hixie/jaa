@@ -49,7 +49,11 @@ class AwardFinalistsPane extends StatelessWidget {
             if (finalists.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('No finalists can be assigned until teams are nominated using the Ranks pane.'),
+                child: Text(
+                  'No finalists can be assigned until teams are nominated using the Ranks pane.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
               )
             else if (competition.inspireAward != null && emptyAwards.contains(competition.inspireAward))
               Padding(
@@ -57,6 +61,8 @@ class AwardFinalistsPane extends StatelessWidget {
                 child: Text(
                   'No finalists designated for the ${competition.inspireAward!.name} award. '
                   'Use the Inspire pane to assign the ${competition.inspireAward!.name} winner and runner-ups.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
                 ),
               )
             else if (emptyAwards.length > 1)
@@ -65,6 +71,8 @@ class AwardFinalistsPane extends StatelessWidget {
                 child: Text(
                   'Some awards have no ranked qualifying teams. Use the Ranks pane to assign ranks for teams in award shortlists. '
                   'The following awards are affected: ${emptyAwards.map((Award award) => award.name).join(", ")}',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
                 ),
               )
             else if (emptyAwards.length == 1)
@@ -72,11 +80,13 @@ class AwardFinalistsPane extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
                   'The ${emptyAwards.single.name} award has no ranked qualifying teams. Use the Ranks pane to assign ranks for teams in award shortlists.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
                 ),
               ),
             if (finalists.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
+                padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0),
                 child: ScrollableWrap(
                   children: [
                     for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
@@ -163,65 +173,73 @@ class AwardFinalistsPane extends StatelessWidget {
     final DateTime now = DateTime.now();
     StringBuffer page = createHtmlPage('Finalists', now);
     final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
-    for (final (Award award, List<AwardFinalistEntry> entry) in finalists) {
-      page.writeln(
-        '<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}'
-        '${escapeHtml(award.name)} award'
-        '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
-      );
-      page.writeln('<table>');
-      page.writeln('<thead>');
-      page.writeln('<tr>');
-      page.writeln('<th>Team');
-      page.writeln('<th>Result');
-      page.writeln('<tbody>');
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in entry) {
-        final bool winner = otherAward == null && rank <= (award.isInspire ? 1 : award.count);
+    if (competition.awardsView.isEmpty) {
+      page.writeln('<p>No awards loaded.');
+    } else {
+      for (final (Award award, List<AwardFinalistEntry> entry) in finalists) {
+        page.writeln(
+          '<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}'
+          '${escapeHtml(award.name)} award'
+          '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
+        );
+        page.writeln('<table>');
+        page.writeln('<thead>');
         page.writeln('<tr>');
-        if (team != null) {
-          page.writeln('<td>${otherAward != null ? "<s>" : ""}${team.number} <i>${escapeHtml(team.name)}</i>${otherAward != null ? "</s>" : ""}');
-        } else {
-          page.writeln('<td>&mdash;');
+        page.writeln('<th>Team');
+        page.writeln('<th>Result');
+        page.writeln('<tbody>');
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in entry) {
+          final bool winner = otherAward == null && rank <= (award.isInspire ? 1 : award.count);
+          page.writeln('<tr>');
+          if (team != null) {
+            page.writeln('<td>${otherAward != null ? "<s>" : ""}${team.number} <i>${escapeHtml(team.name)}</i>${otherAward != null ? "</s>" : ""}');
+          } else {
+            page.writeln('<td>&mdash;');
+          }
+          if (otherAward != null) {
+            page.writeln('<td><s>${escapeHtml(otherAward.name)} ${escapeHtml(placementDescriptor(rank))}</s>');
+          } else if (winner) {
+            page.writeln('<td><strong>${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Win")}</strong>${tied ? " TIED" : ""}');
+          } else {
+            page.writeln('<td>${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Runner-Up")}');
+          }
         }
-        if (otherAward != null) {
-          page.writeln('<td><s>${escapeHtml(otherAward.name)} ${escapeHtml(placementDescriptor(rank))}</s>');
-        } else if (winner) {
-          page.writeln('<td><strong>${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Win")}</strong>${tied ? " TIED" : ""}');
-        } else {
-          page.writeln('<td>${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Runner-Up")}');
-        }
+        page.writeln('</table>');
       }
-      page.writeln('</table>');
     }
     return exportHTML(competition, 'finalists', now, page.toString());
   }
 
   static Future<void> exportFinalistsScriptHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    StringBuffer page = createHtmlPage('Finalists Script', now);
+    StringBuffer page = createHtmlPage('Awards Ceremony Script', now);
     final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
-    for (final (Award award, List<AwardFinalistEntry> entry) in finalists.reversed) {
-      bool includedHeader = false;
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in entry.reversed) {
-        final bool winner = team != null && otherAward == null && rank <= award.count;
-        if (winner) {
-          if (!includedHeader) {
+    if (competition.awardsView.isEmpty) {
+      page.writeln('<p>This event has no awards.');
+    } else {
+      for (final (Award award, List<AwardFinalistEntry> entry) in finalists.reversed) {
+        bool includedHeader = false;
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in entry.reversed) {
+          final bool winner = team != null && otherAward == null && rank <= award.count;
+          if (winner) {
+            if (!includedHeader) {
+              page.writeln(
+                '<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}'
+                '${escapeHtml(award.name)} award'
+                '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
+              );
+              includedHeader = true;
+            }
             page.writeln(
-              '<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}'
-              '${escapeHtml(award.name)} award'
-              '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
+              '<p>'
+              '${tied ? "Tied for " : ""}${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Win")}: '
+              '${team.number} <i>${escapeHtml(team.name)}</i> from ${escapeHtml(team.city)}',
             );
-            includedHeader = true;
           }
-          page.writeln(
-            '<p>'
-            '${tied ? "Tied for " : ""}${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Win")}: '
-            '${team.number} <i>${escapeHtml(team.name)}</i> from ${escapeHtml(team.city)}',
-          );
         }
       }
     }
-    return exportHTML(competition, 'finalists_script', now, page.toString());
+    return exportHTML(competition, 'awards_ceremony_script', now, page.toString());
   }
 }
 

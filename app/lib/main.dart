@@ -1,8 +1,10 @@
+import 'package:elapsed_time_display/elapsed_time_display.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:elapsed_time_display/elapsed_time_display.dart';
 
 import 'constants.dart';
+import 'io.dart';
 import 'model/competition.dart';
 import 'panes/1_setup.dart';
 import 'panes/2_shortlists.dart';
@@ -34,6 +36,7 @@ class MainApp extends StatefulWidget {
 
 enum Pane {
   about,
+  autosaveAvailable,
   setup,
   shortlists,
   pitVisits,
@@ -45,6 +48,14 @@ enum Pane {
 
 class _MainAppState extends State<MainApp> {
   Pane _pane = Pane.setup;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.competition.hasAutosave) {
+      _pane = Pane.autosaveAvailable;
+    }
+  }
 
   void _selectPane(Pane pane) {
     setState(() {
@@ -97,6 +108,53 @@ class _MainAppState extends State<MainApp> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                        ),
+                        const SizedBox(width: spacing),
+                        ListenableBuilder(
+                          listenable: widget.competition,
+                          builder: (BuildContext context, Widget? child) {
+                            if (widget.competition.autosaveScheduled) {
+                              return Tooltip(
+                                message: 'Changes will be autosaved shortly.',
+                                child: Text(
+                                  'Changed',
+                                  style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                ),
+                              );
+                            }
+                            if (widget.competition.loading) {
+                              return Text(
+                                'Loading...',
+                                style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                              );
+                            }
+                            if (widget.competition.dirty) {
+                              return Tooltip(
+                                message: widget.competition.lastAutosaveMessage,
+                                child: ContinuousAnimationBuilder(
+                                  period: const Duration(seconds: 2),
+                                  reverse: true,
+                                  builder: (BuildContext context, double value, Widget? child) => Text(
+                                    'Autosave failed.',
+                                    style: TextStyle(
+                                      color: Colors.red.withOpacity(0.25 + value * 0.75),
+                                      fontVariations: [FontVariation.weight(1 + value * 999.0)],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            if (widget.competition.lastAutosave != null) {
+                              return Tooltip(
+                                message: widget.competition.lastAutosaveMessage,
+                                child: Text(
+                                  'Saved',
+                                  style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
                         ),
                         const SizedBox(width: indent),
                         const Expanded(
@@ -159,16 +217,17 @@ class _MainAppState extends State<MainApp> {
                                     '${widget.competition.nonAdvancingAwardsView.length} Non-Advancing Awards.',
                                     style: bold,
                                   ),
-                                if (widget.competition.previousInspireWinnersView.isEmpty)
-                                  const Text(
-                                    'No Previous Inspire Winners.',
-                                    style: bold,
-                                  )
-                                else
-                                  Text(
-                                    'Previous Inspire Winners: ${formTeamList(widget.competition.previousInspireWinnersView)}.',
-                                    style: bold,
-                                  ),
+                                if (widget.competition.teamsView.isNotEmpty)
+                                  if (widget.competition.previousInspireWinnersView.isEmpty)
+                                    const Text(
+                                      'No Previous Inspire Winners.',
+                                      style: bold,
+                                    )
+                                  else
+                                    Text(
+                                      'Previous Inspire Winners: ${formTeamList(widget.competition.previousInspireWinnersView)}.',
+                                      style: bold,
+                                    ),
                               ],
                             ),
                           ),
@@ -249,6 +308,14 @@ class _MainAppState extends State<MainApp> {
                           constraints: BoxConstraints(minHeight: constraints.maxHeight, minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth),
                           child: switch (_pane) {
                             Pane.about => AboutPane(competition: widget.competition),
+                            Pane.autosaveAvailable => AutosaveAvailablePane(
+                                competition: widget.competition,
+                                onClosed: () {
+                                  setState(() {
+                                    _pane = Pane.setup;
+                                  });
+                                },
+                              ),
                             Pane.setup => SetupPane(competition: widget.competition),
                             Pane.shortlists => ShortlistsPane(competition: widget.competition),
                             Pane.pitVisits => PitVisitsPane(competition: widget.competition),
@@ -297,7 +364,7 @@ class AboutPane extends StatelessWidget {
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
-                if (competition.lastAutosave != null && competition.needsAutosave)
+                if (competition.lastAutosave != null && competition.dirty)
                   Wrap(
                     children: [
                       const Text('Time since last autosave: '),
@@ -327,6 +394,65 @@ class AboutPane extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class AutosaveAvailablePane extends StatefulWidget {
+  const AutosaveAvailablePane({super.key, required this.competition, required this.onClosed});
+
+  final Competition competition;
+  final VoidCallback onClosed;
+
+  @override
+  State<AutosaveAvailablePane> createState() => _AutosaveAvailablePaneState();
+}
+
+class _AutosaveAvailablePaneState extends State<AutosaveAvailablePane> {
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.competition,
+      builder: (BuildContext context, Widget? child) => Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'An autosave file is available.',
+            textAlign: TextAlign.center,
+            softWrap: true,
+            overflow: TextOverflow.clip,
+          ),
+          const SizedBox(height: indent),
+          FilledButton(
+            onPressed: () async {
+              final PlatformFile zipFile = widget.competition.autosaveFile;
+              await showProgress(
+                context, // ignore: use_build_context_synchronously
+                message: 'Importing event state...',
+                task: () => widget.competition.importEventState(zipFile),
+              );
+              widget.onClosed();
+            },
+            child: const Text(
+              'Import event state from autosave file',
+              textAlign: TextAlign.center,
+              softWrap: true,
+              overflow: TextOverflow.clip,
+            ),
+          ),
+          const SizedBox(height: spacing),
+          FilledButton(
+            onPressed: widget.onClosed,
+            child: const Text(
+              'Abandon autosaved event state',
+              textAlign: TextAlign.center,
+              softWrap: true,
+              overflow: TextOverflow.clip,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

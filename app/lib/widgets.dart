@@ -302,9 +302,6 @@ class AwardCard extends StatelessWidget {
             child: DefaultTextStyle.merge(
               style: TextStyle(color: foregroundColor),
               child: IntrinsicWidth(
-                // A quick performance improvement would be to remove
-                // the IntrinsicWidth and change "stretch" to "center"
-                // in the crossAxisAligment below.
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
@@ -314,7 +311,7 @@ class AwardCard extends StatelessWidget {
                       child: Text.rich(
                         TextSpan(
                           children: [
-                            if (showAwardRanks && award.isAdvancing) TextSpan(text: '#${award.rank}: '),
+                            if (award.isSpreadTheWealth) TextSpan(text: '#${award.rank}: '),
                             TextSpan(text: award.name, style: bold),
                             if (award.category.isNotEmpty)
                               TextSpan(
@@ -375,7 +372,7 @@ class AwardBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+      padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, indent),
       child: sortedAwards.isEmpty
           ? const Text('No awards loaded. Use the Setup pane to import an awards list.')
           : ScrollableWrap(
@@ -404,10 +401,13 @@ class ScrollableWrap extends StatelessWidget {
               minWidth: minimumReasonableWidth,
               maxWidth: math.max(minimumReasonableWidth, constraints.maxWidth),
             ),
-            child: Wrap(
-              runSpacing: spacing,
-              spacing: 0.0,
-              children: children,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+              child: Wrap(
+                runSpacing: spacing,
+                spacing: 0.0,
+                children: children,
+              ),
             ),
           ),
         ),
@@ -445,15 +445,32 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   void initState() {
     super.initState();
     _teamController.addListener(_handleTeamTextChange);
+    widget.competition.addListener(_markNeedsBuild);
+  }
+
+  @override
+  void didUpdateWidget(covariant ShortlistEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.competition != oldWidget.competition) {
+      oldWidget.competition.removeListener(_markNeedsBuild);
+      widget.competition.addListener(_markNeedsBuild);
+    }
   }
 
   @override
   void dispose() {
+    widget.competition.removeListener(_markNeedsBuild);
     _teamController.dispose();
     _nominatorController.dispose();
     _teamFocusNode.dispose();
     _nominatorFocusNode.dispose();
     super.dispose();
+  }
+
+  void _markNeedsBuild() {
+    setState(() {
+      // build is depenendent on the competition object
+    });
   }
 
   void _handleAwardSelection(Award award) {
@@ -520,7 +537,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   Widget build(BuildContext context) {
     return ListBody(
       children: [
-        if (widget.sortedAwards.isNotEmpty)
+        if (widget.sortedAwards.isNotEmpty && widget.competition.teamsView.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
             child: Wrap(
@@ -566,14 +583,21 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                       builder: (BuildContext context, Widget? child) {
                         Set<Team> shortlistedTeams = widget.competition.shortlistsView[_award]!.entriesView.keys.toSet();
                         List<Team> remainingTeams = widget.competition.teamsView.where((Team team) => !shortlistedTeams.contains(team)).toList();
-                        String awardDescription;
+                        String awardRank, awardDescription, awardCategory;
+                        if (_award!.isSpreadTheWealth) {
+                          awardRank = 'rank ${_award!.rank} ';
+                        } else {
+                          awardRank = '';
+                        }
                         if (_award!.isAdvancing) {
-                          awardDescription = 'rank ${_award!.rank} award';
+                          awardDescription = 'advancing award';
                         } else {
                           awardDescription = 'non-advancing award';
                         }
                         if (_award!.category.isNotEmpty) {
-                          awardDescription = '$awardDescription in the ${_award!.category} category';
+                          awardCategory = ' in the ${_award!.category} category';
+                        } else {
+                          awardCategory = '';
                         }
                         if (remainingTeams.isEmpty) {
                           return Padding(
@@ -583,7 +607,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                 children: [
                                   const TextSpan(text: 'All the teams have already been shortlisted for the '),
                                   TextSpan(text: _award!.name, style: bold),
-                                  TextSpan(text: ' ($awardDescription) award!'),
+                                  TextSpan(text: ' ($awardRank$awardDescription$awardCategory) award!'),
                                 ],
                               ),
                             ),
@@ -600,7 +624,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                   children: [
                                     const TextSpan(text: 'Nominate team for '),
                                     TextSpan(text: _award!.name, style: bold),
-                                    TextSpan(text: ' ($awardDescription)${widget.lateEntry ? " as a late entry" : ""}:'),
+                                    TextSpan(text: ' ($awardRank$awardDescription$awardCategory)${widget.lateEntry ? " as a late entry" : ""}:'),
                                   ],
                                 ),
                               ),
@@ -610,8 +634,13 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                   child: SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
                                     child: ConstrainedBox(
-                                      constraints:
-                                          BoxConstraints(minWidth: constraints.maxWidth, maxWidth: math.max(constraints.maxWidth, minimumReasonableWidth)),
+                                      constraints: BoxConstraints(
+                                        minWidth: constraints.maxWidth,
+                                        maxWidth: math.max(
+                                          constraints.maxWidth,
+                                          minimumReasonableWidth,
+                                        ),
+                                      ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -710,5 +739,135 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
           ),
       ],
     );
+  }
+}
+
+class VisitedCell extends StatefulWidget {
+  VisitedCell({required this.team, this.label}) : super(key: ObjectKey(team));
+
+  final Team team;
+  final Widget? label;
+
+  @override
+  State<VisitedCell> createState() => _VisitedCellState();
+}
+
+class _VisitedCellState extends State<VisitedCell> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.team.addListener(_handleTeamUpdate);
+    _controller.addListener(_handleTextFieldUpdate);
+    _controller.text = widget.team.visitingJudgesNotes;
+  }
+
+  @override
+  void didUpdateWidget(VisitedCell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    assert(widget.team == oldWidget.team);
+  }
+
+  @override
+  void dispose() {
+    widget.team.removeListener(_handleTeamUpdate);
+    super.dispose();
+  }
+
+  void _handleTeamUpdate() {
+    setState(() {
+      if (_controller.text != widget.team.visitingJudgesNotes) {
+        _controller.text = widget.team.visitingJudgesNotes;
+      }
+    });
+  }
+
+  void _handleTextFieldUpdate() {
+    widget.team.visitingJudgesNotes = _controller.text;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.label != null) widget.label!,
+        Checkbox(
+          value: widget.team.visited,
+          onChanged: (bool? value) {
+            widget.team.visited = value!;
+          },
+        ),
+        SizedBox(
+          width: DefaultTextStyle.of(context).style.fontSize! * 15.0,
+          child: TextField(
+            controller: _controller,
+            decoration: const InputDecoration.collapsed(
+              hintText: 'no judging team assigned',
+              hintStyle: TextStyle(
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            style: DefaultTextStyle.of(context).style,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ContinuousAnimationBuilder extends StatefulWidget {
+  const ContinuousAnimationBuilder({
+    super.key,
+    required this.builder,
+    this.min = 0.0,
+    this.max = 1.0,
+    this.reverse = false,
+    required this.period,
+    this.child,
+  });
+
+  final ValueWidgetBuilder<double> builder;
+  final double min;
+  final double max;
+  final bool reverse;
+  final Duration period;
+  final Widget? child;
+
+  @override
+  State<ContinuousAnimationBuilder> createState() => _ContinuousAnimationBuilderState();
+}
+
+class _ContinuousAnimationBuilderState extends State<ContinuousAnimationBuilder> with TickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(vsync: this);
+
+  @override
+  void initState() {
+    super.initState();
+    _restart();
+  }
+
+  @override
+  void didUpdateWidget(covariant ContinuousAnimationBuilder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.min != widget.min || oldWidget.max != widget.max || oldWidget.reverse != widget.reverse || oldWidget.period != widget.period) {
+      _restart();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _restart() {
+    _controller.repeat(min: widget.min, max: widget.max, reverse: widget.reverse, period: widget.period);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(valueListenable: _controller, builder: widget.builder, child: widget.child);
   }
 }

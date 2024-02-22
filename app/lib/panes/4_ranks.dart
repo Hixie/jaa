@@ -137,48 +137,52 @@ class RanksPane extends StatelessWidget {
   static Future<void> exportRanksHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
     final StringBuffer page = createHtmlPage('Ranks', now);
-    for (final Award award in competition.awardsView.where(Award.isNotInspirePredicate)) {
-      page.writeln('<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
-      final String pitVisits = switch (award.pitVisits) {
-        PitVisit.yes => 'does involve',
-        PitVisit.no => 'does not involve',
-        PitVisit.maybe => 'may involve',
-      };
-      page.writeln(
-        '<p>'
-        'Category: ${award.category.isEmpty ? "<i>none</i>" : escapeHtml(award.category)}. '
-        '${award.count} ${award.isPlacement ? 'ranked places to be awarded.' : 'equal winners to be awarded.'} '
-        'Judging ${escapeHtml(pitVisits)} a pit visit.'
-        '</p>',
-      );
-      Map<Team, ShortlistEntry> shortlist = competition.shortlistsView[award]!.entriesView;
-      final List<Team> teams = shortlist.keys.toList();
-      teams.sort((Team a, Team b) {
-        if (shortlist[a]!.rank == shortlist[b]!.rank) {
-          return a.number - b.number;
+    if (competition.awardsView.isEmpty) {
+      page.writeln('<p>No awards loaded.');
+    } else {
+      for (final Award award in competition.awardsView.where(Award.isNotInspirePredicate)) {
+        page.writeln('<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
+        final String pitVisits = switch (award.pitVisits) {
+          PitVisit.yes => 'does involve',
+          PitVisit.no => 'does not involve',
+          PitVisit.maybe => 'may involve',
+        };
+        page.writeln(
+          '<p>'
+          'Category: ${award.category.isEmpty ? "<i>none</i>" : escapeHtml(award.category)}. '
+          '${award.count} ${award.isPlacement ? 'ranked places to be awarded.' : 'equal winners to be awarded.'} '
+          'Judging ${escapeHtml(pitVisits)} a pit visit.'
+          '</p>',
+        );
+        Map<Team, ShortlistEntry> shortlist = competition.shortlistsView[award]!.entriesView;
+        final List<Team> teams = shortlist.keys.toList();
+        teams.sort((Team a, Team b) {
+          if (shortlist[a]!.rank == shortlist[b]!.rank) {
+            return a.number - b.number;
+          }
+          if (shortlist[a]!.rank == null) {
+            return 1;
+          }
+          if (shortlist[b]!.rank == null) {
+            return -1;
+          }
+          return shortlist[a]!.rank! - shortlist[b]!.rank!;
+        });
+        if (teams.isEmpty) {
+          page.writeln('<p>No nominees.</p>');
+        } else {
+          page.writeln('<h3>Nominees:</h3>');
+          page.writeln('<ol>');
+          for (final Team team in teams) {
+            final String nominator = competition.shortlistsView[award]!.entriesView[team]!.nominator;
+            page.writeln(
+              '<li${shortlist[team]!.rank != null ? " value=${shortlist[team]!.rank!}" : ""}>'
+              '${team.number} <i>${escapeHtml(team.name)}</i>'
+              '${nominator.isEmpty ? "" : " (nominated by ${escapeHtml(nominator)})"}',
+            );
+          }
+          page.writeln('</ol>');
         }
-        if (shortlist[a]!.rank == null) {
-          return 1;
-        }
-        if (shortlist[b]!.rank == null) {
-          return -1;
-        }
-        return shortlist[a]!.rank! - shortlist[b]!.rank!;
-      });
-      if (teams.isEmpty) {
-        page.writeln('<p>No nominees.</p>');
-      } else {
-        page.writeln('<h3>Nominees:</h3>');
-        page.writeln('<ol>');
-        for (final Team team in teams) {
-          final String nominator = competition.shortlistsView[award]!.entriesView[team]!.nominator;
-          page.writeln(
-            '<li${shortlist[team]!.rank != null ? " value=${shortlist[team]!.rank!}" : ""}>'
-            '${team.number} <i>${escapeHtml(team.name)}</i>'
-            '${nominator.isEmpty ? "" : " (nominated by ${escapeHtml(nominator)})"}',
-          );
-        }
-        page.writeln('</ol>');
       }
     }
     return exportHTML(competition, 'ranks', now, page.toString());
