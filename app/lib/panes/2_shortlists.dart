@@ -15,7 +15,7 @@ class ShortlistsPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(Award.categoryBasedComparator);
+        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,6 +52,7 @@ class ShortlistsPane extends StatelessWidget {
                 sortedAwards: awards,
                 competition: competition,
               ),
+            AwardOrderSwitch(competition: competition),
           ],
         );
       },

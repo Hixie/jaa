@@ -387,12 +387,60 @@ class AwardBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, indent),
+      padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, spacing),
       child: sortedAwards.isEmpty
           ? const Text('No awards loaded. Use the Setup pane to import an awards list.')
           : ScrollableWrap(
               children: _buildChildren(),
             ),
+    );
+  }
+}
+
+class AwardOrderSwitch extends StatelessWidget {
+  const AwardOrderSwitch({
+    super.key,
+    required this.competition,
+  });
+
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Sort awards by rank',
+                textAlign: TextAlign.end,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
+              child: ListenableBuilder(
+                listenable: competition,
+                builder: (BuildContext context, Widget? child) => Switch(
+                  value: competition.awardOrder == AwardOrder.categories,
+                  thumbIcon: MaterialStateProperty.all(const Icon(Symbols.trophy)),
+                  onChanged: (bool value) {
+                    competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
+                  },
+                ),
+              ),
+            ),
+            const Expanded(
+              child: Text(
+                'Sort awards by category',
+                textAlign: TextAlign.start,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -821,7 +869,7 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
     }
     if (!candidates.containsKey(targetCategories)) {
       return 'No teams are nominated for $requiredAwards, '
-          'and thus no teams yet qualify for the ${widget.competition.inspireAward!.name} award.';
+          'and thus no teams yet fully qualify for the ${widget.competition.inspireAward!.name} award.';
     }
     final int nomineeTarget = widget.competition.inspireAward!.count;
     final int totalNomineeCount = candidates[targetCategories]!.length;

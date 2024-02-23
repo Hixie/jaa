@@ -16,7 +16,7 @@ class RanksPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(Award.categoryBasedComparator);
+        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
         final int lowRoughRank = (competition.teamsView.length * 5.0 / 6.0).round();
         final int middleRoughRank = (competition.teamsView.length * 3.0 / 6.0).round();
         final int highRoughRank = (competition.teamsView.length * 1.0 / 6.0).round();
@@ -111,7 +111,7 @@ class RanksPane extends StatelessWidget {
             ),
             if (awards.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
                 child: Text(
                   'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
                   'Red ranks indicates invalid or duplicate ranks. '
@@ -121,6 +121,7 @@ class RanksPane extends StatelessWidget {
                   overflow: TextOverflow.visible,
                 ),
               ),
+            AwardOrderSwitch(competition: competition),
           ],
         );
       },

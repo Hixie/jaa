@@ -17,6 +17,8 @@ typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied});
 
 enum PitVisit { yes, no, maybe }
 
+enum AwardOrder { categories, rank }
+
 // change notifications are specifically for the color changing
 class Award extends ChangeNotifier {
   Award({
@@ -77,6 +79,10 @@ class Award extends ChangeNotifier {
       }
       return a.category.compareTo(b.category);
     }
+    return a.rank.compareTo(b.rank);
+  }
+
+  static int rankBasedComparator(Award a, Award b) {
     return a.rank.compareTo(b.rank);
   }
 }
@@ -350,6 +356,7 @@ class Competition extends ChangeNotifier {
   final List<Award> _awards = <Award>[];
   final List<Award> _advancingAwards = <Award>[];
   final List<Award> _nonAdvancingAwards = <Award>[];
+  final List<String> _categories = <String>[];
   final Map<Award, Shortlist> _shortlists = <Award, Shortlist>{};
 
   late final UnmodifiableListView<Team> teamsView = UnmodifiableListView<Team>(_teams);
@@ -358,9 +365,7 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableListView<Award> advancingAwardsView = UnmodifiableListView<Award>(_advancingAwards);
   late final UnmodifiableListView<Award> nonAdvancingAwardsView = UnmodifiableListView<Award>(_nonAdvancingAwards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
-
-  // TODO: cache this
-  List<String> get categories => awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet().toList()..sort();
+  late final UnmodifiableListView<String> categories = UnmodifiableListView(_categories);
 
   int get minimumInspireCategories {
     List<String> cachedCategories = categories;
@@ -472,6 +477,9 @@ class Competition extends ChangeNotifier {
     );
     _awards.add(award);
     _shortlists[award] = Shortlist();
+    // event awards cannot affect Inspire logic:
+    assert(award.category == '');
+    assert(!award.isAdvancing);
     notifyListeners();
   }
 
@@ -486,6 +494,20 @@ class Competition extends ChangeNotifier {
     _awards.remove(award);
     _shortlists.remove(award);
     notifyListeners();
+  }
+
+  int Function(Award a, Award b) get awardSorter => switch (_awardOrder) {
+        AwardOrder.categories => Award.categoryBasedComparator,
+        AwardOrder.rank => Award.rankBasedComparator,
+      };
+
+  AwardOrder get awardOrder => _awardOrder;
+  AwardOrder _awardOrder = AwardOrder.categories;
+  set awardOrder(AwardOrder value) {
+    if (value != _awardOrder) {
+      _awardOrder = value;
+      notifyListeners();
+    }
   }
 
   // IMPORT/EXPORT
@@ -577,6 +599,7 @@ class Competition extends ChangeNotifier {
     _nonAdvancingAwards.clear();
     _inspireAward = null;
     _shortlists.clear();
+    _categories.clear();
     for (final Team team in _teams) {
       team._clearShortlists();
     }
@@ -670,6 +693,9 @@ class Competition extends ChangeNotifier {
       if (!seenInspire && expectAwards) {
         throw const FormatException('Parse error in awards file: None of the awards are advancing awards.');
       }
+      _categories
+        ..addAll(awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet())
+        ..sort();
     } catch (e) {
       _clearAwards();
       rethrow;
@@ -935,13 +961,54 @@ class Competition extends ChangeNotifier {
     return const ListToCsvConverter().convert(data);
   }
 
+  Future<void> importConfiguration(List<int> csvFile) async {
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
+    final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
+    if (csvData.isEmpty) {
+      throw const FormatException('Configuration file corrupted.');
+    }
+    for (List<dynamic> row in csvData) {
+      switch (row[0]) {
+        case 'award order':
+          _awardOrder = switch (row[1]) {
+            'categories' => AwardOrder.categories,
+            'rank' => AwardOrder.rank,
+            _ => AwardOrder.categories,
+          };
+      }
+    }
+    notifyListeners();
+  }
+
+  void resetConfiguration() {
+    _awardOrder = AwardOrder.categories;
+    notifyListeners();
+  }
+
+  String configurationToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Setting', // string
+      'Value', // varies
+    ]);
+    data.add([
+      'award order',
+      switch (_awardOrder) {
+        AwardOrder.categories => 'categories',
+        AwardOrder.rank => 'rank',
+      }
+    ]);
+    return const ListToCsvConverter().convert(data);
+  }
+
   static const String filenameTeams = 'teams.csv';
   static const String filenameAwards = 'awards.csv';
   static const String filenamePitVisitNotes = 'pit visit notes.csv';
   static const String filenameShortlists = 'shortlists.csv';
-  static const String filenameInspireCandidates = 'inspire-candidates.csv';
-  static const String filenameFinalistsTable = 'finalists-table.csv';
-  static const String filenameFinalistsLists = 'finalists-lists.csv';
+  static const String filenameInspireCandidates = 'inspire candidates.csv';
+  static const String filenameFinalistsTable = 'finalists table.csv';
+  static const String filenameFinalistsLists = 'finalists lists.csv';
+  static const String filenameConfiguration = 'jaa configuration.csv';
 
   Future<void> importEventState(PlatformFile zipFile) async {
     _loading = true;
@@ -968,6 +1035,11 @@ class Competition extends ChangeNotifier {
         await importAwards(zip.findFile(filenameAwards)!.content, expectAwards: false);
         await importPitVisitNotes(zip.findFile(filenamePitVisitNotes)!.content);
         await importShortlists(zip.findFile(filenameShortlists)!.content);
+        if (zip.findFile(filenameConfiguration) == null) {
+          resetConfiguration();
+        } else {
+          await importConfiguration(zip.findFile(filenameConfiguration)!.content);
+        }
         _lastAutosaveMessage = 'Imported event state.';
       } catch (e) {
         _clearTeams();
@@ -997,6 +1069,7 @@ class Competition extends ChangeNotifier {
           'This archive contains data that can be opened by the FIRST Tech Challenge Judge Advisor Assistant.\n'
           '\n'
           'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenameShortlists", and "$filenamePitVisitNotes".\n'
+          'The "$filenameConfiguration" file contains settings for the Judge Advisor Assistant app that do not affect the event itself.'
           '\n'
           'Other files (such as this one) are included for information purposes only. They are not used when reimporting the event state.\n'
           'The "$filenameInspireCandidates" file contains a listing of each team\'s rankings for awards that contribute to Inspire award nominations.'
@@ -1004,10 +1077,12 @@ class Competition extends ChangeNotifier {
           '\n'
           'For more information see: https://github.com/Hixie/jaa/',
     ));
+    // The following files should be in the same order as listed in the documentation above.
     zip.addFile(ArchiveFile.string(filenameTeams, teamsToCsv()));
     zip.addFile(ArchiveFile.string(filenameAwards, awardsToCsv()));
-    zip.addFile(ArchiveFile.string(filenamePitVisitNotes, pitVisitNotesToCsv()));
     zip.addFile(ArchiveFile.string(filenameShortlists, shortlistsToCsv()));
+    zip.addFile(ArchiveFile.string(filenamePitVisitNotes, pitVisitNotesToCsv()));
+    zip.addFile(ArchiveFile.string(filenameConfiguration, configurationToCsv()));
     zip.addFile(ArchiveFile.string(filenameInspireCandidates, inspireCandiatesToCsv()));
     zip.addFile(ArchiveFile.string(filenameFinalistsTable, finalistTablesToCsv()));
     zip.addFile(ArchiveFile.string(filenameFinalistsLists, finalistListsToCsv()));

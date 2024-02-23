@@ -59,7 +59,7 @@ class InspirePane extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
                 child: Text(
-                  'No teams shortlisted for multiple advancing award categories. Use the Shortlists pane to nominate teams.',
+                  'No teams shortlisted for sufficient advancing award categories. Use the Shortlists pane to nominate teams.',
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
@@ -68,72 +68,78 @@ class InspirePane extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  'No teams are shortlisted for all ${categories.length} categories.', // TODO: grammar for n=2 (and) n=1?)
+                  'No teams are shortlisted for ${categories.length == 2 ? 'both' : 'all ${categories.length}'} categories.',
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
               ),
-            for (final int categoryCount in categoryCounts)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, indent),
-                child: HorizontalScrollbar(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, indent),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Candidates in $categoryCount categories:'),
-                          const SizedBox(height: spacing),
-                          Table(
-                            border: TableBorder.symmetric(
-                              inside: const BorderSide(),
+            if (competition.inspireAward != null)
+              for (final int categoryCount in categoryCounts)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, indent),
+                  child: HorizontalScrollbar(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, indent),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Candidates in $categoryCount categories'
+                              '${categoryCount < competition.minimumInspireCategories ? " (insufficient to qualify for ${competition.inspireAward!.name} award)" : ""}:',
                             ),
-                            defaultColumnWidth: const IntrinsicCellWidth(),
-                            defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              TableRow(
-                                children: [
-                                  const Cell(Text('#', style: bold), prototype: Text('000000')),
-                                  for (final String category in categories)
-                                    Cell(
-                                      Text(category, style: bold),
-                                      prototype: const Text('unranked'),
-                                    ),
-                                  const Cell(Text('Rank Score', style: bold), prototype: Text('000')),
-                                  const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
-                                ],
+                            const SizedBox(height: spacing),
+                            Table(
+                              border: TableBorder.symmetric(
+                                inside: const BorderSide(),
                               ),
-                              for (final Team team in candidates[categoryCount]!.keys.toList()..sort(Team.inspireCandidateComparator))
+                              defaultColumnWidth: const IntrinsicCellWidth(),
+                              defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
                                 TableRow(
                                   children: [
-                                    Tooltip(
-                                      message: team.name,
-                                      child: Cell(Text('${team.number}')),
-                                    ),
-                                    for (final String category in categories) Cell(Text(team.bestRankFor(category, 'unranked', ''))),
-                                    Cell(Text('${team.rankScore ?? ""}')),
-                                    if (team.inspireEligible)
-                                      InspirePlacementCell(
-                                        competition: competition,
-                                        team: team,
-                                        award: competition.inspireAward!,
-                                      )
-                                    else
-                                      const Cell(Text('Not eligible')),
+                                    const Cell(Text('#', style: bold), prototype: Text('000000')),
+                                    for (final String category in categories)
+                                      Cell(
+                                        Text(category, style: bold),
+                                        prototype: const Text('unranked'),
+                                      ),
+                                    const Cell(Text('Rank Score', style: bold), prototype: Text('000')),
+                                    if (categoryCount >= competition.minimumInspireCategories)
+                                      const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
                                   ],
                                 ),
-                            ],
-                          ),
-                        ],
+                                for (final Team team in candidates[categoryCount]!.keys.toList()..sort(Team.inspireCandidateComparator))
+                                  TableRow(
+                                    children: [
+                                      Tooltip(
+                                        message: team.name,
+                                        child: Cell(Text('${team.number}')),
+                                      ),
+                                      for (final String category in categories) Cell(Text(team.bestRankFor(category, 'unranked', ''))),
+                                      Cell(Text('${team.rankScore ?? ""}')),
+                                      if (categoryCount >= competition.minimumInspireCategories)
+                                        if (!team.inspireEligible)
+                                          const Cell(Text('Not eligible'))
+                                        else
+                                          InspirePlacementCell(
+                                            competition: competition,
+                                            team: team,
+                                            award: competition.inspireAward!,
+                                          ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
           ],
         );
       },
