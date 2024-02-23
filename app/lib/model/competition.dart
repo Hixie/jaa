@@ -400,53 +400,60 @@ class Competition extends ChangeNotifier {
   }
 
   List<(Award, List<AwardFinalistEntry>)> computeFinalists() {
-    final Map<Team, (Award, int)> placedTeams = {};
     final Map<Award, List<Set<Team>>> awardCandidates = {};
     final Map<Award, List<AwardFinalistEntry>> finalists = {};
     for (final Award award in awardsView) {
       awardCandidates[award] = shortlistsView[award]?.asRankedList() ?? [];
       finalists[award] = [];
     }
-    int rank = 1;
-    bool stillPlacing = true;
-    while (stillPlacing) {
-      stillPlacing = false;
-      for (final Award award in awardsView) {
-        if (rank <= award.count) {
-          final List<Set<Team>> candidatesList = awardCandidates[award]!;
-          bool placedTeam = false;
-          while (candidatesList.isNotEmpty && !placedTeam) {
-            final Set<Team> candidates = candidatesList.removeAt(0);
-            final Set<Team> alreadyPlaced = award.isSpreadTheWealth && !award.isInspire ? placedTeams.keys.toSet() : {};
-            final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
-            final Set<Team> winners = candidates.difference(ineligible);
-            if (ineligible.isNotEmpty) {
-              for (Team team in ineligible) {
-                final (Award oldAward, int oldRank) = placedTeams[team]!;
-                finalists[award]!.add((team, oldAward, oldRank, tied: false));
+    final List<List<Award>> awardTiers = [
+      awardsView.where((Award award) => award.isInspire).toList(),
+      awardsView.where((Award award) => !award.isInspire && award.isSpreadTheWealth && award.isAdvancing).toList(),
+      awardsView.where((Award award) => !award.isInspire && award.isSpreadTheWealth && !award.isAdvancing).toList(),
+      awardsView.where((Award award) => !award.isInspire && !award.isSpreadTheWealth).toList(),
+    ];
+    assert((awardTiers[0].isEmpty && inspireAward == null) || awardTiers[0].single == inspireAward);
+    final Map<Team, (Award, int)> placedTeams = {};
+    for (List<Award> awards in awardTiers) {
+      int rank = 1;
+      bool stillPlacing = true;
+      while (stillPlacing) {
+        stillPlacing = false;
+        for (final Award award in awards) {
+          if (rank <= award.count) {
+            final List<Set<Team>> candidatesList = awardCandidates[award]!;
+            bool placedTeam = false;
+            while (candidatesList.isNotEmpty && !placedTeam) {
+              final Set<Team> candidates = candidatesList.removeAt(0);
+              final Set<Team> alreadyPlaced = award.isSpreadTheWealth ? placedTeams.keys.toSet() : {};
+              final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
+              final Set<Team> winners = candidates.difference(ineligible);
+              if (ineligible.isNotEmpty) {
+                for (Team team in ineligible) {
+                  final (Award oldAward, int oldRank) = placedTeams[team]!;
+                  finalists[award]!.add((team, oldAward, oldRank, tied: false));
+                }
               }
-            }
-            if (winners.isNotEmpty) {
-              placedTeam = true;
-              for (Team team in winners) {
-                finalists[award]!.add((team, null, rank, tied: winners.length > 1));
-                if (!award.isInspire || rank == 1) {
-                  if (award.isSpreadTheWealth) {
+              if (winners.isNotEmpty) {
+                placedTeam = true;
+                for (Team team in winners) {
+                  finalists[award]!.add((team, null, rank, tied: winners.length > 1));
+                  if (award.isSpreadTheWealth || (award.isInspire && rank == 1)) {
                     placedTeams[team] = (award, rank);
                   }
                 }
               }
             }
-          }
-          if (!placedTeam) {
-            finalists[award]!.add((null, null, rank, tied: false));
-          }
-          if (rank < award.count) {
-            stillPlacing = true;
+            if (!placedTeam) {
+              finalists[award]!.add((null, null, rank, tied: false));
+            }
+            if (rank < award.count) {
+              stillPlacing = true;
+            }
           }
         }
+        rank += 1;
       }
-      rank += 1;
     }
     List<(Award, List<AwardFinalistEntry>)> result = [];
     for (Award award in awardsView) {
