@@ -148,14 +148,14 @@ class _SetupPaneState extends State<SetupPane> {
                       border: TableBorder.symmetric(
                         inside: const BorderSide(),
                       ),
-                      defaultColumnWidth: const IntrinsicColumnWidth(),
+                      defaultColumnWidth: const IntrinsicCellWidth(),
                       children: [
                         const TableRow(
                           children: [
-                            Cell(Text('Team Number', style: bold)),
-                            Cell(Text('Team Name', style: bold)),
-                            Cell(Text('Team City', style: bold)),
-                            Cell(Text('Previous Inspire Winner', style: bold)),
+                            Cell(Text('Team Number', style: bold), prototype: Text('000000')),
+                            Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
+                            Cell(Text('Team City', style: bold), prototype: Text('Mooselookmeguntic')),
+                            Cell(Text('Previous Inspire Winner', style: bold), prototype: Text('Yes')),
                           ],
                         ),
                         for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))
@@ -245,18 +245,19 @@ class _SetupPaneState extends State<SetupPane> {
                       border: TableBorder.symmetric(
                         inside: const BorderSide(),
                       ),
-                      defaultColumnWidth: const IntrinsicColumnWidth(),
+                      columnWidths: const <int, TableColumnWidth>{0: IntrinsicColumnWidth()},
+                      defaultColumnWidth: const IntrinsicCellWidth(),
                       children: [
                         const TableRow(
                           children: [
                             Cell(Text('Award Name', style: bold)),
-                            Cell(Text('Award Type', style: bold)),
-                            Cell(Text('Award Rank', style: bold)),
-                            Cell(Text('Award Count', style: bold)),
-                            Cell(Text('Inspire Category', style: bold)),
-                            Cell(Text('Spread the wealth', style: bold)),
-                            Cell(Text('Placement', style: bold)),
-                            Cell(Text('Pit Visits', style: bold)),
+                            Cell(Text('Award Type', style: bold), prototype: Text('Non-Advancing')),
+                            Cell(Text('Award Rank', style: bold), prototype: Text('000')),
+                            Cell(Text('Award Count', style: bold), prototype: Text('000')),
+                            Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
+                            Cell(Text('Spread the wealth', style: bold), prototype: Text('Yes')),
+                            Cell(Text('Placement', style: bold), prototype: Text('Yes')),
+                            Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
                           ],
                         ),
                         for (final Award award in widget.competition.awardsView)

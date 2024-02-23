@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -184,15 +185,29 @@ class Cell extends StatelessWidget {
   const Cell(
     this.child, {
     super.key,
+    this.prototype,
   });
 
   final Widget child;
+  final Widget? prototype;
 
   @override
   Widget build(BuildContext context) {
+    Widget result = child;
+    if (prototype != null) {
+      result = Stack(
+        children: [
+          Opacity(
+            opacity: 0.0,
+            child: prototype!,
+          ),
+          result
+        ],
+      );
+    }
     return Padding(
       padding: const EdgeInsets.all(spacing),
-      child: child,
+      child: result,
     );
   }
 }
@@ -539,7 +554,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
       children: [
         if (widget.sortedAwards.isNotEmpty && widget.competition.teamsView.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
             child: Wrap(
               spacing: spacing,
               runSpacing: spacing,
@@ -572,7 +587,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
         if (_award != null)
           Padding(
             key: _cardKey,
-            padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
             child: ListenableBuilder(
               listenable: _award!,
               child: Card(
@@ -742,6 +757,122 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   }
 }
 
+class ShortlistSummary extends StatefulWidget {
+  const ShortlistSummary({super.key, required this.competition});
+
+  final Competition competition;
+
+  @override
+  State<ShortlistSummary> createState() => _ShortlistSummaryState();
+}
+
+class _ShortlistSummaryState extends State<ShortlistSummary> {
+  @override
+  void initState() {
+    super.initState();
+    widget.competition.addListener(_updateSummary);
+    _updateSummary();
+  }
+
+  @override
+  void didUpdateWidget(covariant ShortlistSummary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.competition != oldWidget.competition) {
+      oldWidget.competition.removeListener(_updateSummary);
+      widget.competition.addListener(_updateSummary);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.competition.removeListener(_updateSummary);
+    super.dispose();
+  }
+
+  late String _summary;
+  void _updateSummary() {
+    setState(() {
+      _summary = _generateSummary();
+    });
+  }
+
+  String _generateSummary() {
+    if (widget.competition.inspireAward == null) {
+      return '';
+    }
+    final Map<int, Map<Team, Set<String>>> candidates = widget.competition.computeInspireCandidates();
+    final List<String> categories = widget.competition.categories;
+    final int targetCategories = categories.length;
+    if (targetCategories == 0) {
+      return '';
+    }
+    final String requiredAwards;
+    if (targetCategories == 1) {
+      final List<Award> inspireAwards = widget.competition.awardsView.where(Award.isInspireQualifyingPredicate).toList();
+      if (inspireAwards.length == 1) {
+        requiredAwards = 'the ${inspireAwards.single.name} award';
+      } else {
+        requiredAwards = 'any of the ${categories.single} category awards';
+      }
+    } else if (targetCategories == 2) {
+      requiredAwards = 'awards in both advancing award categories';
+    } else {
+      requiredAwards = 'awards in all $targetCategories advancing award categories';
+    }
+    if (!candidates.containsKey(targetCategories)) {
+      return 'No teams are nominated for $requiredAwards, '
+          'and thus no teams yet qualify for the ${widget.competition.inspireAward!.name} award.';
+    }
+    final int nomineeTarget = widget.competition.inspireAward!.count;
+    final int totalNomineeCount = candidates[targetCategories]!.length;
+    final int qualifyingNomineeCount = candidates[targetCategories]!.keys.where((Team team) => team.inspireEligible).length;
+    final int ineligibleCount = totalNomineeCount - qualifyingNomineeCount;
+    final String nonqualifying = switch (ineligibleCount) {
+      0 => '',
+      1 => ' (one nominated team is ineligible)',
+      _ => ' ($ineligibleCount nominated teams are ineligible)',
+    };
+    // If we get here we know at least one team is nominated for all the relevant categories.
+    assert(totalNomineeCount > 0);
+    if (qualifyingNomineeCount < nomineeTarget) {
+      if (qualifyingNomineeCount == 0) {
+        assert(ineligibleCount > 0);
+        return 'No eligible team is nominated for $requiredAwards '
+            'so no team qualifies for the ${widget.competition.inspireAward!.name} award'
+            '$nonqualifying.';
+      }
+      assert(widget.competition.inspireAward!.count > 1);
+      if (widget.competition.inspireAward!.count == 2) {
+        return 'Insufficient teams are nominated for $requiredAwards '
+            'to have winners for both places of the ${widget.competition.inspireAward!.name} award'
+            '$nonqualifying.';
+      }
+      return 'Insufficient teams are nominated for $requiredAwards '
+          'to have winners for all $nomineeTarget places of the ${widget.competition.inspireAward!.name} award'
+          '$nonqualifying.';
+    }
+    if (qualifyingNomineeCount == 1) {
+      return 'A team has qualified for the ${widget.competition.inspireAward!.name} award.';
+    }
+    return '$qualifyingNomineeCount teams qualify for the ${widget.competition.inspireAward!.name} award.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_summary.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+      child: Text(
+        _summary,
+        softWrap: true,
+        overflow: TextOverflow.clip,
+      ),
+    );
+  }
+}
+
 class VisitedCell extends StatefulWidget {
   VisitedCell({required this.team, this.label}) : super(key: ObjectKey(team));
 
@@ -869,5 +1000,101 @@ class _ContinuousAnimationBuilderState extends State<ContinuousAnimationBuilder>
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(valueListenable: _controller, builder: widget.builder, child: widget.child);
+  }
+}
+
+/// Sizes the column according to the intrinsic dimensions of the
+/// cell in the specified row of the relevant column.
+///
+/// The row is specified using [row].
+///
+/// This is an expensive way to size a column, compared to
+/// [FixedColumnWidth], [FlexColumnWidth], or [FractionColumnWidth],
+/// but is much cheaper than [IntrinsicColumnWidth] when the table has
+/// a lot of rows.
+///
+/// A flex value can be provided. If specified (and non-null), the
+/// column will participate in the distribution of remaining space
+/// once all the non-flexible columns have been sized.
+class IntrinsicCellWidth extends TableColumnWidth {
+  /// Creates a column width based on intrinsic sizing of the column's cell in
+  /// the specified [row] (which defaults to the first row, with index 0).
+  ///
+  /// The `flex` argument specifies the flex factor to apply to the column if
+  /// there is any room left over when laying out the table. If `flex` is
+  /// null (the default), the table will not distribute any extra space to the
+  /// column.
+  const IntrinsicCellWidth({this.row = 0, double? flex}) : _flex = flex;
+
+  /// The row from which to obtain the cell to measure.
+  ///
+  /// If the table does not have enough rows, then the cell is assumed to
+  /// have be of zero width.
+  final int row;
+
+  @override
+  double minIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) {
+    double result = 0.0;
+    if (cells.length >= row) {
+      result = math.max(result, cells.skip(row).first.getMinIntrinsicWidth(double.infinity));
+    }
+    return result;
+  }
+
+  @override
+  double maxIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) {
+    double result = 0.0;
+    if (cells.length >= row) {
+      result = math.max(result, cells.skip(row).first.getMaxIntrinsicWidth(double.infinity));
+    }
+    return result;
+  }
+
+  final double? _flex;
+
+  @override
+  double? flex(Iterable<RenderBox> cells) => _flex;
+
+  @override
+  String toString() => '${objectRuntimeType(this, 'IntrinsicCellWidth')}(flex: ${_flex?.toStringAsFixed(1)})';
+}
+
+class RemoveFromShortlistCell extends StatelessWidget {
+  const RemoveFromShortlistCell({
+    super.key,
+    required this.competition,
+    required this.team,
+    required this.foregroundColor,
+    required this.award,
+  });
+
+  final Competition competition;
+  final Team team;
+  final Color foregroundColor;
+  final Award award;
+
+  @override
+  Widget build(BuildContext context) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: ListenableBuilder(
+        listenable: competition,
+        builder: (BuildContext context, Widget? child) => IconButton(
+          onPressed: () {
+            competition.removeFromShortlist(award, team);
+          },
+          padding: EdgeInsets.zero,
+          iconSize: DefaultTextStyle.of(context).style.fontSize,
+          visualDensity: VisualDensity.compact,
+          color: foregroundColor,
+          tooltip: competition.removingFromShortlistWillRemoveInspireRank(award, team)
+              ? 'Unnominating team ${team.number} will remove them from the rankings for the ${competition.inspireAward!.name} award'
+              : null,
+          icon: const Icon(
+            Symbols.heart_minus,
+          ),
+        ),
+      ),
+    );
   }
 }

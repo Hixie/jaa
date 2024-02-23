@@ -176,6 +176,16 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     }
   }
 
+  int _countHyptheticalShortlistedAdvancingCategories({required Award without}) {
+    Set<String> categories = {};
+    for (final Award award in _shortlists.keys) {
+      if (award != without && award.isAdvancing && !award.isInspire) {
+        categories.add(award.category);
+      }
+    }
+    return categories.length;
+  }
+
   String bestRankFor(String category, String unrankedLabel, String unnominatedLabel) {
     if (!_shortlistedAdvancingCategories.contains(category)) {
       return unnominatedLabel;
@@ -349,6 +359,20 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableListView<Award> nonAdvancingAwardsView = UnmodifiableListView<Award>(_nonAdvancingAwards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
 
+  // TODO: cache this
+  List<String> get categories => awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet().toList()..sort();
+
+  int get minimumInspireCategories {
+    List<String> cachedCategories = categories;
+    if (cachedCategories.isEmpty) {
+      return 0;
+    }
+    if (cachedCategories.length == 1) {
+      return 1;
+    }
+    return cachedCategories.length - 1;
+  }
+
   void updateTeam(Team team, String name, String city) {
     team._name = name;
     team._city = city;
@@ -358,17 +382,16 @@ class Competition extends ChangeNotifier {
   Award? _inspireAward;
   Award? get inspireAward => _inspireAward;
 
-  (Map<int, Map<Team, Set<String>>>, List<String>) computeInspireCandidates() {
+  Map<int, Map<Team, Set<String>>> computeInspireCandidates() {
     final Map<int, Map<Team, Set<String>>> candidates = <int, Map<Team, Set<String>>>{};
     for (final Team team in teamsView) {
       final Set<String> categories = team.shortlistedAdvancingCategories;
-      if (categories.length > 1) {
+      if (categories.isNotEmpty) {
         final Map<Team, Set<String>> group = candidates.putIfAbsent(categories.length, () => <Team, Set<String>>{});
         group[team] = categories;
       }
     }
-    final List<String> categories = awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet().toList()..sort();
-    return (candidates, categories);
+    return candidates;
   }
 
   List<(Award, List<AwardFinalistEntry>)> computeFinalists() {
@@ -737,9 +760,21 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool removingFromShortlistWillRemoveInspireRank(Award award, Team team) {
+    assert(_shortlists[award]!.entriesView.containsKey(team));
+    return inspireAward != null &&
+        _shortlists[inspireAward]!.entriesView.containsKey(team) &&
+        team._countHyptheticalShortlistedAdvancingCategories(without: award) < minimumInspireCategories;
+  }
+
   void removeFromShortlist(Award award, Team team) {
+    assert(_shortlists[award]!.entriesView.containsKey(team));
     _shortlists[award]!._remove(team);
     team._removeFromShortlist(award);
+    if (inspireAward != null && team._shortlistedAdvancingCategories.length < minimumInspireCategories) {
+      _shortlists[inspireAward]!._remove(team);
+      team._removeFromShortlist(inspireAward!);
+    }
     notifyListeners();
   }
 

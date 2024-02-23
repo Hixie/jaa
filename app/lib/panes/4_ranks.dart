@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
 import '../constants.dart';
 import '../io.dart';
@@ -35,6 +34,7 @@ class RanksPane extends StatelessWidget {
               sortedAwards: awards,
               lateEntry: true,
             ),
+            ShortlistSummary(competition: competition),
             if (awards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
@@ -57,14 +57,15 @@ class RanksPane extends StatelessWidget {
                           border: TableBorder.symmetric(
                             inside: BorderSide(color: foregroundColor),
                           ),
-                          defaultColumnWidth: const IntrinsicColumnWidth(),
+                          columnWidths: {0: const IntrinsicCellWidth(flex: 1), 2: FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2)},
+                          defaultColumnWidth: const IntrinsicCellWidth(),
                           defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             TableRow(
                               children: [
-                                const Cell(Text('Rank ✎_', style: bold)),
-                                const Cell(Text('#', style: bold)),
+                                const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
+                                const Cell(Text('#', style: bold), prototype: Text('000000')),
                                 TableCell(
                                   verticalAlignment: TableCellVerticalAlignment.middle,
                                   child: Icon(
@@ -95,19 +96,11 @@ class RanksPane extends StatelessWidget {
                                           }),
                                     ),
                                   ),
-                                  TableCell(
-                                    verticalAlignment: TableCellVerticalAlignment.middle,
-                                    child: IconButton(
-                                      onPressed: () {
-                                        competition.removeFromShortlist(award, team);
-                                      },
-                                      iconSize: DefaultTextStyle.of(context).style.fontSize,
-                                      visualDensity: VisualDensity.compact,
-                                      color: foregroundColor,
-                                      icon: const Icon(
-                                        Symbols.heart_minus,
-                                      ),
-                                    ),
+                                  RemoveFromShortlistCell(
+                                    competition: competition,
+                                    team: team,
+                                    award: award,
+                                    foregroundColor: foregroundColor,
                                   ),
                                 ],
                               ),

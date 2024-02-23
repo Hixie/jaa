@@ -100,8 +100,9 @@ class AwardFinalistsPane extends StatelessWidget {
                               border: TableBorder.symmetric(
                                 inside: BorderSide(color: textColorForColor(award.color)),
                               ),
+                              columnWidths: const <int, TableColumnWidth>{1: IntrinsicCellWidth(flex: 1)},
                               defaultColumnWidth: MaxColumnWidth(
-                                const IntrinsicColumnWidth(),
+                                const IntrinsicCellWidth(),
                                 FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! * 5.0),
                               ),
                               defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
@@ -109,8 +110,8 @@ class AwardFinalistsPane extends StatelessWidget {
                               children: [
                                 TableRow(
                                   children: [
-                                    const Cell(Text('#', style: bold)),
-                                    if (award.isPlacement) const Cell(Text('Ranks', style: bold)) else const Cell(Text('Results', style: bold)),
+                                    const Cell(Text('#', style: bold), prototype: Text('000000')),
+                                    Cell(Text(award.isPlacement ? 'Ranks' : 'Results', style: bold), prototype: const Text('Unlikely result')),
                                   ],
                                 ),
                                 for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in awardFinalists)

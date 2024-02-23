@@ -16,8 +16,9 @@ class InspirePane extends StatelessWidget {
     return ListenableBuilder(
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
-        final (Map<int, Map<Team, Set<String>>> candidates, List<String> categories) = competition.computeInspireCandidates();
-        final List<int> categoryCounts = (candidates.keys.toList()..sort()).reversed.toList();
+        final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
+        final List<String> categories = competition.categories;
+        final List<int> categoryCounts = (candidates.keys.toList()..sort()).reversed.take(competition.minimumInspireCategories).toList();
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +68,7 @@ class InspirePane extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  'No teams are shortlisted for all ${categories.length} categories.',
+                  'No teams are shortlisted for all ${categories.length} categories.', // TODO: grammar for n=2 (and) n=1?)
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
@@ -90,19 +91,20 @@ class InspirePane extends StatelessWidget {
                             border: TableBorder.symmetric(
                               inside: const BorderSide(),
                             ),
-                            defaultColumnWidth: const IntrinsicColumnWidth(),
+                            defaultColumnWidth: const IntrinsicCellWidth(),
                             defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
                             children: [
                               TableRow(
                                 children: [
-                                  const Cell(Text('#', style: bold)),
+                                  const Cell(Text('#', style: bold), prototype: Text('000000')),
                                   for (final String category in categories)
                                     Cell(
                                       Text(category, style: bold),
+                                      prototype: const Text('unranked'),
                                     ),
-                                  const Cell(Text('Rank Score', style: bold)),
-                                  const Cell(Text('Inspire Placement ✎_', style: bold)),
+                                  const Cell(Text('Rank Score', style: bold), prototype: Text('000')),
+                                  const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
                                 ],
                               ),
                               for (final Team team in candidates[categoryCount]!.keys.toList()..sort(Team.inspireCandidateComparator))
@@ -141,7 +143,9 @@ class InspirePane extends StatelessWidget {
   static Future<void> exportInspireHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
     StringBuffer page = createHtmlPage('Inspire', now);
-    final (Map<int, Map<Team, Set<String>>> candidates, List<String> categories) = competition.computeInspireCandidates();
+    final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
+    final List<String> categories = competition.categories;
+
     if (categories.isEmpty) {
       page.writeln('<p>No team qualify for the Inspire award.');
     } else {
@@ -234,6 +238,7 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
   @override
   void initState() {
     super.initState();
+    widget.competition.addListener(_updateError);
     widget.team.addListener(_handleTeamUpdate);
     _handleTeamUpdate();
     _controller.addListener(_handleTextFieldUpdate);
@@ -254,12 +259,15 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
   void dispose() {
     _entry?.removeListener(_handleEntryUpdate);
     widget.team.removeListener(_handleTeamUpdate);
+    widget.competition.removeListener(_updateError);
     _controller.dispose();
     super.dispose();
   }
 
   void _updateError() {
-    _error = _entry == null || _entry!.rank == null;
+    setState(() {
+      _error = _entry == null || _entry!.rank == null || _entry!.rank! <= 0 || _entry!.rank! > widget.competition.teamsView.length;
+    });
   }
 
   void _handleTeamUpdate() {

@@ -74,13 +74,16 @@ class PitVisitsPane extends StatelessWidget {
                         border: TableBorder.symmetric(
                           inside: const BorderSide(),
                         ),
-                        defaultColumnWidth: const IntrinsicColumnWidth(),
+                        columnWidths: <int, TableColumnWidth>{
+                          relevantAwards.length + 1: const MaxColumnWidth(IntrinsicCellWidth(), IntrinsicCellWidth(row: 1))
+                        },
+                        defaultColumnWidth: const IntrinsicCellWidth(),
                         defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           TableRow(
                             children: [
-                              const Cell(Text('#', style: bold)),
+                              const Cell(Text('#', style: bold), prototype: Text('000000')),
                               for (final Award award in relevantAwards)
                                 ListenableBuilder(
                                   listenable: award,
@@ -94,6 +97,7 @@ class PitVisitsPane extends StatelessWidget {
                                             color: textColorForColor(award.color),
                                           ),
                                         ),
+                                        prototype: const Text('Yes'),
                                       ),
                                     );
                                   },
