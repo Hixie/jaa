@@ -110,53 +110,54 @@ class _MainAppState extends State<MainApp> {
                           ),
                         ),
                         const SizedBox(width: spacing),
-                        ListenableBuilder(
-                          listenable: widget.competition,
-                          builder: (BuildContext context, Widget? child) {
-                            if (widget.competition.autosaveScheduled) {
-                              return Tooltip(
-                                message: 'Changes will be autosaved shortly.',
-                                child: Text(
-                                  'Changed',
+                        if (constraints.maxWidth >= minimumReasonableWidth)
+                          ListenableBuilder(
+                            listenable: widget.competition,
+                            builder: (BuildContext context, Widget? child) {
+                              if (widget.competition.autosaveScheduled) {
+                                return Tooltip(
+                                  message: 'Changes will be autosaved shortly.',
+                                  child: Text(
+                                    'Changed',
+                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                  ),
+                                );
+                              }
+                              if (widget.competition.loading) {
+                                return Text(
+                                  'Loading...',
                                   style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
-                                ),
-                              );
-                            }
-                            if (widget.competition.loading) {
-                              return Text(
-                                'Loading...',
-                                style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
-                              );
-                            }
-                            if (widget.competition.dirty) {
-                              return Tooltip(
-                                message: widget.competition.lastAutosaveMessage,
-                                child: ContinuousAnimationBuilder(
-                                  period: const Duration(seconds: 2),
-                                  reverse: true,
-                                  builder: (BuildContext context, double value, Widget? child) => Text(
-                                    'Autosave failed.',
-                                    style: TextStyle(
-                                      color: Colors.red.withOpacity(0.25 + value * 0.75),
-                                      fontVariations: [FontVariation.weight(1 + value * 999.0)],
+                                );
+                              }
+                              if (widget.competition.dirty) {
+                                return Tooltip(
+                                  message: widget.competition.lastAutosaveMessage,
+                                  child: ContinuousAnimationBuilder(
+                                    period: const Duration(seconds: 2),
+                                    reverse: true,
+                                    builder: (BuildContext context, double value, Widget? child) => Text(
+                                      'Autosave failed.',
+                                      style: TextStyle(
+                                        color: Colors.red.withOpacity(0.25 + value * 0.75),
+                                        fontVariations: [FontVariation.weight(1 + value * 999.0)],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }
-                            if (widget.competition.lastAutosave != null) {
-                              return Tooltip(
-                                message: widget.competition.lastAutosaveMessage,
-                                child: Text(
-                                  'Saved',
-                                  style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                        ),
-                        const SizedBox(width: indent),
+                                );
+                              }
+                              if (widget.competition.lastAutosave != null) {
+                                return Tooltip(
+                                  message: widget.competition.lastAutosaveMessage,
+                                  child: Text(
+                                    'Saved',
+                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        if (constraints.maxWidth >= minimumReasonableWidth) const SizedBox(width: indent),
                         const Expanded(
                           child: Padding(
                             padding: EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),

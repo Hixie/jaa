@@ -93,8 +93,10 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     required String name,
     required String city,
     required this.inspireEligible,
+    bool visited = false,
   })  : _name = name,
-        _city = city;
+        _city = city,
+        _visited = visited;
 
   final int number;
   final bool inspireEligible;
@@ -115,15 +117,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   int? get rankScore => _rankScore;
   int? _rankScore;
 
-  bool _visited = false;
   bool get visited => _visited;
-  set visited(bool value) {
-    if (value == _visited) {
-      return;
-    }
-    _visited = value;
-    notifyListeners();
-  }
+  bool _visited = false;
 
   String _visitingJudgesNotes = '';
   String get visitingJudgesNotes => _visitingJudgesNotes;
@@ -211,6 +206,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     }
     return result;
   }
+
+  Iterable<Award> get shortlistedAwardsWithPitVisits => shortlistsView.keys.where((Award award) => award.pitVisits == PitVisit.yes);
 
   static int inspireCandidateComparator(Team a, Team b) {
     if (a.shortlistedAdvancingCategories.length != b.shortlistedAdvancingCategories.length) {
@@ -381,6 +378,11 @@ class Competition extends ChangeNotifier {
   void updateTeam(Team team, String name, String city) {
     team._name = name;
     team._city = city;
+    notifyListeners();
+  }
+
+  void updateTeamVisited(Team team, {required bool visited}) {
+    team._visited = visited;
     notifyListeners();
   }
 
@@ -762,7 +764,7 @@ class Competition extends ChangeNotifier {
       if (row[1] != 'y' && row[1] != 'n') {
         throw FormatException('Parse error in pit visits notes file: "${row[1]}" is not either "y" or "n".');
       }
-      team.visited = row[1] == 'y';
+      team._visited = row[1] == 'y';
       team.visitingJudgesNotes = row[2];
     }
     notifyListeners();
@@ -781,7 +783,7 @@ class Competition extends ChangeNotifier {
         team.number,
         team.visited ? 'y' : 'n',
         team.visitingJudgesNotes,
-        team.shortlistsView.keys.where((Award award) => award.pitVisits == PitVisit.yes).map((Award award) => award.name).join(', '),
+        team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '),
       ]);
     }
     return const ListToCsvConverter().convert(data);

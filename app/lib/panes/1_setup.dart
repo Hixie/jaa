@@ -251,7 +251,11 @@ class _SetupPaneState extends State<SetupPane> {
                         const TableRow(
                           children: [
                             Cell(Text('Award Name', style: bold)),
-                            Cell(Text('Award Type', style: bold), prototype: Text('Non-Advancing')),
+                            Cell(
+                              Text('Award Type', style: bold),
+                              prototype: EventSpecificCell(competition: null, award: null),
+                              padPrototype: false,
+                            ),
                             Cell(Text('Award Rank', style: bold), prototype: Text('000')),
                             Cell(Text('Award Count', style: bold), prototype: Text('000')),
                             Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
@@ -318,32 +322,7 @@ class _SetupPaneState extends State<SetupPane> {
                                 ),
                               ),
                               award.isEventSpecific
-                                  ? Material(
-                                      type: MaterialType.transparency,
-                                      child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(spacing, 0.0, 0.0, 0.0),
-                                        child: Row(
-                                          children: [
-                                            const Text('Event-Specific'),
-                                            IconButton(
-                                              onPressed: !widget.competition.canDelete(award)
-                                                  ? null
-                                                  : () {
-                                                      widget.competition.deleteEventAward(award);
-                                                    },
-                                              iconSize: DefaultTextStyle.of(context).style.fontSize,
-                                              visualDensity: VisualDensity.compact,
-                                              padding: EdgeInsets.zero,
-                                              splashRadius: 100.0,
-                                              tooltip: widget.competition.canDelete(award)
-                                                  ? 'Delete this event-specific award.'
-                                                  : 'Cannot delete awards that have nominees.',
-                                              icon: const Icon(Icons.delete_forever),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
+                                  ? EventSpecificCell(competition: widget.competition, award: award)
                                   : Cell(
                                       Text(
                                         award.isInspire
@@ -372,6 +351,47 @@ class _SetupPaneState extends State<SetupPane> {
               ),
             ),
           const SizedBox(height: indent),
+        ],
+      ),
+    );
+  }
+}
+
+class EventSpecificCell extends StatelessWidget {
+  const EventSpecificCell({
+    super.key,
+    required this.competition,
+    required this.award,
+  });
+
+  final Competition? competition;
+  final Award? award;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(spacing, 0.0, 0.0, 0.0),
+      child: Row(
+        children: [
+          const Expanded(child: Text('Event-Specific')),
+          Material(
+            type: MaterialType.transparency,
+            child: IconButton(
+              onPressed: competition == null || award == null || !competition!.canDelete(award!)
+                  ? null
+                  : () {
+                      competition!.deleteEventAward(award!);
+                    },
+              iconSize: DefaultTextStyle.of(context).style.fontSize,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              splashRadius: 100.0,
+              tooltip: competition != null && award != null && competition!.canDelete(award!)
+                  ? 'Delete this event-specific award.'
+                  : 'Cannot delete awards that have nominees.',
+              icon: const Icon(Icons.delete_forever),
+            ),
+          ),
         ],
       ),
     );
@@ -527,7 +547,11 @@ class _TeamEditorState extends State<TeamEditor> {
         teamNotes.add(const Text('Team will not be automatically visited as part of judging.'));
       }
       teamNotes.add(
-        VisitedCell(label: const Text('Visted?'), team: _team!),
+        VisitedCell(
+          label: const Text('Visted?'),
+          competition: widget.competition,
+          team: _team!,
+        ),
       );
     }
     return ListenableBuilder(

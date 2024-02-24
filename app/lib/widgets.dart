@@ -186,14 +186,22 @@ class Cell extends StatelessWidget {
     this.child, {
     super.key,
     this.prototype,
+    this.padPrototype = true,
   });
 
   final Widget child;
   final Widget? prototype;
+  final bool padPrototype;
 
   @override
   Widget build(BuildContext context) {
     Widget result = child;
+    if (!padPrototype) {
+      result = Padding(
+        padding: const EdgeInsets.all(spacing),
+        child: result,
+      );
+    }
     if (prototype != null) {
       result = Stack(
         children: [
@@ -201,14 +209,17 @@ class Cell extends StatelessWidget {
             opacity: 0.0,
             child: prototype!,
           ),
-          result
+          result,
         ],
       );
     }
-    return Padding(
-      padding: const EdgeInsets.all(spacing),
-      child: result,
-    );
+    if (padPrototype) {
+      result = Padding(
+        padding: const EdgeInsets.all(spacing),
+        child: result,
+      );
+    }
+    return result;
   }
 }
 
@@ -390,8 +401,12 @@ class AwardBuilder extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, spacing),
       child: sortedAwards.isEmpty
           ? const Text('No awards loaded. Use the Setup pane to import an awards list.')
-          : ScrollableWrap(
-              children: _buildChildren(),
+          : ScrollableRegion(
+              child: Wrap(
+                runSpacing: spacing,
+                spacing: 0.0,
+                children: _buildChildren(),
+              ),
             ),
     );
   }
@@ -407,19 +422,19 @@ class AwardOrderSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Sort awards by rank',
-                textAlign: TextAlign.end,
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Sort awards by rank',
+              textAlign: TextAlign.end,
             ),
-            Padding(
+          ),
+          Material(
+            type: MaterialType.transparency,
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
               child: ListenableBuilder(
                 listenable: competition,
@@ -432,31 +447,31 @@ class AwardOrderSwitch extends StatelessWidget {
                 ),
               ),
             ),
-            const Expanded(
-              child: Text(
-                'Sort awards by category',
-                textAlign: TextAlign.start,
-              ),
+          ),
+          const Expanded(
+            child: Text(
+              'Sort awards by category',
+              textAlign: TextAlign.start,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class ScrollableWrap extends StatelessWidget {
-  const ScrollableWrap({
+class ScrollableRegion extends StatelessWidget {
+  const ScrollableRegion({
     super.key,
-    required this.children,
+    required this.child,
   });
 
-  final List<Widget> children;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      return HorizontalScrollbar(
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => HorizontalScrollbar(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: ConstrainedBox(
@@ -466,16 +481,12 @@ class ScrollableWrap extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-              child: Wrap(
-                runSpacing: spacing,
-                spacing: 0.0,
-                children: children,
-              ),
+              child: child,
             ),
           ),
         ),
-      );
-    });
+      ),
+    );
   }
 }
 
@@ -921,10 +932,39 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
   }
 }
 
+@immutable
+class _CompetitionTeamIdentity {
+  const _CompetitionTeamIdentity(
+    this.competition,
+    this.team,
+  );
+
+  final Competition competition;
+  final Team team;
+
+  @override
+  bool operator ==(Object other) {
+    if (other.runtimeType != runtimeType) {
+      return false;
+    }
+    return other is _CompetitionTeamIdentity && other.competition == competition && other.team == team;
+  }
+
+  @override
+  int get hashCode => Object.hash(competition, team);
+}
+
 class VisitedCell extends StatefulWidget {
-  VisitedCell({required this.team, this.label}) : super(key: ObjectKey(team));
+  VisitedCell({
+    required this.team,
+    required this.competition,
+    this.label,
+    this.onVisitedChanged,
+  }) : super(key: ValueKey(_CompetitionTeamIdentity(competition, team)));
 
   final Team team;
+  final Competition competition;
+  final ValueSetter<Team>? onVisitedChanged;
   final Widget? label;
 
   @override
@@ -937,6 +977,7 @@ class _VisitedCellState extends State<VisitedCell> {
   @override
   void initState() {
     super.initState();
+    widget.competition.addListener(_handleTeamUpdate);
     widget.team.addListener(_handleTeamUpdate);
     _controller.addListener(_handleTextFieldUpdate);
     _controller.text = widget.team.visitingJudgesNotes;
@@ -945,12 +986,14 @@ class _VisitedCellState extends State<VisitedCell> {
   @override
   void didUpdateWidget(VisitedCell oldWidget) {
     super.didUpdateWidget(oldWidget);
+    assert(widget.competition == oldWidget.competition);
     assert(widget.team == oldWidget.team);
   }
 
   @override
   void dispose() {
     widget.team.removeListener(_handleTeamUpdate);
+    widget.competition.removeListener(_handleTeamUpdate);
     super.dispose();
   }
 
@@ -959,6 +1002,7 @@ class _VisitedCellState extends State<VisitedCell> {
       if (_controller.text != widget.team.visitingJudgesNotes) {
         _controller.text = widget.team.visitingJudgesNotes;
       }
+      // also team.visited may have changed
     });
   }
 
@@ -972,23 +1016,30 @@ class _VisitedCellState extends State<VisitedCell> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.label != null) widget.label!,
-        Checkbox(
-          value: widget.team.visited,
-          onChanged: (bool? value) {
-            widget.team.visited = value!;
-          },
+        Material(
+          type: MaterialType.transparency,
+          child: Checkbox(
+            value: widget.team.visited,
+            onChanged: (bool? value) {
+              widget.competition.updateTeamVisited(widget.team, visited: value!);
+              widget.onVisitedChanged?.call(widget.team);
+            },
+          ),
         ),
-        SizedBox(
-          width: DefaultTextStyle.of(context).style.fontSize! * 15.0,
-          child: TextField(
-            controller: _controller,
-            decoration: const InputDecoration.collapsed(
-              hintText: 'no judging team assigned',
-              hintStyle: TextStyle(
-                fontStyle: FontStyle.italic,
+        Material(
+          type: MaterialType.transparency,
+          child: SizedBox(
+            width: DefaultTextStyle.of(context).style.fontSize! * 15.0,
+            child: TextField(
+              controller: _controller,
+              decoration: const InputDecoration.collapsed(
+                hintText: 'no judging team assigned',
+                hintStyle: TextStyle(
+                  fontStyle: FontStyle.italic,
+                ),
               ),
+              style: DefaultTextStyle.of(context).style,
             ),
-            style: DefaultTextStyle.of(context).style,
           ),
         ),
       ],
