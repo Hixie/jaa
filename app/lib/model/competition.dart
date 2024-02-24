@@ -1096,6 +1096,7 @@ class Competition extends ChangeNotifier {
     zip.addFile(ArchiveFile.string(filenameFinalistsTable, finalistTablesToCsv()));
     zip.addFile(ArchiveFile.string(filenameFinalistsLists, finalistListsToCsv()));
     zip.endEncode();
+    output.closeSync();
   }
 
   bool _dirty = false;
