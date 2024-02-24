@@ -11,6 +11,7 @@ Future<void> exportEventState(BuildContext context, Competition competition) asy
   final String? filename = await saveFile(
     context,
     title: 'Export event state (ZIP)',
+    filename: 'event.zip',
     extension: 'zip',
   );
   if (filename != null) {
@@ -28,6 +29,7 @@ Future<void> exportPitVisitNotes(BuildContext context, Competition competition) 
   final String? filename = await saveFile(
     context,
     title: 'Export pit visit notes (CSV)',
+    filename: Competition.filenamePitVisitNotes,
     extension: 'csv',
   );
   if (filename != null) {
@@ -43,6 +45,7 @@ Future<void> exportInspireCandidatesTable(BuildContext context, Competition comp
   final String? filename = await saveFile(
     context,
     title: 'Export Inspire candidates table (CSV)',
+    filename: Competition.filenameInspireCandidates,
     extension: 'csv',
   );
   if (filename != null) {
@@ -58,6 +61,7 @@ Future<void> exportFinalistsTable(BuildContext context, Competition competition)
   final String? filename = await saveFile(
     context,
     title: 'Export finalists tables (CSV)',
+    filename: Competition.filenameFinalistsTable,
     extension: 'csv',
   );
   if (filename != null) {
@@ -73,6 +77,7 @@ Future<void> exportFinalistsLists(BuildContext context, Competition competition)
   final String? filename = await saveFile(
     context,
     title: 'Export finalists lists (CSV)',
+    filename: Competition.filenameFinalistsLists,
     extension: 'csv',
   );
   if (filename != null) {

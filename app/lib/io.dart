@@ -64,12 +64,14 @@ Future<PlatformFile?> openFile(
 Future<String?> saveFile(
   BuildContext context, {
   required String title,
+  required String filename,
   required String extension,
 }) async {
   Navigator.push(context, _createModalBackdrop());
   try {
     String? result = await FilePicker.platform.saveFile(
       dialogTitle: title,
+      fileName: filename,
       type: FileType.custom,
       allowedExtensions: [extension, '*'],
       lockParentWindow: true,
