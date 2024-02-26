@@ -1087,14 +1087,14 @@ class Competition extends ChangeNotifier {
           'For more information see: https://github.com/Hixie/jaa/',
     ));
     // The following files should be in the same order as listed in the documentation above.
-    zip.addFile(ArchiveFile.string(filenameTeams, teamsToCsv()));
-    zip.addFile(ArchiveFile.string(filenameAwards, awardsToCsv()));
-    zip.addFile(ArchiveFile.string(filenameShortlists, shortlistsToCsv()));
-    zip.addFile(ArchiveFile.string(filenamePitVisitNotes, pitVisitNotesToCsv()));
-    zip.addFile(ArchiveFile.string(filenameConfiguration, configurationToCsv()));
-    zip.addFile(ArchiveFile.string(filenameInspireCandidates, inspireCandiatesToCsv()));
-    zip.addFile(ArchiveFile.string(filenameFinalistsTable, finalistTablesToCsv()));
-    zip.addFile(ArchiveFile.string(filenameFinalistsLists, finalistListsToCsv()));
+    zip.addFile(ArchiveFile(filenameTeams, -1, utf8.encode(teamsToCsv())));
+    zip.addFile(ArchiveFile(filenameAwards, -1, utf8.encode(awardsToCsv())));
+    zip.addFile(ArchiveFile(filenameShortlists, -1, utf8.encode(shortlistsToCsv())));
+    zip.addFile(ArchiveFile(filenamePitVisitNotes, -1, utf8.encode(pitVisitNotesToCsv())));
+    zip.addFile(ArchiveFile(filenameConfiguration, -1, utf8.encode(configurationToCsv())));
+    zip.addFile(ArchiveFile(filenameInspireCandidates, -1, utf8.encode(inspireCandiatesToCsv())));
+    zip.addFile(ArchiveFile(filenameFinalistsTable, -1, utf8.encode(finalistTablesToCsv())));
+    zip.addFile(ArchiveFile(filenameFinalistsLists, -1, utf8.encode(finalistListsToCsv())));
     zip.endEncode();
     output.closeSync();
   }
