@@ -426,32 +426,51 @@ class AwardOrderSwitch extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
       child: Row(
         children: [
-          const Expanded(
-            child: Text(
-              'Sort awards by rank',
-              textAlign: TextAlign.end,
+          Expanded(
+            child: ExcludeSemantics(
+              child: GestureDetector(
+                onTap: () {
+                  competition.awardOrder = AwardOrder.rank;
+                },
+                child: const Text(
+                  'Sort awards by rank',
+                  textAlign: TextAlign.end,
+                ),
+              ),
             ),
           ),
           Material(
             type: MaterialType.transparency,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
-              child: ListenableBuilder(
-                listenable: competition,
-                builder: (BuildContext context, Widget? child) => Switch(
-                  value: competition.awardOrder == AwardOrder.categories,
-                  thumbIcon: MaterialStateProperty.all(const Icon(Symbols.trophy)),
-                  onChanged: (bool value) {
-                    competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
-                  },
+              child: MergeSemantics(
+                child: Semantics(
+                  label: 'Sort awards by category (rather than rank)',
+                  child: ListenableBuilder(
+                    listenable: competition,
+                    builder: (BuildContext context, Widget? child) => Switch.adaptive(
+                      value: competition.awardOrder == AwardOrder.categories,
+                      thumbIcon: MaterialStateProperty.all(const Icon(Symbols.trophy)),
+                      onChanged: (bool value) {
+                        competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-          const Expanded(
-            child: Text(
-              'Sort awards by category',
-              textAlign: TextAlign.start,
+          Expanded(
+            child: ExcludeSemantics(
+              child: GestureDetector(
+                onTap: () {
+                  competition.awardOrder = AwardOrder.categories;
+                },
+                child: const Text(
+                  'Sort awards by category',
+                  textAlign: TextAlign.start,
+                ),
+              ),
             ),
           ),
         ],

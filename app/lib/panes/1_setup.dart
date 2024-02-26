@@ -722,64 +722,107 @@ class _AwardEditorState extends State<AwardEditor> {
                                   ),
                                 ],
                               ),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Checkbox(
-                                    value: _spreadTheWealth,
-                                    onChanged: (bool? value) {
-                                      setState(() {
-                                        _spreadTheWealth = value!;
-                                      });
-                                    },
-                                  ),
-                                  const Expanded(
-                                    child: Text(
-                                      'Apply "spread the wealth" rules when assigning finalists (teams can only be finalists for one "spread the wealth" award per event).',
-                                      softWrap: true,
-                                      overflow: TextOverflow.clip,
+                              MergeSemantics(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Checkbox(
+                                      value: _spreadTheWealth,
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          _spreadTheWealth = value!;
+                                        });
+                                      },
                                     ),
-                                  ),
-                                ],
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _spreadTheWealth = !_spreadTheWealth;
+                                          });
+                                        },
+                                        child: const Text(
+                                          'Apply "spread the wealth" rules when assigning finalists (teams can only be finalists for one "spread the wealth" award per event).',
+                                          softWrap: true,
+                                          overflow: TextOverflow.clip,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Checkbox(
-                                    value: _count > 1 && _placement,
-                                    onChanged: _count <= 1
-                                        ? null
-                                        : (bool? value) {
-                                            setState(() {
-                                              _placement = value!;
-                                            });
-                                          },
-                                  ),
-                                  const Expanded(child: Text('Finalists are ranked (1st, 2nd, 3rd, etc).', softWrap: true, overflow: TextOverflow.clip)),
-                                ],
+                              MergeSemantics(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Checkbox(
+                                      value: _count > 1 && _placement,
+                                      onChanged: _count <= 1
+                                          ? null
+                                          : (bool? value) {
+                                              setState(() {
+                                                _placement = value!;
+                                              });
+                                            },
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _placement = !_placement;
+                                          });
+                                        },
+                                        child: const Text(
+                                          'Finalists are ranked (1st, 2nd, 3rd, etc).',
+                                          softWrap: true,
+                                          overflow: TextOverflow.clip,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Checkbox(
-                                    value: switch (_pitVisit) {
-                                      PitVisit.yes => true,
-                                      PitVisit.no => false,
-                                      PitVisit.maybe => null,
-                                    },
-                                    tristate: true,
-                                    onChanged: (bool? value) {
-                                      setState(() {
-                                        _pitVisit = switch (value) {
-                                          true => PitVisit.yes,
-                                          false => PitVisit.no,
-                                          null => PitVisit.maybe,
-                                        };
-                                      });
-                                    },
-                                  ),
-                                  const Expanded(child: Text('Judging this award always involves a pit visit.', softWrap: true, overflow: TextOverflow.clip)),
-                                ],
+                              MergeSemantics(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Checkbox(
+                                      value: switch (_pitVisit) {
+                                        PitVisit.yes => true,
+                                        PitVisit.no => false,
+                                        PitVisit.maybe => null,
+                                      },
+                                      tristate: true,
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          _pitVisit = switch (value) {
+                                            true => PitVisit.yes,
+                                            false => PitVisit.no,
+                                            null => PitVisit.maybe,
+                                          };
+                                        });
+                                      },
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _pitVisit = switch (_pitVisit) {
+                                              PitVisit.no => PitVisit.yes,
+                                              PitVisit.maybe => PitVisit.no,
+                                              PitVisit.yes => PitVisit.maybe,
+                                            };
+                                          });
+                                        },
+                                        child: const Text(
+                                          'Judging this award always involves a pit visit.',
+                                          softWrap: true,
+                                          overflow: TextOverflow.clip,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: spacing),
                               FilledButton(

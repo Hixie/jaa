@@ -258,55 +258,75 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Material(
-                    type: MaterialType.transparency,
-                    child: Checkbox(
-                      value: !_filterTeams,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _filterTeams = !value!;
-                          _legacyTeams.clear();
-                        });
-                      },
+              child: MergeSemantics(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Material(
+                      type: MaterialType.transparency,
+                      child: Checkbox(
+                        value: !_filterTeams,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _filterTeams = !value!;
+                            _legacyTeams.clear();
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Include teams that are nominated for an award that always involves a pit visit from the judges.',
-                      softWrap: true,
-                      overflow: TextOverflow.clip,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _filterTeams = !_filterTeams;
+                            _legacyTeams.clear();
+                          });
+                        },
+                        child: const Text(
+                          'Include teams that are nominated for an award that always involves a pit visit from the judges.',
+                          softWrap: true,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
-              child: Row(
-                children: [
-                  Material(
-                    type: MaterialType.transparency,
-                    child: Checkbox(
-                      value: !_hideVisited,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _hideVisited = !value!;
-                          _legacyTeams.clear();
-                        });
-                      },
+              child: MergeSemantics(
+                child: Row(
+                  children: [
+                    Material(
+                      type: MaterialType.transparency,
+                      child: Checkbox(
+                        value: !_hideVisited,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _hideVisited = !value!;
+                            _legacyTeams.clear();
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Include teams that are already marked as visited.',
-                      softWrap: true,
-                      overflow: TextOverflow.clip,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _hideVisited = !_hideVisited;
+                            _legacyTeams.clear();
+                          });
+                        },
+                        child: const Text(
+                          'Include teams that are already marked as visited.',
+                          softWrap: true,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
