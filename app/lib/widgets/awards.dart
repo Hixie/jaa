@@ -41,7 +41,7 @@ class AwardCard extends StatelessWidget {
                       child: Text.rich(
                         TextSpan(
                           children: [
-                            if (award.isSpreadTheWealth) TextSpan(text: '#${award.rank}: '),
+                            if (award.spreadTheWealth != SpreadTheWealth.no) TextSpan(text: '#${award.rank}: '),
                             TextSpan(text: award.name, style: bold),
                             if (award.category.isNotEmpty)
                               TextSpan(

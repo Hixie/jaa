@@ -17,6 +17,8 @@ typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied, bool overridden});
 
 enum PitVisit { yes, no, maybe }
 
+enum SpreadTheWealth { allPlaces, winnerOnly, no }
+
 enum AwardOrder { categories, rank }
 
 // change notifications are specifically for the color changing
@@ -28,7 +30,7 @@ class Award extends ChangeNotifier {
     required this.rank,
     required this.count,
     required this.category,
-    required this.isSpreadTheWealth,
+    required this.spreadTheWealth,
     required this.isPlacement,
     required this.pitVisits,
     required this.isEventSpecific,
@@ -41,7 +43,7 @@ class Award extends ChangeNotifier {
   final int rank;
   final int count;
   final String category;
-  final bool isSpreadTheWealth;
+  final SpreadTheWealth spreadTheWealth;
   final bool isPlacement;
   final PitVisit pitVisits;
   final bool isEventSpecific;
@@ -56,7 +58,7 @@ class Award extends ChangeNotifier {
 
   String get description {
     StringBuffer buffer = StringBuffer();
-    if (isSpreadTheWealth) {
+    if (spreadTheWealth != SpreadTheWealth.no) {
       buffer.write('rank $rank ');
     }
     if (isAdvancing) {
@@ -428,9 +430,9 @@ class Competition extends ChangeNotifier {
     }
     final List<List<Award>> awardTiers = [
       awardsView.where((Award award) => award.isInspire).toList(),
-      awardsView.where((Award award) => !award.isInspire && award.isSpreadTheWealth && award.isAdvancing).toList(),
-      awardsView.where((Award award) => !award.isInspire && award.isSpreadTheWealth && !award.isAdvancing).toList(),
-      awardsView.where((Award award) => !award.isInspire && !award.isSpreadTheWealth).toList(),
+      awardsView.where((Award award) => !award.isInspire && award.spreadTheWealth != SpreadTheWealth.no && award.isAdvancing).toList(),
+      awardsView.where((Award award) => !award.isInspire && award.spreadTheWealth != SpreadTheWealth.no && !award.isAdvancing).toList(),
+      awardsView.where((Award award) => !award.isInspire && award.spreadTheWealth == SpreadTheWealth.no).toList(),
     ];
     assert((awardTiers[0].isEmpty && inspireAward == null) || awardTiers[0].single == inspireAward);
     final Map<Team, (Award, int)> placedTeams = {};
@@ -452,7 +454,7 @@ class Competition extends ChangeNotifier {
               final List<Set<Team>> candidatesList = awardCandidates[award]!;
               while (candidatesList.isNotEmpty && !placedTeam) {
                 final Set<Team> candidates = candidatesList.removeAt(0);
-                final Set<Team> alreadyPlaced = award.isSpreadTheWealth ? placedTeams.keys.toSet() : {};
+                final Set<Team> alreadyPlaced = award.spreadTheWealth != SpreadTheWealth.no ? placedTeams.keys.toSet() : {};
                 final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
                 final Set<Team> winners = candidates.difference(ineligible);
                 if (ineligible.isNotEmpty) {
@@ -465,7 +467,7 @@ class Competition extends ChangeNotifier {
                   placedTeam = true;
                   for (Team team in winners) {
                     finalists[award]!.add((team, null, rank, tied: winners.length > 1, overridden: false));
-                    if (award.isSpreadTheWealth || (award.isInspire && rank == 1)) {
+                    if (award.spreadTheWealth == SpreadTheWealth.allPlaces || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
                       placedTeams[team] = (award, rank);
                     }
                   }
@@ -493,7 +495,7 @@ class Competition extends ChangeNotifier {
   void addEventAward({
     required String name,
     required int count,
-    required bool isSpreadTheWealth,
+    required SpreadTheWealth spreadTheWealth,
     required bool isPlacement,
     required PitVisit pitVisit,
   }) {
@@ -504,7 +506,7 @@ class Competition extends ChangeNotifier {
       rank: _awards.isEmpty ? 1 : _awards.last.rank + 1,
       count: count,
       category: '',
-      isSpreadTheWealth: isSpreadTheWealth,
+      spreadTheWealth: spreadTheWealth,
       isPlacement: isPlacement,
       pitVisits: pitVisit,
       isEventSpecific: true,
@@ -696,7 +698,16 @@ class Competition extends ChangeNotifier {
         if (isAdvancing && !isInspire && category.isEmpty) {
           throw FormatException('Parse error in awards file row $rank column 4: "${row[0]}" is an Advancing award but has no specified category.');
         }
-        final bool isSpreadTheWealth = _parseBool(row[4]);
+        final SpreadTheWealth spreadTheWealth = switch (row[4]) {
+          'all places' => SpreadTheWealth.allPlaces,
+          'winner only' => SpreadTheWealth.winnerOnly,
+          'no' => SpreadTheWealth.no,
+          _ => throw FormatException(
+              'Parse error in awards file row $rank column 5: '
+              '"${row[4]}" is not a valid "Spread The Wealth" value; '
+              'valid values are "no", "all places", and "winner only".',
+            ),
+        };
         final bool isPlacement = _parseBool(row[5]);
         final PitVisit pitVisit = '${row[6]}' == 'maybe'
             ? PitVisit.maybe
@@ -725,7 +736,7 @@ class Competition extends ChangeNotifier {
           rank: rank,
           count: count,
           category: category,
-          isSpreadTheWealth: isSpreadTheWealth,
+          spreadTheWealth: spreadTheWealth,
           isPlacement: isPlacement,
           pitVisits: pitVisit,
           isEventSpecific: isEventSpecific,
@@ -775,7 +786,11 @@ class Competition extends ChangeNotifier {
         award.isAdvancing ? 'Advancing' : 'Non-Advancing',
         award.count,
         award.category,
-        award.isSpreadTheWealth ? 'y' : 'n',
+        switch (award.spreadTheWealth) {
+          SpreadTheWealth.allPlaces => 'all places',
+          SpreadTheWealth.winnerOnly => 'winner only',
+          SpreadTheWealth.no => 'no',
+        },
         award.isPlacement ? 'y' : 'n',
         switch (award.pitVisits) { PitVisit.yes => 'y', PitVisit.no => 'n', PitVisit.maybe => 'maybe' },
         '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}',

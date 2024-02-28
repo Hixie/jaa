@@ -1,10 +1,10 @@
 award name,award type,award count,inspire category,spread the wealth,placement,pit visits,color
-Inspire,Advancing,3,,n,y,n,#2D88D9
-Think,Advancing,3,Documentation,y,y,n,#6559F5
-Connect,Advancing,3,Team,y,y,y,#18AE9F
-Innovate,Advancing,3,Machine,y,y,y,#F7C325
-Control,Advancing,3,Machine,y,y,maybe,#F7C325
-Motivate,Advancing,3,Team,y,y,y,#18AE9F
-Design,Advancing,3,Machine,y,y,y,#F7C325
-Judges,Non-Advancing,3,,y,n,n,#333333
-Local Scholarship,Non-Advancing,3,,n,n,n,#FFFFFF
+Inspire,Advancing,3,,winner only,y,n,#2D88D9
+Think,Advancing,3,Documentation,all places,y,n,#6559F5
+Connect,Advancing,3,Team,all places,y,y,#18AE9F
+Innovate,Advancing,3,Machine,all places,y,y,#F7C325
+Control,Advancing,3,Machine,all places,y,maybe,#F7C325
+Motivate,Advancing,3,Team,all places,y,y,#18AE9F
+Design,Advancing,3,Machine,all places,y,y,#F7C325
+Judges,Non-Advancing,3,,all places,n,n,#333333
+Local Scholarship,Non-Advancing,3,,no,n,n,#FFFFFF

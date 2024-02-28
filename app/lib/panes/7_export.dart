@@ -114,7 +114,7 @@ class ExportPane extends StatelessWidget {
         page.writeln('<h3>${escapeHtml(judgePanel)}</h3>');
         page.writeln('<ul>');
         for (final (Award award, Team team) in nominations[judgePanel]!) {
-          page.writeln('<li>${team.number} <i>${escapeHtml(team.name)}</i> for ${award.isSpreadTheWealth ? "#${award.rank} " : ""}'
+          page.writeln('<li>${team.number} <i>${escapeHtml(team.name)}</i> for ${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank} " : ""}'
               '${escapeHtml(award.name)} award'
               '${award.category.isNotEmpty ? " (${award.category} category)" : ""}');
         }

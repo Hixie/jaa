@@ -26,7 +26,7 @@ class AwardFinalistsPane extends StatefulWidget {
     } else {
       for (final (Award award, List<AwardFinalistEntry> entry) in finalists) {
         page.writeln(
-          '<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}'
+          '<h2>${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank}: " : ""}'
           '${escapeHtml(award.name)} award'
           '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
         );
@@ -73,7 +73,7 @@ class AwardFinalistsPane extends StatefulWidget {
           if (winner) {
             if (!includedHeader) {
               page.writeln(
-                '<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}'
+                '<h2>${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank}: " : ""}'
                 '${escapeHtml(award.name)} award'
                 '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
               );

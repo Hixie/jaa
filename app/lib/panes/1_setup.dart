@@ -258,7 +258,7 @@ class _SetupPaneState extends State<SetupPane> {
                             Cell(Text('Award Rank', style: bold), prototype: Text('000')),
                             Cell(Text('Award Count', style: bold), prototype: Text('000')),
                             Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
-                            Cell(Text('Spread the wealth', style: bold), prototype: Text('Yes')),
+                            Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
                             Cell(Text('Placement', style: bold), prototype: Text('Yes')),
                             Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
                           ],
@@ -331,10 +331,14 @@ class _SetupPaneState extends State<SetupPane> {
                                                 : 'Non-Advancing',
                                       ),
                                     ),
-                              Cell(Text(award.isSpreadTheWealth ? '${award.rank}' : '')),
+                              Cell(Text(award.spreadTheWealth != SpreadTheWealth.no ? '${award.rank}' : '')),
                               Cell(Text('${award.count}')),
                               Cell(Text(award.category)),
-                              Cell(Text(award.isSpreadTheWealth ? 'Yes' : '')),
+                              Cell(Text(switch (award.spreadTheWealth) {
+                                SpreadTheWealth.allPlaces => 'All Places',
+                                SpreadTheWealth.winnerOnly => 'Winner Only',
+                                SpreadTheWealth.no => '',
+                              })),
                               Cell(Text(award.isPlacement ? 'Yes' : '')),
                               Cell(Text(switch (award.pitVisits) {
                                 PitVisit.yes => 'Yes',
@@ -531,7 +535,7 @@ class _TeamEditorState extends State<TeamEditor> {
         for (final Award award in _team!.shortlistsView.keys) {
           ShortlistEntry entry = _team!.shortlistsView[award]!;
           teamNotes.add(Text(
-            '• ${award.isSpreadTheWealth ? '#${award.rank} ' : ''}'
+            '• ${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
             '${award.name}'
             '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
             '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
@@ -618,7 +622,7 @@ class AwardEditor extends StatefulWidget {
 class _AwardEditorState extends State<AwardEditor> {
   final TextEditingController _nameController = TextEditingController();
   int _count = 1;
-  bool _spreadTheWealth = false;
+  SpreadTheWealth _spreadTheWealth = SpreadTheWealth.no;
   bool _placement = false;
   PitVisit _pitVisit = PitVisit.no;
 
@@ -686,10 +690,19 @@ class _AwardEditorState extends State<AwardEditor> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Checkbox(
-                    value: _spreadTheWealth,
+                    value: switch (_spreadTheWealth) {
+                      SpreadTheWealth.allPlaces => true,
+                      SpreadTheWealth.winnerOnly => null,
+                      SpreadTheWealth.no => false,
+                    },
+                    tristate: true,
                     onChanged: (bool? value) {
                       setState(() {
-                        _spreadTheWealth = value!;
+                        _spreadTheWealth = switch (value) {
+                          true => SpreadTheWealth.allPlaces,
+                          null => SpreadTheWealth.winnerOnly,
+                          false => SpreadTheWealth.no,
+                        };
                       });
                     },
                   ),
@@ -697,11 +710,16 @@ class _AwardEditorState extends State<AwardEditor> {
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
-                          _spreadTheWealth = !_spreadTheWealth;
+                          _spreadTheWealth = switch (_spreadTheWealth) {
+                            SpreadTheWealth.allPlaces => SpreadTheWealth.winnerOnly,
+                            SpreadTheWealth.winnerOnly => SpreadTheWealth.no,
+                            SpreadTheWealth.no => SpreadTheWealth.allPlaces,
+                          };
                         });
                       },
                       child: const Text(
-                        'Apply "spread the wealth" rules when assigning finalists (teams can only be finalists for one "spread the wealth" award per event).',
+                        'Apply "spread the wealth" rules when assigning finalists (all places, winner only, no). '
+                        'Teams can only be finalists for one "spread the wealth" award per event.',
                         softWrap: true,
                         overflow: TextOverflow.clip,
                       ),
@@ -774,7 +792,7 @@ class _AwardEditorState extends State<AwardEditor> {
                         });
                       },
                       child: const Text(
-                        'Judging this award always involves a pit visit.',
+                        'Judging this award always involves a pit visit (yes, maybe, no).',
                         softWrap: true,
                         overflow: TextOverflow.clip,
                       ),
@@ -791,7 +809,7 @@ class _AwardEditorState extends State<AwardEditor> {
                       widget.competition.addEventAward(
                         name: _nameController.text,
                         count: _count,
-                        isSpreadTheWealth: _spreadTheWealth,
+                        spreadTheWealth: _spreadTheWealth,
                         isPlacement: _placement,
                         pitVisit: _pitVisit,
                       );

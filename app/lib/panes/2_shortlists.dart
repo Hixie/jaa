@@ -77,7 +77,7 @@ class ShortlistsPane extends StatelessWidget {
       page.writeln('<p>No awards loaded.');
     } else {
       for (final Award award in competition.awardsView) {
-        page.writeln('<h2>${award.isSpreadTheWealth ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
+        page.writeln('<h2>${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
         final String pitVisits = switch (award.pitVisits) {
           PitVisit.yes => 'does involve',
           PitVisit.no => 'does not involve',
