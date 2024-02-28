@@ -13,7 +13,7 @@ import 'panes/4_ranks.dart';
 import 'panes/5_inspire.dart';
 import 'panes/6_finalists.dart';
 import 'panes/7_export.dart';
-import 'widgets.dart';
+import 'widgets/widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

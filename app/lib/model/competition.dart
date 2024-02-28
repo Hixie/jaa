@@ -10,10 +10,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
-import '../widgets.dart';
+import '../widgets/widgets.dart';
 import '../colors.dart';
 
-typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied});
+typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied, bool overridden});
 
 enum PitVisit { yes, no, maybe }
 
@@ -52,6 +52,22 @@ class Award extends ChangeNotifier {
   void updateColor(Color color) {
     _color = color;
     notifyListeners();
+  }
+
+  String get description {
+    StringBuffer buffer = StringBuffer();
+    if (isSpreadTheWealth) {
+      buffer.write('rank $rank ');
+    }
+    if (isAdvancing) {
+      buffer.write('advancing award');
+    } else {
+      buffer.write('non-advancing award');
+    }
+    if (category.isNotEmpty) {
+      buffer.write(' in the $category category');
+    }
+    return buffer.toString();
   }
 
   // predicate for List.where clauses
@@ -364,6 +380,8 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
   late final UnmodifiableListView<String> categories = UnmodifiableListView(_categories);
 
+  final Map<Award, Map<int, Set<Team>>> _overrides = {};
+
   int get minimumInspireCategories {
     List<String> cachedCategories = categories;
     if (cachedCategories.isEmpty) {
@@ -423,31 +441,39 @@ class Competition extends ChangeNotifier {
         stillPlacing = false;
         for (final Award award in awards) {
           if (rank <= award.count) {
-            final List<Set<Team>> candidatesList = awardCandidates[award]!;
             bool placedTeam = false;
-            while (candidatesList.isNotEmpty && !placedTeam) {
-              final Set<Team> candidates = candidatesList.removeAt(0);
-              final Set<Team> alreadyPlaced = award.isSpreadTheWealth ? placedTeams.keys.toSet() : {};
-              final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
-              final Set<Team> winners = candidates.difference(ineligible);
-              if (ineligible.isNotEmpty) {
-                for (Team team in ineligible) {
-                  final (Award oldAward, int oldRank) = placedTeams[team]!;
-                  finalists[award]!.add((team, oldAward, oldRank, tied: false));
-                }
+            Set<Team>? overrides = _overrides[award]?[rank];
+            if (overrides != null && overrides.isNotEmpty) {
+              placedTeam = true;
+              for (Team team in overrides) {
+                finalists[award]!.add((team, null, rank, tied: overrides.length > 1, overridden: true));
               }
-              if (winners.isNotEmpty) {
-                placedTeam = true;
-                for (Team team in winners) {
-                  finalists[award]!.add((team, null, rank, tied: winners.length > 1));
-                  if (award.isSpreadTheWealth || (award.isInspire && rank == 1)) {
-                    placedTeams[team] = (award, rank);
+            } else {
+              final List<Set<Team>> candidatesList = awardCandidates[award]!;
+              while (candidatesList.isNotEmpty && !placedTeam) {
+                final Set<Team> candidates = candidatesList.removeAt(0);
+                final Set<Team> alreadyPlaced = award.isSpreadTheWealth ? placedTeams.keys.toSet() : {};
+                final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
+                final Set<Team> winners = candidates.difference(ineligible);
+                if (ineligible.isNotEmpty) {
+                  for (Team team in ineligible) {
+                    final (Award oldAward, int oldRank) = placedTeams[team]!;
+                    finalists[award]!.add((team, oldAward, oldRank, tied: false, overridden: false));
+                  }
+                }
+                if (winners.isNotEmpty) {
+                  placedTeam = true;
+                  for (Team team in winners) {
+                    finalists[award]!.add((team, null, rank, tied: winners.length > 1, overridden: false));
+                    if (award.isSpreadTheWealth || (award.isInspire && rank == 1)) {
+                      placedTeams[team] = (award, rank);
+                    }
                   }
                 }
               }
             }
             if (!placedTeam) {
-              finalists[award]!.add((null, null, rank, tied: false));
+              finalists[award]!.add((null, null, rank, tied: false, overridden: false));
             }
             if (rank < award.count) {
               stillPlacing = true;
@@ -505,6 +531,22 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addOverride(Award award, Team team, int rank) {
+    _overrides.putIfAbsent(award, () => <int, Set<Team>>{}).putIfAbsent(rank, () => <Team>{}).add(team);
+    notifyListeners();
+  }
+
+  void removeOverride(Award award, Team team, int rank) {
+    _overrides[award]![rank]!.remove(team);
+    if (_overrides[award]![rank]!.isEmpty) {
+      _overrides[award]!.remove(rank);
+      if (_overrides[award]!.isEmpty) {
+        _overrides.remove(award);
+      }
+    }
+    notifyListeners();
+  }
+
   int Function(Award a, Award b) get awardSorter => switch (_awardOrder) {
         AwardOrder.categories => Award.categoryBasedComparator,
         AwardOrder.rank => Award.rankBasedComparator,
@@ -549,6 +591,7 @@ class Competition extends ChangeNotifier {
     for (final Team team in _teams) {
       team._clearShortlists();
     }
+    _overrides.clear();
     notifyListeners();
   }
 
@@ -612,6 +655,7 @@ class Competition extends ChangeNotifier {
     for (final Team team in _teams) {
       team._clearShortlists();
     }
+    _overrides.clear();
     notifyListeners();
   }
 
@@ -745,7 +789,7 @@ class Competition extends ChangeNotifier {
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
     if (csvData.isEmpty) {
-      throw const FormatException('Pit visit notes are corrupted or missing.');
+      throw const FormatException('Pit visit notes are corrupted.');
     }
     Map<int, Team> teamMap = {
       for (final Team team in _teams) team.number: team,
@@ -817,7 +861,7 @@ class Competition extends ChangeNotifier {
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
     if (csvData.isEmpty) {
-      throw const FormatException('Shortlists file corrupted or missing.');
+      throw const FormatException('Shortlists file corrupted.');
     }
     Map<int, Team> teamMap = {
       for (final Team team in _teams) team.number: team,
@@ -870,6 +914,63 @@ class Competition extends ChangeNotifier {
     return const ListToCsvConverter().convert(data);
   }
 
+  Future<void> importFinalistOverrides(List<int> csvFile) async {
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
+    final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
+    if (csvData.isEmpty) {
+      throw const FormatException('Finalist overrides are corrupted.');
+    }
+    Map<int, Team> teamMap = {
+      for (final Team team in _teams) team.number: team,
+    };
+    Map<String, Award> awardMap = {
+      for (final Award award in _awards) award.name: award,
+    };
+    for (List<dynamic> row in csvData.skip(1)) {
+      if (row.length < 3) {
+        throw const FormatException('Finalist overrides file contains a row with less than three cells.');
+      }
+      if (!awardMap.containsKey('${row[0]}')) {
+        throw FormatException('Parse error in finalist overrides file: award "${row[0]}" not recognized.');
+      }
+      final Award award = awardMap['${row[0]}']!;
+      if (row[1] is! int || (row[1] < 0)) {
+        throw FormatException('Parse error in finalist overrides file: "${row[1]}" is not a valid team number.');
+      }
+      if (!teamMap.containsKey(row[1] as int)) {
+        throw FormatException('Parse error in finalist overrides file: team "${row[1]}" not recognised.');
+      }
+      final Team team = teamMap[row[1] as int]!;
+      if (row[2] is! int || (row[2] < 0)) {
+        throw FormatException('Parse error in finalist overrides file: "${row[2]}" is not a valid rank.');
+      }
+      final int rank = row[2] as int;
+      addOverride(award, team, rank);
+    }
+    notifyListeners();
+  }
+
+  String finalistOverridesToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Award name', // string
+      'Team number', // numeric
+      'Rank', // numeric
+    ]);
+    for (final Award award in _overrides.keys) {
+      for (final int rank in _overrides[award]!.keys) {
+        for (final Team team in _overrides[award]![rank]!) {
+          data.add([
+            award.name,
+            team.number,
+            rank,
+          ]);
+        }
+      }
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
   // Derived artifacts
 
   String inspireCandiatesToCsv() {
@@ -915,7 +1016,8 @@ class Competition extends ChangeNotifier {
     //  - a number followed by the string " (tied)", indicating the win is currently shared by multiple teams
     //  - a string consisting of an award name, a space, and a rank (giving the award that the team won that disqualified them from winning this one)
     for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in finalists) {
+      // ignore: unused_local_variable
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
         data.add([
           award.name,
           team?.number ?? '',
@@ -938,7 +1040,7 @@ class Competition extends ChangeNotifier {
       final List<Set<Team>?> placedTeams = [];
       placedAwards[award] = placedTeams;
       // ignore: unused_local_variable
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied) in finalists) {
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
         if (otherAward != null) {
           continue;
         }
@@ -1014,6 +1116,7 @@ class Competition extends ChangeNotifier {
   static const String filenameAwards = 'awards.csv';
   static const String filenamePitVisitNotes = 'pit visit notes.csv';
   static const String filenameShortlists = 'shortlists.csv';
+  static const String filenameFinalistOverrides = 'finalist overrides.csv';
   static const String filenameInspireCandidates = 'inspire candidates.csv';
   static const String filenameFinalistsTable = 'finalists table.csv';
   static const String filenameFinalistsLists = 'finalists lists.csv';
@@ -1044,6 +1147,9 @@ class Competition extends ChangeNotifier {
         await importAwards(zip.findFile(filenameAwards)!.content, expectAwards: false);
         await importPitVisitNotes(zip.findFile(filenamePitVisitNotes)!.content);
         await importShortlists(zip.findFile(filenameShortlists)!.content);
+        if (zip.findFile(filenameFinalistOverrides) != null) {
+          await importFinalistOverrides(zip.findFile(filenameFinalistOverrides)!.content);
+        }
         if (zip.findFile(filenameConfiguration) == null) {
           resetConfiguration();
         } else {
@@ -1078,10 +1184,11 @@ class Competition extends ChangeNotifier {
           'This archive contains data that can be opened by the FIRST Tech Challenge Judge Advisor Assistant.\n'
           '\n'
           'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenameShortlists", and "$filenamePitVisitNotes".\n'
-          'The "$filenameConfiguration" file contains settings for the Judge Advisor Assistant app that do not affect the event itself.'
+          'The "$filenameFinalistOverrides" file contains any award finalists overrides that are in effect.\n'
+          'The "$filenameConfiguration" file contains settings for the Judge Advisor Assistant app that do not affect the event itself.\n'
           '\n'
           'Other files (such as this one) are included for information purposes only. They are not used when reimporting the event state.\n'
-          'The "$filenameInspireCandidates" file contains a listing of each team\'s rankings for awards that contribute to Inspire award nominations.'
+          'The "$filenameInspireCandidates" file contains a listing of each team\'s rankings for awards that contribute to Inspire award nominations.\n'
           'The "$filenameFinalistsTable" and "$filenameFinalistsLists" files contain the computed finalists at the time of the export.\n'
           '\n'
           'For more information see: https://github.com/Hixie/jaa/',
@@ -1091,6 +1198,7 @@ class Competition extends ChangeNotifier {
     zip.addFile(ArchiveFile(filenameAwards, -1, utf8.encode(awardsToCsv())));
     zip.addFile(ArchiveFile(filenameShortlists, -1, utf8.encode(shortlistsToCsv())));
     zip.addFile(ArchiveFile(filenamePitVisitNotes, -1, utf8.encode(pitVisitNotesToCsv())));
+    zip.addFile(ArchiveFile(filenameFinalistOverrides, -1, utf8.encode(finalistOverridesToCsv())));
     zip.addFile(ArchiveFile(filenameConfiguration, -1, utf8.encode(configurationToCsv())));
     zip.addFile(ArchiveFile(filenameInspireCandidates, -1, utf8.encode(inspireCandiatesToCsv())));
     zip.addFile(ArchiveFile(filenameFinalistsTable, -1, utf8.encode(finalistTablesToCsv())));

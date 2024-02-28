@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import '../constants.dart';
 import '../io.dart';
 import '../model/competition.dart';
-import '../widgets.dart';
+import '../widgets/cells.dart';
+import '../widgets/widgets.dart';
 
 class InspirePane extends StatelessWidget {
   const InspirePane({super.key, required this.competition});

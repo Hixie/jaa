@@ -1,14 +1,13 @@
-import 'dart:math' as math;
-
+import 'package:file_picker/file_picker.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../constants.dart';
 import '../io.dart';
-import '../widgets.dart';
 import '../model/competition.dart';
+import '../widgets/cells.dart';
+import '../widgets/widgets.dart';
 
 class SetupPane extends StatefulWidget {
   const SetupPane({super.key, required this.competition});
@@ -406,7 +405,7 @@ class TeamEditor extends StatefulWidget {
   });
 
   final Competition competition;
-  final VoidCallback? onClosed;
+  final VoidCallback onClosed;
 
   @override
   State<TeamEditor> createState() => _TeamEditorState();
@@ -556,76 +555,48 @@ class _TeamEditorState extends State<TeamEditor> {
     }
     return ListenableBuilder(
       listenable: widget.competition,
-      builder: (BuildContext context, Widget? child) => Card(
-        child: HorizontalScrollbar(
-          child: Stack(
-            children: [
-              LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) => SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: math.max(minimumReasonableWidth, constraints.maxWidth)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(spacing * 2.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              const Padding(
-                                // TODO: remove this once DropdownMenu correctly reports its baseline
-                                padding: EdgeInsets.fromLTRB(0.0, 16.0, 0.0, 0.0),
-                                child: Text('Edit team:', style: bold),
-                              ),
-                              const SizedBox(width: indent),
-                              DropdownMenu<Team>(
-                                controller: _teamController,
-                                onSelected: _handleTeamChange,
-                                requestFocusOnTap: true,
-                                enableFilter: true,
-                                menuStyle: const MenuStyle(
-                                  maximumSize: MaterialStatePropertyAll(
-                                    Size(double.infinity, indent * 11.0),
-                                  ),
-                                ),
-                                label: const Text(
-                                  'Team',
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
-                                  return DropdownMenuEntry<Team>(
-                                    value: team,
-                                    label: '${team.number} ${team.name}',
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ),
-                          ...teamNotes,
-                        ],
-                      ),
+      builder: (BuildContext context, Widget? child) {
+        return InlineScrollableCard(
+          onClosed: widget.onClosed,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                const Padding(
+                  // TODO: remove this once DropdownMenu correctly reports its baseline
+                  padding: EdgeInsets.fromLTRB(0.0, 16.0, 0.0, 0.0),
+                  child: Text('Edit team:', style: bold),
+                ),
+                const SizedBox(width: indent),
+                DropdownMenu<Team>(
+                  controller: _teamController,
+                  onSelected: _handleTeamChange,
+                  requestFocusOnTap: true,
+                  enableFilter: true,
+                  menuStyle: const MenuStyle(
+                    maximumSize: MaterialStatePropertyAll(
+                      Size(double.infinity, indent * 11.0),
                     ),
                   ),
+                  label: const Text(
+                    'Team',
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
+                    return DropdownMenuEntry<Team>(
+                      value: team,
+                      label: '${team.number} ${team.name}',
+                    );
+                  }).toList(),
                 ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IconButton(
-                  onPressed: widget.onClosed,
-                  iconSize: DefaultTextStyle.of(context).style.fontSize,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.close),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+              ],
+            ),
+            ...teamNotes,
+          ],
+        );
+      },
     );
   }
 }
@@ -638,7 +609,7 @@ class AwardEditor extends StatefulWidget {
   });
 
   final Competition competition;
-  final VoidCallback? onClosed;
+  final VoidCallback onClosed;
 
   @override
   State<AwardEditor> createState() => _AwardEditorState();
@@ -659,211 +630,182 @@ class _AwardEditorState extends State<AwardEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: HorizontalScrollbar(
-        child: Stack(
+    return ListenableBuilder(
+      listenable: Listenable.merge([_nameController, widget.competition]),
+      builder: (BuildContext context, Widget? child) {
+        bool nameIsUnique = !widget.competition.awardsView.any((Award award) => award.name == _nameController.text);
+        return InlineScrollableCard(
+          onClosed: widget.onClosed,
           children: [
-            LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: math.max(minimumReasonableWidth, constraints.maxWidth)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(spacing * 2.0),
-                    child: ListenableBuilder(
-                        listenable: Listenable.merge([_nameController, widget.competition]),
-                        builder: (BuildContext context, Widget? child) {
-                          bool nameIsUnique = !widget.competition.awardsView.any((Award award) => award.name == _nameController.text);
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Add event-specific award:', style: bold),
-                              const SizedBox(height: spacing),
-                              TextField(
-                                controller: _nameController,
-                                decoration: InputDecoration(
-                                  border: const OutlineInputBorder(),
-                                  labelText: 'Award Name',
-                                  errorText: nameIsUnique ? null : 'Name must be unique.',
-                                ),
-                              ),
-                              const SizedBox(height: spacing),
-                              Row(
-                                children: [
-                                  const Text('Maximum number of winners:'),
-                                  const SizedBox(width: indent),
-                                  IconButton.outlined(
-                                    onPressed: _count <= 1
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _count -= 1;
-                                            });
-                                          },
-                                    icon: const Icon(Icons.remove),
-                                  ),
-                                  SizedBox(
-                                    width: DefaultTextStyle.of(context).style.fontSize! * 3.0,
-                                    child: Text(
-                                      '$_count',
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                  IconButton.outlined(
-                                    onPressed: _count >= 32
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _count += 1;
-                                            });
-                                          },
-                                    icon: const Icon(Icons.add),
-                                  ),
-                                ],
-                              ),
-                              MergeSemantics(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Checkbox(
-                                      value: _spreadTheWealth,
-                                      onChanged: (bool? value) {
-                                        setState(() {
-                                          _spreadTheWealth = value!;
-                                        });
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _spreadTheWealth = !_spreadTheWealth;
-                                          });
-                                        },
-                                        child: const Text(
-                                          'Apply "spread the wealth" rules when assigning finalists (teams can only be finalists for one "spread the wealth" award per event).',
-                                          softWrap: true,
-                                          overflow: TextOverflow.clip,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              MergeSemantics(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Checkbox(
-                                      value: _count > 1 && _placement,
-                                      onChanged: _count <= 1
-                                          ? null
-                                          : (bool? value) {
-                                              setState(() {
-                                                _placement = value!;
-                                              });
-                                            },
-                                    ),
-                                    Expanded(
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _placement = !_placement;
-                                          });
-                                        },
-                                        child: const Text(
-                                          'Finalists are ranked (1st, 2nd, 3rd, etc).',
-                                          softWrap: true,
-                                          overflow: TextOverflow.clip,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              MergeSemantics(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Checkbox(
-                                      value: switch (_pitVisit) {
-                                        PitVisit.yes => true,
-                                        PitVisit.no => false,
-                                        PitVisit.maybe => null,
-                                      },
-                                      tristate: true,
-                                      onChanged: (bool? value) {
-                                        setState(() {
-                                          _pitVisit = switch (value) {
-                                            true => PitVisit.yes,
-                                            false => PitVisit.no,
-                                            null => PitVisit.maybe,
-                                          };
-                                        });
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _pitVisit = switch (_pitVisit) {
-                                              PitVisit.no => PitVisit.yes,
-                                              PitVisit.maybe => PitVisit.no,
-                                              PitVisit.yes => PitVisit.maybe,
-                                            };
-                                          });
-                                        },
-                                        child: const Text(
-                                          'Judging this award always involves a pit visit.',
-                                          softWrap: true,
-                                          overflow: TextOverflow.clip,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: spacing),
-                              FilledButton(
-                                onPressed: _nameController.text.isEmpty || !nameIsUnique
-                                    ? null
-                                    : () {
-                                        widget.competition.addEventAward(
-                                          name: _nameController.text,
-                                          count: _count,
-                                          isSpreadTheWealth: _spreadTheWealth,
-                                          isPlacement: _placement,
-                                          pitVisit: _pitVisit,
-                                        );
-                                        widget.onClosed?.call();
-                                      },
-                                child: const Text(
-                                  'Add award',
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          );
-                        }),
-                  ),
-                ),
+            const Text('Add event-specific award:', style: bold),
+            const SizedBox(height: spacing),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                labelText: 'Award Name',
+                errorText: nameIsUnique ? null : 'Name must be unique.',
               ),
             ),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconButton(
-                onPressed: widget.onClosed,
-                iconSize: DefaultTextStyle.of(context).style.fontSize,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.close),
+            const SizedBox(height: spacing),
+            Row(
+              children: [
+                const Text('Maximum number of winners:'),
+                const SizedBox(width: indent),
+                IconButton.outlined(
+                  onPressed: _count <= 1
+                      ? null
+                      : () {
+                          setState(() {
+                            _count -= 1;
+                          });
+                        },
+                  icon: const Icon(Icons.remove),
+                ),
+                SizedBox(
+                  width: DefaultTextStyle.of(context).style.fontSize! * 3.0,
+                  child: Text(
+                    '$_count',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                IconButton.outlined(
+                  onPressed: _count >= 32
+                      ? null
+                      : () {
+                          setState(() {
+                            _count += 1;
+                          });
+                        },
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+            MergeSemantics(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Checkbox(
+                    value: _spreadTheWealth,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _spreadTheWealth = value!;
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _spreadTheWealth = !_spreadTheWealth;
+                        });
+                      },
+                      child: const Text(
+                        'Apply "spread the wealth" rules when assigning finalists (teams can only be finalists for one "spread the wealth" award per event).',
+                        softWrap: true,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            MergeSemantics(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Checkbox(
+                    value: _count > 1 && _placement,
+                    onChanged: _count <= 1
+                        ? null
+                        : (bool? value) {
+                            setState(() {
+                              _placement = value!;
+                            });
+                          },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _placement = !_placement;
+                        });
+                      },
+                      child: const Text(
+                        'Finalists are ranked (1st, 2nd, 3rd, etc).',
+                        softWrap: true,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            MergeSemantics(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Checkbox(
+                    value: switch (_pitVisit) {
+                      PitVisit.yes => true,
+                      PitVisit.no => false,
+                      PitVisit.maybe => null,
+                    },
+                    tristate: true,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _pitVisit = switch (value) {
+                          true => PitVisit.yes,
+                          false => PitVisit.no,
+                          null => PitVisit.maybe,
+                        };
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _pitVisit = switch (_pitVisit) {
+                            PitVisit.no => PitVisit.yes,
+                            PitVisit.maybe => PitVisit.no,
+                            PitVisit.yes => PitVisit.maybe,
+                          };
+                        });
+                      },
+                      child: const Text(
+                        'Judging this award always involves a pit visit.',
+                        softWrap: true,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: spacing),
+            FilledButton(
+              onPressed: _nameController.text.isEmpty || !nameIsUnique
+                  ? null
+                  : () {
+                      widget.competition.addEventAward(
+                        name: _nameController.text,
+                        count: _count,
+                        isSpreadTheWealth: _spreadTheWealth,
+                        isPlacement: _placement,
+                        pitVisit: _pitVisit,
+                      );
+                      widget.onClosed.call();
+                    },
+              child: const Text(
+                'Add award',
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

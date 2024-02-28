@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../io.dart';
 import '../model/competition.dart';
-import '../widgets.dart';
+import '../widgets/cells.dart';
+import '../widgets/widgets.dart';
 
 class PitVisitsPane extends StatefulWidget {
   const PitVisitsPane({super.key, required this.competition});
@@ -151,17 +152,16 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   overflow: TextOverflow.clip,
                 ),
               ),
-            ScrollableRegion(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (totalCount > 0)
+            if (totalCount > 0)
+              ScrollableRegion(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     const Padding(
                       padding: EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
                       child: Text('Summary:', style: bold),
                     ),
-                  if (totalCount > 0)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                       child: Table(
@@ -249,86 +249,89 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-              child: Text('Details:', style: bold),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-              child: MergeSemantics(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Material(
-                      type: MaterialType.transparency,
-                      child: Checkbox(
-                        value: !_filterTeams,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _filterTeams = !value!;
-                            _legacyTeams.clear();
-                          });
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _filterTeams = !_filterTeams;
-                            _legacyTeams.clear();
-                          });
-                        },
-                        child: const Text(
-                          'Include teams that are nominated for an award that always involves a pit visit from the judges.',
-                          softWrap: true,
-                          overflow: TextOverflow.clip,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
-              child: MergeSemantics(
-                child: Row(
-                  children: [
-                    Material(
-                      type: MaterialType.transparency,
-                      child: Checkbox(
-                        value: !_hideVisited,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _hideVisited = !value!;
-                            _legacyTeams.clear();
-                          });
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _hideVisited = !_hideVisited;
-                            _legacyTeams.clear();
-                          });
-                        },
-                        child: const Text(
-                          'Include teams that are already marked as visited.',
-                          softWrap: true,
-                          overflow: TextOverflow.clip,
+            if (totalCount > 0)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text('Details:', style: bold),
+              ),
+            if (totalCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+                child: MergeSemantics(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Material(
+                        type: MaterialType.transparency,
+                        child: Checkbox(
+                          value: !_filterTeams,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _filterTeams = !value!;
+                              _legacyTeams.clear();
+                            });
+                          },
                         ),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _filterTeams = !_filterTeams;
+                              _legacyTeams.clear();
+                            });
+                          },
+                          child: const Text(
+                            'Include teams that are nominated for an award that always involves a pit visit from the judges.',
+                            softWrap: true,
+                            overflow: TextOverflow.clip,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            if (totalCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
+                child: MergeSemantics(
+                  child: Row(
+                    children: [
+                      Material(
+                        type: MaterialType.transparency,
+                        child: Checkbox(
+                          value: !_hideVisited,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _hideVisited = !value!;
+                              _legacyTeams.clear();
+                            });
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _hideVisited = !_hideVisited;
+                              _legacyTeams.clear();
+                            });
+                          },
+                          child: const Text(
+                            'Include teams that are already marked as visited.',
+                            softWrap: true,
+                            overflow: TextOverflow.clip,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -434,7 +437,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   ),
                 ),
               ),
-            if (relevantAwards.where((Award award) => award.pitVisits == PitVisit.maybe).isNotEmpty)
+            if (widget.competition.teamsView.isNotEmpty && relevantAwards.where((Award award) => award.pitVisits == PitVisit.maybe).isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
                 child: Text('* This award may involve pit visits.', style: italic),

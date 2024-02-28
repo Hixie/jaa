@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../constants.dart';
 import '../io.dart';
-import '../widgets.dart';
 import '../model/competition.dart';
+import '../widgets/awards.dart';
+import '../widgets/cells.dart';
+import '../widgets/shortlists.dart';
+import '../widgets/widgets.dart';
 
 class RanksPane extends StatelessWidget {
   const RanksPane({super.key, required this.competition});
@@ -29,12 +32,22 @@ class RanksPane extends StatelessWidget {
               title: '4. Rank Lists',
               onHeaderButtonPressed: () => exportRanksHTML(context, competition),
             ),
-            ShortlistEditor(
-              competition: competition,
-              sortedAwards: awards,
-              lateEntry: true,
-            ),
-            ShortlistSummary(competition: competition),
+            if (competition.teamsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (competition.teamsView.isNotEmpty)
+              ShortlistEditor(
+                competition: competition,
+                sortedAwards: awards,
+                lateEntry: true,
+              ),
+            if (competition.teamsView.isNotEmpty) ShortlistSummary(competition: competition),
             if (awards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
@@ -87,13 +100,14 @@ class RanksPane extends StatelessWidget {
                                     message: team.name,
                                     child: Cell(
                                       ListenableBuilder(
-                                          listenable: entry,
-                                          builder: (BuildContext context, Widget? child) {
-                                            return Text(
-                                              '${team.number}',
-                                              style: _styleFor(context, entry),
-                                            );
-                                          }),
+                                        listenable: entry,
+                                        builder: (BuildContext context, Widget? child) {
+                                          return Text(
+                                            '${team.number}',
+                                            style: _styleFor(context, entry),
+                                          );
+                                        },
+                                      ),
                                     ),
                                   ),
                                   RemoveFromShortlistCell(
@@ -109,7 +123,7 @@ class RanksPane extends StatelessWidget {
                 );
               },
             ),
-            if (awards.isNotEmpty)
+            if (awards.isNotEmpty && competition.teamsView.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
                 child: Text(
@@ -121,7 +135,7 @@ class RanksPane extends StatelessWidget {
                   overflow: TextOverflow.visible,
                 ),
               ),
-            AwardOrderSwitch(competition: competition),
+            if (awards.isNotEmpty) AwardOrderSwitch(competition: competition),
           ],
         );
       },

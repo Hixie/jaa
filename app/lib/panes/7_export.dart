@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:jaa/exporters.dart';
-import 'package:jaa/panes/1_setup.dart';
 
+import '../constants.dart';
+import '../exporters.dart';
 import '../io.dart';
+import '../model/competition.dart';
+import '../panes/1_setup.dart';
+import '../widgets/widgets.dart';
 import '2_shortlists.dart';
 import '3_pitvisits.dart';
 import '4_ranks.dart';
 import '5_inspire.dart';
 import '6_finalists.dart';
-import '../constants.dart';
-import '../model/competition.dart';
-import '../widgets.dart';
 
 class ExportPane extends StatelessWidget {
   const ExportPane({super.key, required this.competition});
@@ -29,10 +29,6 @@ class ExportPane extends StatelessWidget {
           children: [
             const Heading('7. Export'),
             const Padding(padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing), child: Text('For printing:')),
-            ExportButton(
-              label: 'Export awards ceremony script (HTML)',
-              onPressed: () => AwardFinalistsPane.exportFinalistsScriptHTML(context, competition),
-            ),
             ExportButton(
               label: 'Export team list (HTML)',
               onPressed: () => SetupPane.exportTeamsHTML(context, competition),
@@ -60,6 +56,10 @@ class ExportPane extends StatelessWidget {
             ExportButton(
               label: 'Export finalists tables (HTML)',
               onPressed: () => AwardFinalistsPane.exportFinalistsTableHTML(context, competition),
+            ),
+            ExportButton(
+              label: 'Export awards ceremony script (HTML)',
+              onPressed: () => AwardFinalistsPane.exportFinalistsScriptHTML(context, competition),
             ),
             const Padding(padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing), child: Text('For spreadsheet import:')),
             ExportButton(
@@ -142,31 +142,5 @@ class ExportPane extends StatelessWidget {
       }
     }
     return exportHTML(competition, 'judge_panels', now, page.toString());
-  }
-}
-
-class ExportButton extends StatelessWidget {
-  const ExportButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-      child: FilledButton(
-        onPressed: onPressed,
-        child: Text(
-          label,
-          softWrap: false,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    );
   }
 }

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../io.dart';
-import '../widgets.dart';
 import '../model/competition.dart';
+import '../widgets/awards.dart';
+import '../widgets/cells.dart';
+import '../widgets/shortlists.dart';
+import '../widgets/widgets.dart';
 
 class ShortlistsPane extends StatelessWidget {
   const ShortlistsPane({super.key, required this.competition});
@@ -28,12 +31,20 @@ class ShortlistsPane extends StatelessWidget {
             if (competition.teamsView.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('No teams loaded. Use the Setup pane to import a teams list.'),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
               ),
             if (awards.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text('No awards loaded. Use the Setup pane to import an awards list.'),
+                child: Text(
+                  'No awards loaded. Use the Setup pane to import an awards list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
               ),
             if (awards.isNotEmpty)
               ShortlistEditor(
@@ -41,7 +52,7 @@ class ShortlistsPane extends StatelessWidget {
                 competition: competition,
                 lateEntry: false,
               ),
-            ShortlistSummary(competition: competition),
+            if (competition.teamsView.isNotEmpty) ShortlistSummary(competition: competition),
             if (awards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
@@ -52,7 +63,7 @@ class ShortlistsPane extends StatelessWidget {
                 sortedAwards: awards,
                 competition: competition,
               ),
-            AwardOrderSwitch(competition: competition),
+            if (awards.isNotEmpty) AwardOrderSwitch(competition: competition),
           ],
         );
       },
@@ -156,7 +167,12 @@ class ShortlistTables extends StatelessWidget {
                             ),
                           ),
                           NominatorCell(entry),
-                          RemoveFromShortlistCell(competition: competition, team: team, award: award, foregroundColor: foregroundColor),
+                          RemoveFromShortlistCell(
+                            competition: competition,
+                            team: team,
+                            award: award,
+                            foregroundColor: foregroundColor,
+                          ),
                         ],
                       ),
                   ],
