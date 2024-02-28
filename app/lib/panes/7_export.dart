@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jaa/widgets/awards.dart';
 
 import '../constants.dart';
 import '../exporters.dart';
@@ -22,6 +23,7 @@ class ExportPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: competition,
       builder: (BuildContext context, Widget? child) {
+        List<Award> sortedAwards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +49,15 @@ class ExportPane extends StatelessWidget {
             ),
             ExportButton(
               label: 'Export ranked lists (HTML)',
-              onPressed: () => RanksPane.exportRanksHTML(context, competition),
+              onPressed: () => RanksPane.exportRanksHTML(context, competition, sortedAwards),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+              child: AwardSelector(
+                label: 'Export ranked list (HTML) for:',
+                awards: sortedAwards,
+                onPressed: (Award award) => RanksPane.exportRanksHTML(context, competition, [award]),
+              ),
             ),
             ExportButton(
               label: 'Export Inspire award results (HTML)',

@@ -456,32 +456,10 @@ class _OverrideEditorState extends State<OverrideEditor> {
         if (widget.competition.awardsView.isNotEmpty && widget.competition.teamsView.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-            child: Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                const Text('Override rankings for:'),
-                for (final Award award in widget.competition.awardsView)
-                  ListenableBuilder(
-                    listenable: award,
-                    child: Text(
-                      award.name,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    builder: (BuildContext context, Widget? child) {
-                      return FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: award.color,
-                            foregroundColor: textColorForColor(award.color),
-                            side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
-                          ),
-                          onPressed: () => _handleAwardSelection(award),
-                          child: child);
-                    },
-                  ),
-              ],
+            child: AwardSelector(
+              label: 'Override rankings for:',
+              awards: widget.competition.awardsView,
+              onPressed: _handleAwardSelection,
             ),
           ),
         if (_award != null)

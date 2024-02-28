@@ -5,6 +5,51 @@ import '../constants.dart';
 import '../model/competition.dart';
 import 'widgets.dart';
 
+class AwardSelector extends StatelessWidget {
+  const AwardSelector({
+    super.key,
+    required this.label,
+    required this.awards,
+    required this.onPressed,
+  });
+
+  final String label;
+  final List<Award> awards;
+  final ValueSetter<Award> onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(label),
+        for (final Award award in awards)
+          ListenableBuilder(
+            listenable: award,
+            child: Text(
+              award.name,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+            ),
+            builder: (BuildContext context, Widget? child) {
+              return FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: award.color,
+                  foregroundColor: textColorForColor(award.color),
+                  side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+                ),
+                onPressed: () => onPressed(award),
+                child: child,
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
 class AwardCard extends StatelessWidget {
   const AwardCard({
     super.key,

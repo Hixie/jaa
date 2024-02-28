@@ -30,7 +30,7 @@ class RanksPane extends StatelessWidget {
           children: [
             PaneHeader(
               title: '4. Rank Lists',
-              onHeaderButtonPressed: () => exportRanksHTML(context, competition),
+              onHeaderButtonPressed: () => exportRanksHTML(context, competition, awards),
             ),
             if (competition.teamsView.isEmpty)
               const Padding(
@@ -142,13 +142,13 @@ class RanksPane extends StatelessWidget {
     );
   }
 
-  static Future<void> exportRanksHTML(BuildContext context, Competition competition) async {
+  static Future<void> exportRanksHTML(BuildContext context, Competition competition, List<Award> awards) async {
     final DateTime now = DateTime.now();
     final StringBuffer page = createHtmlPage('Ranks', now);
     if (competition.awardsView.isEmpty) {
       page.writeln('<p>No awards loaded.');
     } else {
-      for (final Award award in competition.awardsView.where(Award.isNotInspirePredicate)) {
+      for (final Award award in awards) {
         page.writeln('<h2>${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
         final String pitVisits = switch (award.pitVisits) {
           PitVisit.yes => 'does involve',

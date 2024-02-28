@@ -59,7 +59,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
 
   void _markNeedsBuild() {
     setState(() {
-      // build is depenendent on the competition object
+      // build is dependent on the competition object
     });
   }
 
@@ -114,7 +114,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
       ),
     );
     _teamController.clear();
-    _nominatorController.clear();
+    // we intentionally don't clear the nominator field
     _teamFocusNode.requestFocus();
     setState(() {
       _team = null;
@@ -130,33 +130,10 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
         if (widget.sortedAwards.isNotEmpty && widget.competition.teamsView.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-            child: Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                const Text('Nominate for:'),
-                for (final Award award in widget.sortedAwards)
-                  if (!award.isInspire)
-                    ListenableBuilder(
-                      listenable: award,
-                      child: Text(
-                        award.name,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      builder: (BuildContext context, Widget? child) {
-                        return FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: award.color,
-                              foregroundColor: textColorForColor(award.color),
-                              side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
-                            ),
-                            onPressed: () => _handleAwardSelection(award),
-                            child: child);
-                      },
-                    ),
-              ],
+            child: AwardSelector(
+              label: 'Nominate for:',
+              awards: widget.sortedAwards,
+              onPressed: _handleAwardSelection,
             ),
           ),
         if (_award != null)
