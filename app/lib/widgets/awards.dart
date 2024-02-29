@@ -122,28 +122,6 @@ class AwardBuilder extends StatelessWidget {
   final Competition competition;
   final AwardWidgetBuilder builder;
 
-  List<Widget> _buildChildren() {
-    final List<Widget> children = [];
-    String? lastCategory = sortedAwards.last.category;
-    for (final Award award in sortedAwards.reversed) {
-      final bool needPadding = award.category != lastCategory;
-      lastCategory = award.category;
-      children.insert(
-        0,
-        Padding(
-          padding: EdgeInsetsDirectional.only(end: needPadding ? indent : 0.0),
-          child: ListenableBuilder(
-            listenable: competition.shortlistsView[award]!,
-            builder: (BuildContext context, Widget? child) {
-              return builder(context, award, competition.shortlistsView[award]!);
-            },
-          ),
-        ),
-      );
-    }
-    return children;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -154,10 +132,33 @@ class AwardBuilder extends StatelessWidget {
               child: Text('No awards loaded. Use the Setup pane to import an awards list.'),
             )
           : ScrollableRegion(
-              child: Wrap(
-                runSpacing: spacing,
-                spacing: 0.0,
-                children: _buildChildren(),
+              child: ListenableBuilder(
+                listenable: competition,
+                builder: (BuildContext context, Widget? child) {
+                  final List<Widget> children = [];
+                  String? lastCategory = sortedAwards.last.category;
+                  for (final Award award in sortedAwards.reversed) {
+                    final bool needPadding = award.category != lastCategory;
+                    lastCategory = award.category;
+                    children.insert(
+                      0,
+                      Padding(
+                        padding: EdgeInsetsDirectional.only(end: needPadding ? indent : 0.0),
+                        child: ListenableBuilder(
+                          listenable: competition.shortlistsView[award]!,
+                          builder: (BuildContext context, Widget? child) {
+                            return builder(context, award, competition.shortlistsView[award]!);
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                  return Wrap(
+                    runSpacing: spacing,
+                    spacing: 0.0,
+                    children: children,
+                  );
+                },
               ),
             ),
     );

@@ -395,7 +395,7 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
         widget.competition.addToShortlist(widget.award, widget.team, ShortlistEntry(lateEntry: false, rank: int.parse(_controller.text)));
         assert(_entry != null); // set by _handleTeamUpdate
       } else {
-        _entry!.rank = int.parse(_controller.text);
+        widget.competition.updateShortlistRank(widget.award, widget.team, int.parse(_controller.text));
       }
     }
   }
