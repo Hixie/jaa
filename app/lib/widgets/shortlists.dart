@@ -25,8 +25,10 @@ class ShortlistEditor extends StatefulWidget {
 class _ShortlistEditorState extends State<ShortlistEditor> {
   final TextEditingController _teamController = TextEditingController();
   final TextEditingController _nominatorController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
   final FocusNode _teamFocusNode = FocusNode();
   final FocusNode _nominatorFocusNode = FocusNode();
+  final FocusNode _commentFocusNode = FocusNode();
 
   Award? _award;
   Team? _team;
@@ -52,8 +54,10 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     widget.competition.removeListener(_markNeedsBuild);
     _teamController.dispose();
     _nominatorController.dispose();
+    _commentController.dispose();
     _teamFocusNode.dispose();
     _nominatorFocusNode.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
@@ -65,7 +69,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
 
   void _handleAwardSelection(Award award) {
     if (_award == award) {
-      if (_teamController.text.isEmpty && _nominatorController.text.isEmpty) {
+      if (_teamController.text.isEmpty && _nominatorController.text.isEmpty && _commentController.text.isEmpty) {
         setState(() {
           _award = null;
         });
@@ -110,11 +114,13 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
       _team!,
       ShortlistEntry(
         nominator: _nominatorController.text,
+        comment: _commentController.text,
         lateEntry: widget.lateEntry,
       ),
     );
     _teamController.clear();
     // we intentionally don't clear the nominator field
+    _commentController.clear();
     _teamFocusNode.requestFocus();
     setState(() {
       _team = null;
@@ -205,6 +211,35 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                     decoration: const InputDecoration(
                                       label: Text(
                                         'Nominator',
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onSubmitted: (String value) {
+                                      if (_team == null) {
+                                        _teamFocusNode.requestFocus();
+                                      } else if (_commentController.text.isEmpty) {
+                                        _commentFocusNode.requestFocus();
+                                      } else {
+                                        _addTeamToShortlist();
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: spacing),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _commentController,
+                                    focusNode: _commentFocusNode,
+                                    decoration: const InputDecoration(
+                                      label: Text(
+                                        'Comment',
                                         softWrap: false,
                                         overflow: TextOverflow.ellipsis,
                                       ),

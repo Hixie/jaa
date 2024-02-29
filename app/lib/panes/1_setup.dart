@@ -534,11 +534,27 @@ class _TeamEditorState extends State<TeamEditor> {
         teamNotes.add(const Text('Team is nominated for:'));
         for (final Award award in _team!.shortlistsView.keys) {
           ShortlistEntry entry = _team!.shortlistsView[award]!;
-          teamNotes.add(Text(
-            '• ${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
-            '${award.name}'
-            '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
-            '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
+          teamNotes.add(Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              const Text('• '),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: '${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
+                        '${award.name}'
+                        '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
+                        '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
+                    children: [
+                      if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
+                    ],
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              ),
+            ],
           ));
         }
       }

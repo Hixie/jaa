@@ -104,14 +104,14 @@ class ExportPane extends StatelessWidget {
     final DateTime now = DateTime.now();
     final StringBuffer page = createHtmlPage('Judge Panels', now);
     page.writeln('<h2>Nominations</h2>');
-    final Map<String, Set<(Award, Team)>> nominations = <String, Set<(Award, Team)>>{};
+    final Map<String, Set<(Award, Team, {String comment})>> nominations = <String, Set<(Award, Team, {String comment})>>{};
     int nominationCount = 0;
     for (Award award in competition.shortlistsView.keys) {
       for (Team team in competition.shortlistsView[award]!.entriesView.keys) {
         final ShortlistEntry entry = competition.shortlistsView[award]!.entriesView[team]!;
         nominationCount += 1;
         if (entry.nominator.isNotEmpty) {
-          nominations.putIfAbsent(entry.nominator, () => <(Award, Team)>{}).add((award, team));
+          nominations.putIfAbsent(entry.nominator, () => <(Award, Team, {String comment})>{}).add((award, team, comment: entry.comment));
         }
       }
     }
@@ -123,10 +123,11 @@ class ExportPane extends StatelessWidget {
       for (final String judgePanel in nominations.keys) {
         page.writeln('<h3>${escapeHtml(judgePanel)}</h3>');
         page.writeln('<ul>');
-        for (final (Award award, Team team) in nominations[judgePanel]!) {
+        for (final (Award award, Team team, comment: String comment) in nominations[judgePanel]!) {
           page.writeln('<li>${team.number} <i>${escapeHtml(team.name)}</i> for ${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank} " : ""}'
               '${escapeHtml(award.name)} award'
               '${award.category.isNotEmpty ? " (${award.category} category)" : ""}');
+          if (comment.isNotEmpty) page.writeln('<br><i>${escapeHtml(comment)}</i>');
         }
         page.writeln('</ul>');
       }

@@ -247,9 +247,11 @@ class Team extends ChangeNotifier implements Comparable<Team> {
 class ShortlistEntry extends ChangeNotifier {
   ShortlistEntry({
     String nominator = '',
+    String comment = '',
     int? rank,
     required bool lateEntry,
   })  : _nominator = nominator,
+        _comment = comment,
         _rank = rank,
         _lateEntry = lateEntry,
         _tied = false;
@@ -259,6 +261,15 @@ class ShortlistEntry extends ChangeNotifier {
   set nominator(String value) {
     if (_nominator != value) {
       _nominator = value;
+      notifyListeners();
+    }
+  }
+
+  String get comment => _comment;
+  String _comment;
+  set comment(String value) {
+    if (_comment != value) {
+      _comment = value;
       notifyListeners();
     }
   }
@@ -906,7 +917,8 @@ class Competition extends ChangeNotifier {
       if (row[4] != 'y' && row[4] != 'n') {
         throw FormatException('Parse error in shortlists file: "${row[4]}" is not either "y" or "n".');
       }
-      addToShortlist(award, team, ShortlistEntry(lateEntry: row[4] == 'y', nominator: '${row[2]}', rank: rank));
+      final String comment = row.length > 5 ? '${row[5]}' : '';
+      addToShortlist(award, team, ShortlistEntry(lateEntry: row[4] == 'y', nominator: '${row[2]}', comment: comment, rank: rank));
     }
     notifyListeners();
   }
@@ -919,11 +931,12 @@ class Competition extends ChangeNotifier {
       'Nominator', // string
       'Rank', // numeric or empty
       'Late entry', // 'y' or 'n'
+      'Comment', // string (column is optional)
     ]);
     for (final Award award in _awards) {
       for (final Team team in _shortlists[award]!.entriesView.keys) {
         final ShortlistEntry entry = _shortlists[award]!.entriesView[team]!;
-        data.add([award.name, team.number, entry.nominator, entry.rank ?? '', entry.lateEntry ? 'y' : 'n']);
+        data.add([award.name, team.number, entry.nominator, entry.rank ?? '', entry.lateEntry ? 'y' : 'n', entry.comment]);
       }
     }
     return const ListToCsvConverter().convert(data);

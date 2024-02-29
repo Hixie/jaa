@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../constants.dart';
 import '../io.dart';
@@ -9,138 +10,13 @@ import '../widgets/cells.dart';
 import '../widgets/shortlists.dart';
 import '../widgets/widgets.dart';
 
-class RanksPane extends StatelessWidget {
+class RanksPane extends StatefulWidget {
   const RanksPane({super.key, required this.competition});
 
   final Competition competition;
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: competition,
-      builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
-        final int lowRoughRank = (competition.teamsView.length * 5.0 / 6.0).round();
-        final int middleRoughRank = (competition.teamsView.length * 3.0 / 6.0).round();
-        final int highRoughRank = (competition.teamsView.length * 1.0 / 6.0).round();
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PaneHeader(
-              title: '4. Rank Lists',
-              onHeaderButtonPressed: () => exportRanksHTML(context, competition, awards),
-            ),
-            if (competition.teamsView.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No teams loaded. Use the Setup pane to import a teams list.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (competition.teamsView.isNotEmpty)
-              ShortlistEditor(
-                competition: competition,
-                sortedAwards: awards,
-                lateEntry: true,
-              ),
-            if (competition.teamsView.isNotEmpty) ShortlistSummary(competition: competition),
-            if (awards.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Rankings:'),
-              ),
-            AwardBuilder(
-              sortedAwards: awards,
-              competition: competition,
-              builder: (BuildContext context, Award award, Shortlist shortlist) {
-                final Color foregroundColor = textColorForColor(award.color);
-                final List<MapEntry<Team, ShortlistEntry>> entries = shortlist.entriesView.entries.toList()
-                  ..sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
-                    return a.key.compareTo(b.key);
-                  });
-                return ShortlistCard(
-                  award: award,
-                  child: shortlist.entriesView.isEmpty
-                      ? null
-                      : Table(
-                          border: TableBorder.symmetric(
-                            inside: BorderSide(color: foregroundColor),
-                          ),
-                          columnWidths: {0: const IntrinsicCellWidth(flex: 1), 2: FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2)},
-                          defaultColumnWidth: const IntrinsicCellWidth(),
-                          defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            TableRow(
-                              children: [
-                                const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
-                                const Cell(Text('#', style: bold), prototype: Text('000000')),
-                                TableCell(
-                                  verticalAlignment: TableCellVerticalAlignment.middle,
-                                  child: Icon(
-                                    Icons.more_vert,
-                                    color: foregroundColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            for (final MapEntry(key: Team team, value: ShortlistEntry entry) in entries)
-                              TableRow(
-                                children: [
-                                  RankCell(
-                                    entry: entry,
-                                    foregroundColor: foregroundColor,
-                                    maxRank: entries.length,
-                                  ),
-                                  Tooltip(
-                                    message: team.name,
-                                    child: Cell(
-                                      ListenableBuilder(
-                                        listenable: entry,
-                                        builder: (BuildContext context, Widget? child) {
-                                          return Text(
-                                            '${team.number}',
-                                            style: _styleFor(context, entry),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  RemoveFromShortlistCell(
-                                    competition: competition,
-                                    team: team,
-                                    award: award,
-                                    foregroundColor: foregroundColor,
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                );
-              },
-            ),
-            if (awards.isNotEmpty && competition.teamsView.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
-                child: Text(
-                  'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
-                  'Red ranks indicates invalid or duplicate ranks. '
-                  'Bold team numbers indicate missing or duplicate ranks. '
-                  'Italics indicates late entry nominations.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (awards.isNotEmpty) AwardOrderSwitch(competition: competition),
-          ],
-        );
-      },
-    );
-  }
+  State<RanksPane> createState() => _RanksPaneState();
 
   static Future<void> exportRanksHTML(BuildContext context, Competition competition, List<Award> awards) async {
     final DateTime now = DateTime.now();
@@ -197,16 +73,235 @@ class RanksPane extends StatelessWidget {
   }
 }
 
+class _RanksPaneState extends State<RanksPane> {
+  bool _showComments = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.competition,
+      builder: (BuildContext context, Widget? child) {
+        final List<Award> awards = widget.competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(widget.competition.awardSorter);
+        final int lowRoughRank = (widget.competition.teamsView.length * 5.0 / 6.0).round();
+        final int middleRoughRank = (widget.competition.teamsView.length * 3.0 / 6.0).round();
+        final int highRoughRank = (widget.competition.teamsView.length * 1.0 / 6.0).round();
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PaneHeader(
+              title: '4. Rank Lists',
+              onHeaderButtonPressed: () => RanksPane.exportRanksHTML(context, widget.competition, awards),
+            ),
+            if (widget.competition.teamsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (widget.competition.teamsView.isNotEmpty)
+              ShortlistEditor(
+                competition: widget.competition,
+                sortedAwards: awards,
+                lateEntry: true,
+              ),
+            if (widget.competition.teamsView.isNotEmpty)
+              ShortlistSummary(
+                competition: widget.competition,
+              ),
+            if (awards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Rankings:', style: bold),
+              ),
+            if (awards.isNotEmpty)
+              CheckboxRow(
+                checked: _showComments,
+                onChanged: (bool value) {
+                  setState(() {
+                    _showComments = value;
+                  });
+                },
+                label: 'Show nominators and nomination comments.',
+              ),
+            if (awards.isNotEmpty)
+              RankTables(
+                sortedAwards: awards,
+                competition: widget.competition,
+                showComments: _showComments,
+              ),
+            if (awards.isNotEmpty && widget.competition.teamsView.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
+                child: Text(
+                  'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
+                  'Red ranks indicates invalid or duplicate ranks. '
+                  'Bold team numbers indicate missing or duplicate ranks. '
+                  'Italics indicates late entry nominations.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (awards.isNotEmpty)
+              AwardOrderSwitch(
+                competition: widget.competition,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class RankTables extends StatelessWidget {
+  const RankTables({
+    super.key,
+    required this.sortedAwards,
+    required this.competition,
+    required this.showComments,
+  });
+
+  final List<Award> sortedAwards;
+  final Competition competition;
+  final bool showComments;
+
+  @override
+  Widget build(BuildContext context) {
+    return AwardBuilder(
+      sortedAwards: sortedAwards,
+      competition: competition,
+      builder: (BuildContext context, Award award, Shortlist shortlist) {
+        final Color foregroundColor = textColorForColor(award.color);
+        final List<MapEntry<Team, ShortlistEntry>> entries = shortlist.entriesView.entries.toList()
+          ..sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
+            return a.key.compareTo(b.key);
+          });
+        return ShortlistCard(
+          award: award,
+          child: shortlist.entriesView.isEmpty
+              ? null
+              : Table(
+                  border: TableBorder.symmetric(
+                    inside: BorderSide(color: foregroundColor),
+                  ),
+                  columnWidths: {
+                    0: IntrinsicCellWidth(flex: showComments ? 1 : null),
+                    if (showComments) 2: const IntrinsicCellWidth(flex: 1),
+                    if (showComments) 3: const IntrinsicCellWidth(flex: 1),
+                    (showComments ? 4 : 2): FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2),
+                  },
+                  defaultColumnWidth: const IntrinsicCellWidth(),
+                  defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    TableRow(
+                      children: [
+                        const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
+                        const Cell(Text('#', style: bold), prototype: Text('000000')),
+                        if (showComments) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
+                        if (showComments) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
+                        TableCell(
+                          verticalAlignment: TableCellVerticalAlignment.middle,
+                          child: Icon(
+                            Icons.more_vert,
+                            color: foregroundColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    for (final MapEntry(key: Team team, value: ShortlistEntry entry) in entries)
+                      TableRow(
+                        children: [
+                          RankCell(
+                            entry: entry,
+                            foregroundColor: foregroundColor,
+                            maxRank: entries.length,
+                            icons: !showComments
+                                ? [
+                                    if (entry.nominator.isNotEmpty)
+                                      Tooltip(
+                                        message: entry.nominator,
+                                        child: Icon(
+                                          Symbols.people,
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                          color: foregroundColor,
+                                        ),
+                                      ),
+                                    if (entry.comment.isNotEmpty)
+                                      Tooltip(
+                                        message: entry.comment,
+                                        child: Icon(
+                                          Symbols.mark_unread_chat_alt,
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                          color: foregroundColor,
+                                        ),
+                                      ),
+                                  ]
+                                : null,
+                          ),
+                          Tooltip(
+                            message: team.name,
+                            child: Cell(
+                              ListenableBuilder(
+                                listenable: entry,
+                                builder: (BuildContext context, Widget? child) {
+                                  return Text(
+                                    '${team.number}',
+                                    style: _styleFor(context, entry),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          if (showComments)
+                            TextEntryCell(
+                              value: entry.nominator,
+                              onChanged: (String value) {
+                                entry.nominator = value;
+                              },
+                            ),
+                          if (showComments)
+                            ListenableBuilder(
+                              listenable: entry,
+                              builder: (BuildContext context, Widget? child) => TextEntryCell(
+                                value: entry.comment,
+                                onChanged: (String value) {
+                                  entry.comment = value;
+                                },
+                              ),
+                            ),
+                          RemoveFromShortlistCell(
+                            competition: competition,
+                            team: team,
+                            award: award,
+                            foregroundColor: foregroundColor,
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
 class RankCell extends StatefulWidget {
   RankCell({
     required this.entry,
     required this.foregroundColor,
     required this.maxRank,
+    this.icons,
   }) : super(key: ObjectKey(entry));
 
   final ShortlistEntry entry;
   final Color foregroundColor;
   final int maxRank;
+  final List<Widget>? icons;
 
   @override
   State<RankCell> createState() => _RankCellState();
@@ -267,24 +362,31 @@ class _RankCellState extends State<RankCell> {
     final TextStyle textStyle = _styleFor(context, widget.entry);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: spacing),
-      child: SizedBox(
-        width: DefaultTextStyle.of(context).style.fontSize! * 4.0,
-        child: TextField(
-          controller: _controller,
-          decoration: InputDecoration.collapsed(
-            hintText: '·',
-            hintStyle: textStyle,
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              width: DefaultTextStyle.of(context).style.fontSize! * 4.0,
+              child: TextField(
+                controller: _controller,
+                decoration: InputDecoration.collapsed(
+                  hintText: '·',
+                  hintStyle: textStyle,
+                ),
+                style: _error || widget.entry.tied
+                    ? textStyle.copyWith(
+                        color: Colors.red,
+                        shadows: const [Shadow(color: Colors.white, blurRadius: 3.0)],
+                      )
+                    : textStyle,
+                cursorColor: textStyle.color,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                keyboardType: TextInputType.number,
+              ),
+            ),
           ),
-          style: _error || widget.entry.tied
-              ? textStyle.copyWith(
-                  color: Colors.red,
-                  shadows: const [Shadow(color: Colors.white, blurRadius: 3.0)],
-                )
-              : textStyle,
-          cursorColor: textStyle.color,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          keyboardType: TextInputType.number,
-        ),
+          ...?widget.icons,
+        ],
       ),
     );
   }

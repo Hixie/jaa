@@ -90,6 +90,7 @@ class InspirePane extends StatelessWidget {
                             Text(
                               'Candidates in $categoryCount categories'
                               '${categoryCount < competition.minimumInspireCategories ? " (insufficient to qualify for ${competition.inspireAward!.name} award)" : ""}:',
+                              style: bold,
                             ),
                             const SizedBox(height: spacing),
                             Table(

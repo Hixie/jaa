@@ -163,6 +163,82 @@ class _VisitedCellState extends State<VisitedCell> {
   }
 }
 
+class TextEntryCell extends StatefulWidget {
+  const TextEntryCell({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.hintText = 'none',
+    this.icons,
+  });
+
+  final String value;
+  final ValueSetter<String> onChanged;
+  final String hintText;
+  final List<Widget>? icons;
+
+  @override
+  State<TextEntryCell> createState() => _TextEntryCellState();
+}
+
+class _TextEntryCellState extends State<TextEntryCell> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_handleTextFieldUpdate);
+    _controller.text = widget.value;
+  }
+
+  @override
+  void didUpdateWidget(TextEntryCell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTextFieldUpdate() {
+    if (_controller.text != widget.value) {
+      widget.onChanged(_controller.text);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle textStyle = DefaultTextStyle.of(context).style;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: spacing),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: DefaultTextStyle.of(context).style.fontSize! * 4.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                decoration: InputDecoration.collapsed(
+                  hintText: widget.hintText,
+                  hintStyle: textStyle.copyWith(fontStyle: FontStyle.italic),
+                ),
+                style: textStyle,
+                cursorColor: textStyle.color,
+              ),
+            ),
+            ...?widget.icons,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Sizes the column according to the intrinsic dimensions of the
 /// cell in the specified row of the relevant column.
 ///

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../constants.dart';
 import '../io.dart';
@@ -8,67 +9,13 @@ import '../widgets/cells.dart';
 import '../widgets/shortlists.dart';
 import '../widgets/widgets.dart';
 
-class ShortlistsPane extends StatelessWidget {
+class ShortlistsPane extends StatefulWidget {
   const ShortlistsPane({super.key, required this.competition});
 
   final Competition competition;
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: competition,
-      builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PaneHeader(
-              title: '2. Enter Shortlists',
-              onHeaderButtonPressed: () => exportShortlistsHTML(context, competition),
-            ),
-            if (competition.teamsView.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No teams loaded. Use the Setup pane to import a teams list.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (awards.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No awards loaded. Use the Setup pane to import an awards list.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (awards.isNotEmpty)
-              ShortlistEditor(
-                sortedAwards: awards,
-                competition: competition,
-                lateEntry: false,
-              ),
-            if (competition.teamsView.isNotEmpty) ShortlistSummary(competition: competition),
-            if (awards.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Current shortlists:'),
-              ),
-            if (awards.isNotEmpty)
-              ShortlistTables(
-                sortedAwards: awards,
-                competition: competition,
-              ),
-            if (awards.isNotEmpty) AwardOrderSwitch(competition: competition),
-          ],
-        );
-      },
-    );
-  }
+  State<ShortlistsPane> createState() => _ShortlistsPaneState();
 
   static Future<void> exportShortlistsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
@@ -97,10 +44,13 @@ class ShortlistsPane extends StatelessWidget {
           page.writeln('<h3>Nominees:</h3>');
           page.writeln('<ul>');
           for (final Team team in teams) {
-            final String nominator = competition.shortlistsView[award]!.entriesView[team]!.nominator;
+            final ShortlistEntry entry = competition.shortlistsView[award]!.entriesView[team]!;
             page.writeln(
-              '<li>' '${team.number} <i>${escapeHtml(team.name)}</i>' '${nominator.isEmpty ? "" : " (nominated by ${escapeHtml(nominator)})"}',
+              '<li>' '${team.number} <i>${escapeHtml(team.name)}</i>' '${entry.nominator.isEmpty ? "" : " (nominated by ${escapeHtml(entry.nominator)})"}',
             );
+            if (entry.comment.isNotEmpty) {
+              page.writeln('<br><i>${escapeHtml(entry.comment)}</i>');
+            }
           }
           page.writeln('</ul>');
         }
@@ -110,15 +60,95 @@ class ShortlistsPane extends StatelessWidget {
   }
 }
 
+class _ShortlistsPaneState extends State<ShortlistsPane> {
+  bool _showComments = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.competition,
+      builder: (BuildContext context, Widget? child) {
+        final List<Award> awards = widget.competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(widget.competition.awardSorter);
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PaneHeader(
+              title: '2. Enter Shortlists',
+              onHeaderButtonPressed: () => ShortlistsPane.exportShortlistsHTML(context, widget.competition),
+            ),
+            if (widget.competition.teamsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (awards.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No awards loaded. Use the Setup pane to import an awards list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (awards.isNotEmpty)
+              ShortlistEditor(
+                sortedAwards: awards,
+                competition: widget.competition,
+                lateEntry: false,
+              ),
+            if (widget.competition.teamsView.isNotEmpty)
+              ShortlistSummary(
+                competition: widget.competition,
+              ),
+            if (awards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Current shortlists:', style: bold),
+              ),
+            if (awards.isNotEmpty)
+              CheckboxRow(
+                checked: _showComments,
+                onChanged: (bool value) {
+                  setState(() {
+                    _showComments = value;
+                  });
+                },
+                label: 'Show nomination comments.',
+              ),
+            if (awards.isNotEmpty)
+              ShortlistTables(
+                sortedAwards: awards,
+                competition: widget.competition,
+                showComments: _showComments,
+              ),
+            if (awards.isNotEmpty)
+              AwardOrderSwitch(
+                competition: widget.competition,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class ShortlistTables extends StatelessWidget {
   const ShortlistTables({
     super.key,
     required this.sortedAwards,
     required this.competition,
+    required this.showComments,
   });
 
   final List<Award> sortedAwards;
   final Competition competition;
+  final bool showComments;
 
   @override
   Widget build(BuildContext context) {
@@ -127,10 +157,10 @@ class ShortlistTables extends StatelessWidget {
       competition: competition,
       builder: (BuildContext context, Award award, Shortlist shortlist) {
         final Color foregroundColor = textColorForColor(award.color);
-        final List<MapEntry<Team, ShortlistEntry>> entries = shortlist.entriesView.entries.toList();
-        entries.sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
-          return a.key.compareTo(b.key);
-        });
+        final List<MapEntry<Team, ShortlistEntry>> entries = shortlist.entriesView.entries.toList()
+          ..sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
+            return a.key.compareTo(b.key);
+          });
         return ShortlistCard(
           award: award,
           child: shortlist.entriesView.isEmpty
@@ -139,7 +169,11 @@ class ShortlistTables extends StatelessWidget {
                   border: TableBorder.symmetric(
                     inside: BorderSide(color: foregroundColor),
                   ),
-                  columnWidths: {1: const IntrinsicCellWidth(flex: 1), 2: FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2)},
+                  columnWidths: {
+                    1: const IntrinsicCellWidth(flex: 1),
+                    if (showComments) 2: const IntrinsicCellWidth(flex: 1),
+                    (showComments ? 3 : 2): FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2),
+                  },
                   defaultColumnWidth: const IntrinsicCellWidth(),
                   defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
@@ -148,6 +182,7 @@ class ShortlistTables extends StatelessWidget {
                       children: [
                         const Cell(Text('#', style: bold), prototype: Text('000000')),
                         const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
+                        if (showComments) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                         TableCell(
                           verticalAlignment: TableCellVerticalAlignment.middle,
                           child: Icon(
@@ -166,7 +201,37 @@ class ShortlistTables extends StatelessWidget {
                               Text('${team.number}'),
                             ),
                           ),
-                          NominatorCell(entry),
+                          ListenableBuilder(
+                            listenable: entry,
+                            builder: (BuildContext context, Widget? child) => TextEntryCell(
+                              value: entry.nominator,
+                              onChanged: (String value) {
+                                entry.nominator = value;
+                              },
+                              icons: !showComments && entry.comment.isNotEmpty
+                                  ? [
+                                      Tooltip(
+                                        message: entry.comment,
+                                        child: Icon(
+                                          Symbols.mark_unread_chat_alt,
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                          color: foregroundColor,
+                                        ),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                          if (showComments)
+                            ListenableBuilder(
+                              listenable: entry,
+                              builder: (BuildContext context, Widget? child) => TextEntryCell(
+                                value: entry.comment,
+                                onChanged: (String value) {
+                                  entry.comment = value;
+                                },
+                              ),
+                            ),
                           RemoveFromShortlistCell(
                             competition: competition,
                             team: team,
@@ -179,71 +244,6 @@ class ShortlistTables extends StatelessWidget {
                 ),
         );
       },
-    );
-  }
-}
-
-class NominatorCell extends StatefulWidget {
-  NominatorCell(this.entry) : super(key: ObjectKey(entry));
-
-  final ShortlistEntry entry;
-
-  @override
-  State<NominatorCell> createState() => _NominatorCellState();
-}
-
-class _NominatorCellState extends State<NominatorCell> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    widget.entry.addListener(_handleTeamUpdate);
-    _controller.addListener(_handleTextFieldUpdate);
-    _controller.text = widget.entry.nominator;
-  }
-
-  @override
-  void didUpdateWidget(NominatorCell oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    assert(widget.entry == oldWidget.entry);
-  }
-
-  @override
-  void dispose() {
-    widget.entry.removeListener(_handleTeamUpdate);
-    super.dispose();
-  }
-
-  void _handleTeamUpdate() {
-    setState(() {
-      if (_controller.text != widget.entry.nominator) {
-        _controller.text = widget.entry.nominator;
-      }
-    });
-  }
-
-  void _handleTextFieldUpdate() {
-    widget.entry.nominator = _controller.text;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final TextStyle textStyle = DefaultTextStyle.of(context).style;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: spacing),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: DefaultTextStyle.of(context).style.fontSize! * 4.0),
-        child: TextField(
-          controller: _controller,
-          decoration: InputDecoration.collapsed(
-            hintText: 'none',
-            hintStyle: textStyle.copyWith(fontStyle: FontStyle.italic),
-          ),
-          style: textStyle,
-          cursorColor: textStyle.color,
-        ),
-      ),
     );
   }
 }

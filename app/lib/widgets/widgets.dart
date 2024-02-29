@@ -136,6 +136,52 @@ class ExportButton extends StatelessWidget {
   }
 }
 
+class CheckboxRow extends StatelessWidget {
+  const CheckboxRow({
+    super.key,
+    required this.label,
+    required this.checked,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool checked;
+  final ValueSetter<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+      child: MergeSemantics(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Material(
+              type: MaterialType.transparency,
+              child: Checkbox(
+                value: checked,
+                onChanged: (bool? value) => onChanged(value!),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  onChanged(!checked);
+                },
+                child: Text(
+                  label,
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class PaneHeader extends StatelessWidget {
   const PaneHeader({
     super.key,
