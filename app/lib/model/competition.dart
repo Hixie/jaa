@@ -581,6 +581,42 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  bool get expandShortlistTables => _expandShortlistTables;
+  bool _expandShortlistTables = false;
+  set expandShortlistTables(bool value) {
+    if (value != _expandShortlistTables) {
+      _expandShortlistTables = value;
+      notifyListeners();
+    }
+  }
+
+  bool get expandInspireTable => _expandInspireTable;
+  bool _expandInspireTable = false;
+  set expandInspireTable(bool value) {
+    if (value != _expandInspireTable) {
+      _expandInspireTable = value;
+      notifyListeners();
+    }
+  }
+
+  bool get pitVisitsExcludeAutovisitedTeams => _pitVisitsExcludeAutovisitedTeams;
+  bool _pitVisitsExcludeAutovisitedTeams = true;
+  set pitVisitsExcludeAutovisitedTeams(bool value) {
+    if (value != _pitVisitsExcludeAutovisitedTeams) {
+      _pitVisitsExcludeAutovisitedTeams = value;
+      notifyListeners();
+    }
+  }
+
+  bool get pitVisitsHideVisitedTeams => _pitVisitsHideVisitedTeams;
+  bool _pitVisitsHideVisitedTeams = false;
+  set pitVisitsHideVisitedTeams(bool value) {
+    if (value != _pitVisitsHideVisitedTeams) {
+      _pitVisitsHideVisitedTeams = value;
+      notifyListeners();
+    }
+  }
+
   // IMPORT/EXPORT
 
   static bool _parseBool(Object? cell) {
@@ -1121,13 +1157,26 @@ class Competition extends ChangeNotifier {
             'rank' => AwardOrder.rank,
             _ => AwardOrder.categories,
           };
+        case 'expand shortlist tables':
+          _expandShortlistTables = _parseBool(row[1]);
+        case 'expand inspire table':
+          _expandInspireTable = _parseBool(row[1]);
+        case 'pit visits - exclude autovisited teams':
+          _pitVisitsExcludeAutovisitedTeams = _parseBool(row[1]);
+        case 'pit visits - hide visited teams':
+          _pitVisitsHideVisitedTeams = _parseBool(row[1]);
       }
     }
+
     notifyListeners();
   }
 
   void resetConfiguration() {
     _awardOrder = AwardOrder.categories;
+    _expandShortlistTables = false;
+    _expandInspireTable = false;
+    _pitVisitsExcludeAutovisitedTeams = true;
+    _pitVisitsHideVisitedTeams = false;
     notifyListeners();
   }
 
@@ -1144,6 +1193,10 @@ class Competition extends ChangeNotifier {
         AwardOrder.rank => 'rank',
       }
     ]);
+    data.add(['expand shortlist tables', _expandShortlistTables ? 'y' : 'n']);
+    data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
+    data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
+    data.add(['pit visits - hide visited teams', _pitVisitsHideVisitedTeams ? 'y' : 'n']);
     return const ListToCsvConverter().convert(data);
   }
 

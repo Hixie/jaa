@@ -9,13 +9,82 @@ import '../widgets/cells.dart';
 import '../widgets/shortlists.dart';
 import '../widgets/widgets.dart';
 
-class ShortlistsPane extends StatefulWidget {
+class ShortlistsPane extends StatelessWidget {
   const ShortlistsPane({super.key, required this.competition});
 
   final Competition competition;
 
   @override
-  State<ShortlistsPane> createState() => _ShortlistsPaneState();
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: competition,
+      builder: (BuildContext context, Widget? child) {
+        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PaneHeader(
+              title: '2. Enter Shortlists',
+              onHeaderButtonPressed: () => exportShortlistsHTML(context, competition),
+            ),
+            if (competition.teamsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (awards.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No awards loaded. Use the Setup pane to import an awards list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (awards.isNotEmpty)
+              ShortlistEditor(
+                sortedAwards: awards,
+                competition: competition,
+                lateEntry: false,
+              ),
+            if (competition.teamsView.isNotEmpty)
+              ShortlistSummary(
+                competition: competition,
+              ),
+            if (awards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Current shortlists:', style: bold),
+              ),
+            if (awards.isNotEmpty)
+              CheckboxRow(
+                checked: competition.expandShortlistTables,
+                onChanged: (bool value) {
+                  competition.expandShortlistTables = value;
+                },
+                label: 'Show nomination comments.',
+              ),
+            if (awards.isNotEmpty)
+              ShortlistTables(
+                sortedAwards: awards,
+                competition: competition,
+                showComments: competition.expandShortlistTables,
+              ),
+            if (awards.isNotEmpty)
+              AwardOrderSwitch(
+                competition: competition,
+              ),
+          ],
+        );
+      },
+    );
+  }
 
   static Future<void> exportShortlistsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
@@ -57,84 +126,6 @@ class ShortlistsPane extends StatefulWidget {
       }
     }
     return exportHTML(competition, 'shortlists', now, page.toString());
-  }
-}
-
-class _ShortlistsPaneState extends State<ShortlistsPane> {
-  bool _showComments = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: widget.competition,
-      builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = widget.competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(widget.competition.awardSorter);
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PaneHeader(
-              title: '2. Enter Shortlists',
-              onHeaderButtonPressed: () => ShortlistsPane.exportShortlistsHTML(context, widget.competition),
-            ),
-            if (widget.competition.teamsView.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No teams loaded. Use the Setup pane to import a teams list.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (awards.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No awards loaded. Use the Setup pane to import an awards list.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (awards.isNotEmpty)
-              ShortlistEditor(
-                sortedAwards: awards,
-                competition: widget.competition,
-                lateEntry: false,
-              ),
-            if (widget.competition.teamsView.isNotEmpty)
-              ShortlistSummary(
-                competition: widget.competition,
-              ),
-            if (awards.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Current shortlists:', style: bold),
-              ),
-            if (awards.isNotEmpty)
-              CheckboxRow(
-                checked: _showComments,
-                onChanged: (bool value) {
-                  setState(() {
-                    _showComments = value;
-                  });
-                },
-                label: 'Show nomination comments.',
-              ),
-            if (awards.isNotEmpty)
-              ShortlistTables(
-                sortedAwards: awards,
-                competition: widget.competition,
-                showComments: _showComments,
-              ),
-            if (awards.isNotEmpty)
-              AwardOrderSwitch(
-                competition: widget.competition,
-              ),
-          ],
-        );
-      },
-    );
   }
 }
 

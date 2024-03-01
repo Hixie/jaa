@@ -10,13 +10,89 @@ import '../widgets/cells.dart';
 import '../widgets/shortlists.dart';
 import '../widgets/widgets.dart';
 
-class RanksPane extends StatefulWidget {
+class RanksPane extends StatelessWidget {
   const RanksPane({super.key, required this.competition});
 
   final Competition competition;
 
   @override
-  State<RanksPane> createState() => _RanksPaneState();
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: competition,
+      builder: (BuildContext context, Widget? child) {
+        final List<Award> awards = competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(competition.awardSorter);
+        final int lowRoughRank = (competition.teamsView.length * 5.0 / 6.0).round();
+        final int middleRoughRank = (competition.teamsView.length * 3.0 / 6.0).round();
+        final int highRoughRank = (competition.teamsView.length * 1.0 / 6.0).round();
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PaneHeader(
+              title: '4. Rank Lists',
+              onHeaderButtonPressed: () => exportRanksHTML(context, competition, awards),
+            ),
+            if (competition.teamsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (competition.teamsView.isNotEmpty)
+              ShortlistEditor(
+                competition: competition,
+                sortedAwards: awards,
+                lateEntry: true,
+              ),
+            if (competition.teamsView.isNotEmpty)
+              ShortlistSummary(
+                competition: competition,
+              ),
+            if (awards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Rankings:', style: bold),
+              ),
+            if (awards.isNotEmpty)
+              CheckboxRow(
+                checked: competition.expandShortlistTables,
+                onChanged: (bool value) {
+                  competition.expandShortlistTables = value;
+                },
+                label: 'Show nominators and nomination comments.',
+              ),
+            if (awards.isNotEmpty)
+              RankTables(
+                sortedAwards: awards,
+                competition: competition,
+                showComments: competition.expandShortlistTables,
+              ),
+            if (awards.isNotEmpty && competition.teamsView.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
+                child: Text(
+                  'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
+                  'Red ranks indicates invalid or duplicate ranks. '
+                  'Italics indicates late entry nominations. '
+                  'Bold team numbers indicate award finalists. '
+                  'Strikethrough indicates teams that do not qualify for the award due to spread-the-wealth rules.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            if (awards.isNotEmpty)
+              AwardOrderSwitch(
+                competition: competition,
+              ),
+          ],
+        );
+      },
+    );
+  }
 
   static Future<void> exportRanksHTML(BuildContext context, Competition competition, List<Award> awards) async {
     final DateTime now = DateTime.now();
@@ -86,91 +162,6 @@ class RanksPane extends StatefulWidget {
       }
     }
     return exportHTML(competition, 'ranks', now, page.toString());
-  }
-}
-
-class _RanksPaneState extends State<RanksPane> {
-  bool _showComments = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: widget.competition,
-      builder: (BuildContext context, Widget? child) {
-        final List<Award> awards = widget.competition.awardsView.where(Award.isNotInspirePredicate).toList()..sort(widget.competition.awardSorter);
-        final int lowRoughRank = (widget.competition.teamsView.length * 5.0 / 6.0).round();
-        final int middleRoughRank = (widget.competition.teamsView.length * 3.0 / 6.0).round();
-        final int highRoughRank = (widget.competition.teamsView.length * 1.0 / 6.0).round();
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PaneHeader(
-              title: '4. Rank Lists',
-              onHeaderButtonPressed: () => RanksPane.exportRanksHTML(context, widget.competition, awards),
-            ),
-            if (widget.competition.teamsView.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No teams loaded. Use the Setup pane to import a teams list.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (widget.competition.teamsView.isNotEmpty)
-              ShortlistEditor(
-                competition: widget.competition,
-                sortedAwards: awards,
-                lateEntry: true,
-              ),
-            if (widget.competition.teamsView.isNotEmpty)
-              ShortlistSummary(
-                competition: widget.competition,
-              ),
-            if (awards.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Rankings:', style: bold),
-              ),
-            if (awards.isNotEmpty)
-              CheckboxRow(
-                checked: _showComments,
-                onChanged: (bool value) {
-                  setState(() {
-                    _showComments = value;
-                  });
-                },
-                label: 'Show nominators and nomination comments.',
-              ),
-            if (awards.isNotEmpty)
-              RankTables(
-                sortedAwards: awards,
-                competition: widget.competition,
-                showComments: _showComments,
-              ),
-            if (awards.isNotEmpty && widget.competition.teamsView.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, spacing),
-                child: Text(
-                  'Rough ranks: high=$highRoughRank, middle=$middleRoughRank, low=$lowRoughRank.\n'
-                  'Red ranks indicates invalid or duplicate ranks. '
-                  'Italics indicates late entry nominations. '
-                  'Bold team numbers indicate award finalists. '
-                  'Strikethrough indicates teams that do not qualify for the award due to spread-the-wealth rules.',
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                ),
-              ),
-            if (awards.isNotEmpty)
-              AwardOrderSwitch(
-                competition: widget.competition,
-              ),
-          ],
-        );
-      },
-    );
   }
 }
 

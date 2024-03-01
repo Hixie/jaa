@@ -66,12 +66,9 @@ class PitVisitsPane extends StatefulWidget {
 }
 
 class _PitVisitsPaneState extends State<PitVisitsPane> {
-  bool _filterTeams = true;
-  bool _hideVisited = false;
-
   final Set<Team> _legacyTeams = <Team>{};
 
-  (List<Team>, int, int, int, int, int) computeAffectedTeams() {
+  (List<Team>, int, int, int, int, int) computeAffectedTeams({required bool filterTeams, required bool hideVisited}) {
     final List<Team> teams = [];
     int totalCount = 0;
     int visitedCount = 0;
@@ -92,7 +89,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
       } else {
         unvisitedRemainingCount += 1;
       }
-      if ((!_hideVisited || !team.visited || _legacyTeams.contains(team)) && (!_filterTeams || !hasPitVisit)) {
+      if ((!hideVisited || !team.visited || _legacyTeams.contains(team)) && (!filterTeams || !hasPitVisit)) {
         teams.add(team);
       }
     }
@@ -122,7 +119,10 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
           int unvisitedNominatedCount,
           int unvisitedAssignedCount,
           int unvisitedRemainingCount,
-        ) = computeAffectedTeams();
+        ) = computeAffectedTeams(
+          filterTeams: widget.competition.pitVisitsExcludeAutovisitedTeams,
+          hideVisited: widget.competition.pitVisitsHideVisitedTeams,
+        );
         assert(totalCount == visitedCount + unvisitedNominatedCount + unvisitedAssignedCount + unvisitedRemainingCount);
         final List<Award> relevantAwards = PitVisitsPane.computeAffectedAwards(widget.competition);
         return Column(
@@ -259,10 +259,10 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               ),
             if (totalCount > 0)
               CheckboxRow(
-                checked: !_filterTeams,
+                checked: !widget.competition.pitVisitsExcludeAutovisitedTeams,
                 onChanged: (bool value) {
+                  widget.competition.pitVisitsExcludeAutovisitedTeams = !value;
                   setState(() {
-                    _filterTeams = !value;
                     _legacyTeams.clear();
                   });
                 },
@@ -270,10 +270,10 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               ),
             if (totalCount > 0)
               CheckboxRow(
-                checked: !_hideVisited,
+                checked: !widget.competition.pitVisitsHideVisitedTeams,
                 onChanged: (bool value) {
+                  widget.competition.pitVisitsHideVisitedTeams = !value;
                   setState(() {
-                    _hideVisited = !value;
                     _legacyTeams.clear();
                   });
                 },
@@ -283,11 +283,11 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  _filterTeams
-                      ? _hideVisited
-                          ? 'All of the teams have not been shortlisted for awards that always involve pit visits have been visited.'
+                  widget.competition.pitVisitsExcludeAutovisitedTeams
+                      ? widget.competition.pitVisitsHideVisitedTeams
+                          ? 'All of the teams that have not been shortlisted for awards that always involve pit visits have been visited.'
                           : 'All of the teams have been shortlisted for awards that always involve pit visits.'
-                      : _hideVisited
+                      : widget.competition.pitVisitsHideVisitedTeams
                           ? 'All of the teams have been visited.'
                           : () {
                               assert(false, 'internal error with teams filtering');
@@ -301,11 +301,11 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  _filterTeams
-                      ? _hideVisited
+                  widget.competition.pitVisitsExcludeAutovisitedTeams
+                      ? widget.competition.pitVisitsHideVisitedTeams
                           ? 'The following teams have not been shortlisted for any awards that always involve pit visits, and have not yet been visited:'
                           : 'The following teams have not been shortlisted for any awards that always involve pit visits:'
-                      : _hideVisited
+                      : widget.competition.pitVisitsHideVisitedTeams
                           ? 'The following teams have not yet been visited:'
                           : 'All teams:',
                   softWrap: true,
@@ -353,12 +353,14 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                   },
                                 ),
                               const Cell(Text('Visited? ✎_', style: bold)),
-                              if (!_filterTeams) const Cell(Text('Nominations for awards with pit visits')),
+                              if (!widget.competition.pitVisitsExcludeAutovisitedTeams) const Cell(Text('Nominations for awards with pit visits')),
                             ],
                           ),
                           for (final Team team in teams)
                             TableRow(
-                              decoration: _hideVisited && team.visited && _legacyTeams.contains(team) ? BoxDecoration(color: Colors.grey.shade100) : null,
+                              decoration: widget.competition.pitVisitsHideVisitedTeams && team.visited && _legacyTeams.contains(team)
+                                  ? BoxDecoration(color: Colors.grey.shade100)
+                                  : null,
                               children: [
                                 Tooltip(
                                   message: team.name,
@@ -375,7 +377,8 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                   team: team,
                                   onVisitedChanged: _handleVisitedChanged,
                                 ),
-                                if (!_filterTeams) Cell(Text(team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '))),
+                                if (!widget.competition.pitVisitsExcludeAutovisitedTeams)
+                                  Cell(Text(team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '))),
                               ],
                             ),
                         ],
