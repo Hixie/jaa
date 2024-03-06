@@ -142,11 +142,13 @@ class CheckboxRow extends StatelessWidget {
     required this.label,
     required this.checked,
     required this.onChanged,
+    required this.tristate,
   });
 
   final String label;
-  final bool checked;
-  final ValueSetter<bool> onChanged;
+  final bool? checked;
+  final ValueSetter<bool?> onChanged;
+  final bool tristate;
 
   @override
   Widget build(BuildContext context) {
@@ -160,13 +162,22 @@ class CheckboxRow extends StatelessWidget {
               type: MaterialType.transparency,
               child: Checkbox(
                 value: checked,
-                onChanged: (bool? value) => onChanged(value!),
+                tristate: tristate,
+                onChanged: (bool? value) => onChanged(value),
               ),
             ),
             Expanded(
               child: GestureDetector(
                 onTap: () {
-                  onChanged(!checked);
+                  if (tristate) {
+                    onChanged(switch (checked) {
+                      true => null,
+                      null => false,
+                      false => true,
+                    });
+                  } else {
+                    onChanged(!checked!);
+                  }
                 },
                 child: Text(
                   label,
@@ -186,7 +197,7 @@ class PaneHeader extends StatelessWidget {
   const PaneHeader({
     super.key,
     required this.title,
-    this.headerButtonLabel = 'Export (HTML)',
+    required this.headerButtonLabel,
     required this.onHeaderButtonPressed,
   });
 
@@ -205,7 +216,7 @@ class PaneHeader extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.start,
           children: [
             Heading(
-              title,
+              title: title,
               padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, 0.0),
             ),
             Padding(
@@ -227,13 +238,13 @@ class PaneHeader extends StatelessWidget {
 }
 
 class Heading extends StatelessWidget {
-  const Heading(
-    this.text, {
+  const Heading({
+    required this.title,
     super.key,
     this.padding = const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
   });
 
-  final String text;
+  final String title;
   final EdgeInsets padding;
 
   @override
@@ -241,7 +252,7 @@ class Heading extends StatelessWidget {
     return Padding(
       padding: padding,
       child: Text(
-        text,
+        title,
         style: const TextStyle(
           fontSize: 24.0,
         ),

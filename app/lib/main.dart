@@ -219,14 +219,14 @@ class _MainAppState extends State<MainApp> {
                                     style: bold,
                                   ),
                                 if (widget.competition.teamsView.isNotEmpty)
-                                  if (widget.competition.previousInspireWinnersView.isEmpty)
+                                  if (widget.competition.inspireIneligibleTeamsView.isEmpty)
                                     const Text(
-                                      'No Previous Inspire Winners.',
+                                      'All teams are eligible for the Inspire award.',
                                       style: bold,
                                     )
                                   else
                                     Text(
-                                      'Previous Inspire Winners: ${formTeamList(widget.competition.previousInspireWinnersView)}.',
+                                      'Inspire-ineligible teams: ${formTeamList(widget.competition.inspireIneligibleTeamsView)}.',
                                       style: bold,
                                     ),
                               ],
@@ -349,7 +349,7 @@ class AboutPane extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Heading('About'),
+        const Heading(title: 'About'),
         const Padding(
           padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
           child: Text(currentHelp),

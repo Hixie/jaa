@@ -93,6 +93,8 @@ class AwardFinalistsPane extends StatefulWidget {
 }
 
 class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
+  bool _showOverride = false;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -131,7 +133,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           children: [
             PaneHeader(
               title: '6. Award Finalists',
-              onHeaderButtonPressed: () => AwardFinalistsPane.exportFinalistsTableHTML(context, widget.competition),
+              headerButtonLabel: _showOverride ? 'Close override editor' : 'Show override editor',
+              onHeaderButtonPressed: () {
+                setState(() {
+                  _showOverride = !_showOverride;
+                });
+              },
             ),
             if (finalists.isEmpty)
               const Padding(
@@ -183,6 +190,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   overflow: TextOverflow.clip,
                 ),
               ),
+            if (finalists.isNotEmpty && _showOverride) OverrideEditor(competition: widget.competition),
             if (overriddenAwards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -286,7 +294,6 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   ),
                 ),
               ),
-            if (finalists.isNotEmpty) OverrideEditor(competition: widget.competition),
             const SizedBox(height: indent)
           ],
         );

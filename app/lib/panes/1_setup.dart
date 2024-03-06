@@ -144,8 +144,8 @@ class _SetupPaneState extends State<SetupPane> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
                     child: Table(
-                      border: TableBorder.symmetric(
-                        inside: const BorderSide(),
+                      border: const TableBorder.symmetric(
+                        inside: BorderSide(),
                       ),
                       defaultColumnWidth: const IntrinsicCellWidth(),
                       children: [
@@ -154,7 +154,7 @@ class _SetupPaneState extends State<SetupPane> {
                             Cell(Text('Team Number', style: bold), prototype: Text('000000')),
                             Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
                             Cell(Text('Team City', style: bold), prototype: Text('Mooselookmeguntic')),
-                            Cell(Text('Previous Inspire Winner', style: bold), prototype: Text('Yes')),
+                            Cell(Text('Inspire eligible', style: bold), prototype: Text('Yes')),
                           ],
                         ),
                         for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))
@@ -166,8 +166,8 @@ class _SetupPaneState extends State<SetupPane> {
                               Cell(Text(
                                 team != null
                                     ? team.inspireEligible
-                                        ? ''
-                                        : 'Yes'
+                                        ? 'Yes'
+                                        : 'No'
                                     : '...',
                               )),
                             ],
@@ -241,8 +241,8 @@ class _SetupPaneState extends State<SetupPane> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
                     child: Table(
-                      border: TableBorder.symmetric(
-                        inside: const BorderSide(),
+                      border: const TableBorder.symmetric(
+                        inside: BorderSide(),
                       ),
                       columnWidths: const <int, TableColumnWidth>{0: IntrinsicColumnWidth()},
                       defaultColumnWidth: const IntrinsicCellWidth(),

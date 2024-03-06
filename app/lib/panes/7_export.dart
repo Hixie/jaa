@@ -29,16 +29,28 @@ class ExportPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Heading('7. Export'),
-            const Padding(padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing), child: Text('For printing:')),
+            const Heading(title: '7. Export'),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+              child: Text('For printing:', style: bold),
+            ),
             ExportButton(
               label: 'Export team list (HTML)',
               onPressed: () => SetupPane.exportTeamsHTML(context, competition),
             ),
             ExportButton(
               label: 'Export shortlists (HTML)',
-              onPressed: () => ShortlistsPane.exportShortlistsHTML(context, competition),
+              onPressed: () => ShortlistsPane.exportShortlistsHTML(context, competition, sortedAwards),
             ),
+            if (sortedAwards.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent * 2.0, 0.0, indent, spacing),
+                child: AwardSelector(
+                  label: 'Export shortlists (HTML) for:',
+                  awards: sortedAwards,
+                  onPressed: (Award award) => ShortlistsPane.exportShortlistsHTML(context, competition, [award]),
+                ),
+              ),
             ExportButton(
               label: 'Export judge panel summary (HTML)',
               onPressed: () => exportJudgePanelsHTML(context, competition),
@@ -51,14 +63,15 @@ class ExportPane extends StatelessWidget {
               label: 'Export ranked lists (HTML)',
               onPressed: () => RanksPane.exportRanksHTML(context, competition, sortedAwards),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-              child: AwardSelector(
-                label: 'Export ranked list (HTML) for:',
-                awards: sortedAwards,
-                onPressed: (Award award) => RanksPane.exportRanksHTML(context, competition, [award]),
+            if (sortedAwards.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent * 2.0, 0.0, indent, spacing),
+                child: AwardSelector(
+                  label: 'Export ranked list (HTML) for:',
+                  awards: sortedAwards,
+                  onPressed: (Award award) => RanksPane.exportRanksHTML(context, competition, [award]),
+                ),
               ),
-            ),
             ExportButton(
               label: 'Export Inspire award results (HTML)',
               onPressed: () => InspirePane.exportInspireHTML(context, competition),
@@ -71,7 +84,10 @@ class ExportPane extends StatelessWidget {
               label: 'Export awards ceremony script (HTML)',
               onPressed: () => AwardFinalistsPane.exportFinalistsScriptHTML(context, competition),
             ),
-            const Padding(padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing), child: Text('For spreadsheet import:')),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+              child: Text('For spreadsheet import:', style: bold),
+            ),
             ExportButton(
               label: 'Export pit visit notes (CSV)',
               onPressed: () => exportPitVisitNotes(context, competition),
@@ -88,7 +104,10 @@ class ExportPane extends StatelessWidget {
               label: 'Export finalists lists (CSV)',
               onPressed: () => exportFinalistsLists(context, competition),
             ),
-            const Padding(padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing), child: Text('For archiving:')),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+              child: Text('For archiving:', style: bold),
+            ),
             ExportButton(
               label: 'Export event state (ZIP)',
               onPressed: () => exportEventState(context, competition),

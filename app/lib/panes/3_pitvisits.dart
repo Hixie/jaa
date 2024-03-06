@@ -130,10 +130,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            PaneHeader(
-              title: '3. Pit Visits',
-              onHeaderButtonPressed: () => PitVisitsPane.exportPitVisitsHTML(context, widget.competition),
-            ),
+            const Heading(title: '3. Pit Visits'),
             if (totalCount == 0)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -260,23 +257,25 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
             if (totalCount > 0)
               CheckboxRow(
                 checked: !widget.competition.pitVisitsExcludeAutovisitedTeams,
-                onChanged: (bool value) {
-                  widget.competition.pitVisitsExcludeAutovisitedTeams = !value;
+                onChanged: (bool? value) {
+                  widget.competition.pitVisitsExcludeAutovisitedTeams = !value!;
                   setState(() {
                     _legacyTeams.clear();
                   });
                 },
+                tristate: false,
                 label: 'Include teams that are nominated for an award that always involves a pit visit from the judges.',
               ),
             if (totalCount > 0)
               CheckboxRow(
                 checked: !widget.competition.pitVisitsHideVisitedTeams,
-                onChanged: (bool value) {
-                  widget.competition.pitVisitsHideVisitedTeams = !value;
+                onChanged: (bool? value) {
+                  widget.competition.pitVisitsHideVisitedTeams = !value!;
                   setState(() {
                     _legacyTeams.clear();
                   });
                 },
+                tristate: false,
                 label: 'Include teams that are already marked as visited.',
               ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
@@ -321,8 +320,8 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
                       child: Table(
-                        border: TableBorder.symmetric(
-                          inside: const BorderSide(),
+                        border: const TableBorder.symmetric(
+                          inside: BorderSide(),
                         ),
                         columnWidths: <int, TableColumnWidth>{
                           relevantAwards.length + 1: const MaxColumnWidth(IntrinsicCellWidth(), IntrinsicCellWidth(row: 1))

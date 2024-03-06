@@ -29,10 +29,7 @@ class RanksPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            PaneHeader(
-              title: '4. Rank Lists',
-              onHeaderButtonPressed: () => exportRanksHTML(context, competition, awards),
-            ),
+            const Heading(title: '4. Rank Lists'),
             if (competition.teamsView.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -59,17 +56,28 @@ class RanksPane extends StatelessWidget {
               ),
             if (awards.isNotEmpty)
               CheckboxRow(
-                checked: competition.expandShortlistTables,
-                onChanged: (bool value) {
-                  competition.expandShortlistTables = value;
+                checked: showToBool(competition.showNominators),
+                onChanged: (bool? value) {
+                  competition.showNominators = boolToShow(value);
                 },
-                label: 'Show nominators and nomination comments.',
+                tristate: true,
+                label: 'Show nominators (always, if any, never).',
+              ),
+            if (awards.isNotEmpty)
+              CheckboxRow(
+                checked: showToBool(competition.showNominationComments),
+                onChanged: (bool? value) {
+                  competition.showNominationComments = boolToShow(value);
+                },
+                tristate: true,
+                label: 'Show nomination comments (always, if any, never).',
               ),
             if (awards.isNotEmpty)
               RankTables(
                 sortedAwards: awards,
                 competition: competition,
-                showComments: competition.expandShortlistTables,
+                showNominators: competition.showNominators,
+                showComments: competition.showNominationComments,
               ),
             if (awards.isNotEmpty && competition.teamsView.isNotEmpty)
               Padding(
@@ -170,12 +178,14 @@ class RankTables extends StatelessWidget {
     super.key,
     required this.sortedAwards,
     required this.competition,
+    required this.showNominators,
     required this.showComments,
   });
 
   final List<Award> sortedAwards;
   final Competition competition;
-  final bool showComments;
+  final Show showNominators;
+  final Show showComments;
 
   static ({Map<Award, Set<Team>> winningTeams, Map<Award, Set<Team>> disqualifiedTeams}) computeWinnersAndLosers(Competition competition) {
     final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
@@ -212,6 +222,10 @@ class RankTables extends StatelessWidget {
               ..sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
                 return a.key.compareTo(b.key);
               });
+            final bool includeNominatorColumn = (showNominators == Show.all) ||
+                (showNominators == Show.ifNeeded && entries.any((MapEntry<Team, ShortlistEntry> entry) => entry.value.nominator.isNotEmpty));
+            final bool includeCommentsColumn = (showComments == Show.all) ||
+                (showComments == Show.ifNeeded && entries.any((MapEntry<Team, ShortlistEntry> entry) => entry.value.comment.isNotEmpty));
             return ShortlistCard(
               award: award,
               child: shortlist.entriesView.isEmpty
@@ -221,10 +235,14 @@ class RankTables extends StatelessWidget {
                         inside: BorderSide(color: foregroundColor),
                       ),
                       columnWidths: {
-                        0: IntrinsicCellWidth(flex: showComments ? 1 : null),
-                        if (showComments) 2: const IntrinsicCellWidth(flex: 1),
-                        if (showComments) 3: const IntrinsicCellWidth(flex: 1),
-                        (showComments ? 4 : 2): FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2),
+                        0: IntrinsicCellWidth(flex: includeNominatorColumn || includeCommentsColumn ? 1 : null),
+                        if (includeNominatorColumn) 2: const IntrinsicCellWidth(flex: 1),
+                        if (includeCommentsColumn) (includeNominatorColumn ? 3 : 2): const IntrinsicCellWidth(flex: 1),
+                        (includeCommentsColumn && includeNominatorColumn
+                            ? 4
+                            : includeCommentsColumn || includeNominatorColumn
+                                ? 3
+                                : 2): FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2),
                       },
                       defaultColumnWidth: const IntrinsicCellWidth(),
                       defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
@@ -234,8 +252,8 @@ class RankTables extends StatelessWidget {
                           children: [
                             const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
                             const Cell(Text('#', style: bold), prototype: Text('000000')),
-                            if (showComments) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
-                            if (showComments) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
+                            if (includeNominatorColumn) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
+                            if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                             TableCell(
                               verticalAlignment: TableCellVerticalAlignment.middle,
                               child: Icon(
@@ -262,28 +280,26 @@ class RankTables extends StatelessWidget {
                                   foregroundColor: foregroundColor,
                                   minimum: 1,
                                   maximum: entries.length,
-                                  icons: !showComments
-                                      ? [
-                                          if (entry.nominator.isNotEmpty)
-                                            Tooltip(
-                                              message: entry.nominator,
-                                              child: Icon(
-                                                Symbols.people,
-                                                size: DefaultTextStyle.of(context).style.fontSize,
-                                                color: foregroundColor,
-                                              ),
-                                            ),
-                                          if (entry.comment.isNotEmpty)
-                                            Tooltip(
-                                              message: entry.comment,
-                                              child: Icon(
-                                                Symbols.mark_unread_chat_alt,
-                                                size: DefaultTextStyle.of(context).style.fontSize,
-                                                color: foregroundColor,
-                                              ),
-                                            ),
-                                        ]
-                                      : null,
+                                  icons: [
+                                    if (entry.nominator.isNotEmpty && !includeNominatorColumn)
+                                      Tooltip(
+                                        message: entry.nominator,
+                                        child: Icon(
+                                          Symbols.people,
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                          color: foregroundColor,
+                                        ),
+                                      ),
+                                    if (entry.comment.isNotEmpty && !includeCommentsColumn)
+                                      Tooltip(
+                                        message: entry.comment,
+                                        child: Icon(
+                                          Symbols.mark_unread_chat_alt,
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                          color: foregroundColor,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                               Tooltip(
@@ -305,14 +321,14 @@ class RankTables extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              if (showComments)
+                              if (includeNominatorColumn)
                                 TextEntryCell(
                                   value: entry.nominator,
                                   onChanged: (String value) {
                                     entry.nominator = value;
                                   },
                                 ),
-                              if (showComments)
+                              if (includeCommentsColumn)
                                 ListenableBuilder(
                                   listenable: entry,
                                   builder: (BuildContext context, Widget? child) => TextEntryCell(

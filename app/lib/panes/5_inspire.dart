@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -5,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../constants.dart';
 import '../io.dart';
 import '../model/competition.dart';
+import '../widgets/awards.dart';
 import '../widgets/cells.dart';
 import '../widgets/widgets.dart';
 
@@ -29,10 +32,7 @@ class InspirePane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            PaneHeader(
-              title: '5. Inspire',
-              onHeaderButtonPressed: () => exportInspireHTML(context, competition),
-            ),
+            const Heading(title: '5. Inspire'),
             if (competition.teamsView.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
@@ -86,9 +86,10 @@ class InspirePane extends StatelessWidget {
             if (competition.inspireAward != null)
               CheckboxRow(
                 checked: competition.expandInspireTable,
-                onChanged: (bool value) {
-                  competition.expandInspireTable = value;
+                onChanged: (bool? value) {
+                  competition.expandInspireTable = value!;
                 },
+                tristate: false,
                 label: 'Show rankings for all awards in addition to categories.',
               ),
             if (competition.inspireAward != null) const SizedBox(height: indent),
@@ -100,7 +101,7 @@ class InspirePane extends StatelessWidget {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(indent, 0.0, 0.0, indent),
+                        padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,10 +112,20 @@ class InspirePane extends StatelessWidget {
                             ),
                             const SizedBox(height: spacing),
                             Table(
-                              border: TableBorder.symmetric(
-                                inside: const BorderSide(),
-                              ),
+                              border: awards.isEmpty
+                                  ? const TableBorder.symmetric(
+                                      inside: BorderSide(),
+                                    )
+                                  : SkipColumnTableBorder.symmetric(
+                                      inside: const BorderSide(),
+                                      skippedColumn: 1 + categories.length + 1 + (categoryCount >= competition.minimumInspireCategories ? 1 : 0),
+                                    ),
                               defaultColumnWidth: const IntrinsicCellWidth(),
+                              columnWidths: {
+                                if (awards.isNotEmpty)
+                                  1 + categories.length + 1 + (categoryCount >= competition.minimumInspireCategories ? 1 : 0):
+                                      const FixedColumnWidth(indent * 2.0),
+                              },
                               defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
@@ -127,6 +138,9 @@ class InspirePane extends StatelessWidget {
                                         prototype: const Text('unranked'),
                                       ),
                                     const Cell(Text('Rank Score', style: bold), prototype: Text('000')),
+                                    if (categoryCount >= competition.minimumInspireCategories)
+                                      const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
+                                    if (awards.isNotEmpty) const SizedBox.shrink(),
                                     for (final Award award in awards)
                                       ListenableBuilder(
                                         listenable: award,
@@ -145,8 +159,6 @@ class InspirePane extends StatelessWidget {
                                           );
                                         },
                                       ),
-                                    if (categoryCount >= competition.minimumInspireCategories)
-                                      const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
                                   ],
                                 ),
                                 for (final Team team in candidates[categoryCount]!.keys.toList()..sort(Team.inspireCandidateComparator))
@@ -158,10 +170,6 @@ class InspirePane extends StatelessWidget {
                                       ),
                                       for (final String category in categories) Cell(Text(team.bestRankFor(category, 'unranked', ''))),
                                       Cell(Text('${team.rankScore ?? ""}')),
-                                      for (final Award award in awards)
-                                        RankCell(
-                                          entry: competition.shortlistsView[award]!.entriesView[team],
-                                        ),
                                       if (categoryCount >= competition.minimumInspireCategories)
                                         if (!team.inspireEligible)
                                           const Cell(Text('Not eligible'))
@@ -171,6 +179,11 @@ class InspirePane extends StatelessWidget {
                                             team: team,
                                             award: competition.inspireAward!,
                                           ),
+                                      if (awards.isNotEmpty) const SizedBox.shrink(),
+                                      for (final Award award in awards)
+                                        RankCell(
+                                          entry: competition.shortlistsView[award]!.entriesView[team],
+                                        ),
                                     ],
                                   ),
                               ],
@@ -181,6 +194,10 @@ class InspirePane extends StatelessWidget {
                     ),
                   ),
                 ),
+            if (awards.isNotEmpty)
+              AwardOrderSwitch(
+                competition: competition,
+              ),
           ],
         );
       },
@@ -430,4 +447,296 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
       ),
     );
   }
+}
+
+/// Border specification for [Table] widgets, with a missing column.
+///
+/// This is like [TableBorder], but the horizontal lines skip one of
+/// the columns, the [skippedColumn].
+@immutable
+class SkipColumnTableBorder implements TableBorder {
+  /// Creates a border for a table.
+  ///
+  /// All the sides of the border default to [BorderSide.none].
+  const SkipColumnTableBorder({
+    this.top = BorderSide.none,
+    this.right = BorderSide.none,
+    this.bottom = BorderSide.none,
+    this.left = BorderSide.none,
+    this.horizontalInside = BorderSide.none,
+    this.verticalInside = BorderSide.none,
+    this.borderRadius = BorderRadius.zero,
+    required this.skippedColumn,
+  });
+
+  /// A uniform border with all sides the same color and width.
+  ///
+  /// The sides default to black solid borders, one logical pixel wide.
+  factory SkipColumnTableBorder.all({
+    Color color = const Color(0xFF000000),
+    double width = 1.0,
+    BorderStyle style = BorderStyle.solid,
+    BorderRadius borderRadius = BorderRadius.zero,
+    required int skippedColumn,
+  }) {
+    final BorderSide side = BorderSide(color: color, width: width, style: style);
+    return SkipColumnTableBorder(
+      top: side,
+      right: side,
+      bottom: side,
+      left: side,
+      horizontalInside: side,
+      verticalInside: side,
+      borderRadius: borderRadius,
+      skippedColumn: skippedColumn,
+    );
+  }
+
+  /// Creates a border for a table where all the interior sides use the same
+  /// styling and all the exterior sides use the same styling.
+  const SkipColumnTableBorder.symmetric({
+    BorderSide inside = BorderSide.none,
+    BorderSide outside = BorderSide.none,
+    this.borderRadius = BorderRadius.zero,
+    required this.skippedColumn,
+  })  : top = outside,
+        right = outside,
+        bottom = outside,
+        left = outside,
+        horizontalInside = inside,
+        verticalInside = inside;
+
+  /// The top side of this border.
+  @override
+  final BorderSide top;
+
+  /// The right side of this border.
+  @override
+  final BorderSide right;
+
+  /// The bottom side of this border.
+  @override
+  final BorderSide bottom;
+
+  /// The left side of this border.
+  @override
+  final BorderSide left;
+
+  /// The horizontal interior sides of this border.
+  @override
+  final BorderSide horizontalInside;
+
+  /// The vertical interior sides of this border.
+  @override
+  final BorderSide verticalInside;
+
+  /// The [BorderRadius] to use when painting the corners of this border.
+  ///
+  /// It is also applied to [DataTable]'s [Material].
+  @override
+  final BorderRadius borderRadius;
+
+  /// The index of the column that the horizontal rows are to skip.
+  final int skippedColumn;
+
+  /// The widths of the sides of this border represented as an [EdgeInsets].
+  ///
+  /// This can be used, for example, with a [Padding] widget to inset a box by
+  /// the size of these borders.
+  @override
+  EdgeInsets get dimensions {
+    return EdgeInsets.fromLTRB(left.width, top.width, right.width, bottom.width);
+  }
+
+  /// Whether all the sides of the border (outside and inside) are identical.
+  /// Uniform borders are typically more efficient to paint.
+  ///
+  /// For [SkipColumnTableBorder], this is always false, because of the [skippedColumn].
+  @override
+  bool get isUniform => false;
+
+  /// Creates a copy of this border but with the widths scaled by the factor `t`.
+  ///
+  /// The `t` argument represents the multiplicand, or the position on the
+  /// timeline for an interpolation from nothing to `this`, with 0.0 meaning
+  /// that the object returned should be the nil variant of this object, 1.0
+  /// meaning that no change should be applied, returning `this` (or something
+  /// equivalent to `this`), and other values meaning that the object should be
+  /// multiplied by `t`. Negative values are treated like zero.
+  ///
+  /// Values for `t` are usually obtained from an [Animation<double>], such as
+  /// an [AnimationController].
+  ///
+  /// The [skippedColumn] is not scaled.
+  ///
+  /// See also:
+  ///
+  ///  * [BorderSide.scale], which is used to implement this method.
+  @override
+  SkipColumnTableBorder scale(double t) {
+    return SkipColumnTableBorder(
+      top: top.scale(t),
+      right: right.scale(t),
+      bottom: bottom.scale(t),
+      left: left.scale(t),
+      horizontalInside: horizontalInside.scale(t),
+      verticalInside: verticalInside.scale(t),
+      skippedColumn: skippedColumn,
+    );
+  }
+
+  /// Linearly interpolate between two table borders.
+  ///
+  /// If a border is null, it is treated as having only [BorderSide.none]
+  /// borders.
+  ///
+  /// If the [skippedColumn] is not identical in the two inputs, it is interpolated
+  /// discretely, which will typically not result in a pretty rendering.
+  ///
+  /// {@macro dart.ui.shadow.lerp}
+  static SkipColumnTableBorder? lerp(SkipColumnTableBorder? a, SkipColumnTableBorder? b, double t) {
+    if (identical(a, b)) {
+      return a;
+    }
+    if (a == null) {
+      return b!.scale(t);
+    }
+    if (b == null) {
+      return a.scale(1.0 - t);
+    }
+    return SkipColumnTableBorder(
+      top: BorderSide.lerp(a.top, b.top, t),
+      right: BorderSide.lerp(a.right, b.right, t),
+      bottom: BorderSide.lerp(a.bottom, b.bottom, t),
+      left: BorderSide.lerp(a.left, b.left, t),
+      horizontalInside: BorderSide.lerp(a.horizontalInside, b.horizontalInside, t),
+      verticalInside: BorderSide.lerp(a.verticalInside, b.verticalInside, t),
+      skippedColumn: lerpDouble(a.skippedColumn, b.skippedColumn, t)!.round(),
+    );
+  }
+
+  /// Paints the border around the given [Rect] on the given [Canvas], with the
+  /// given rows and columns.
+  ///
+  /// The `rows` argument specifies the vertical positions between the rows,
+  /// relative to the given rectangle. For example, if the table contained two
+  /// rows of height 100.0 each, then `rows` would contain a single value,
+  /// 100.0, which is the vertical position between the two rows (relative to
+  /// the top edge of `rect`).
+  ///
+  /// The `columns` argument specifies the horizontal positions between the
+  /// columns, relative to the given rectangle. For example, if the table
+  /// contained two columns of width 100.0 each, then `columns` would contain a
+  /// single value, 100.0, which is the horizontal position between the two
+  /// columns (relative to the left edge of `rect`).
+  ///
+  /// The [verticalInside] border is only drawn if there are at least two
+  /// columns. The [horizontalInside] border is only drawn if there are at least
+  /// two rows. The horizontal borders are drawn after the vertical borders.
+  ///
+  /// The horizontal lines skip over the [skippedColumn].
+  ///
+  /// The outer borders (in the order [top], [right], [bottom], [left], with
+  /// [left] above the others) are painted after the inner borders.
+  ///
+  /// The paint order is particularly notable in the case of
+  /// partially-transparent borders.
+  @override
+  void paint(
+    Canvas canvas,
+    Rect rect, {
+    required Iterable<double> rows,
+    required Iterable<double> columns,
+  }) {
+    final List<double> theColumns = columns.toList();
+    assert(rows.isEmpty || (rows.first >= 0.0 && rows.last <= rect.height));
+    assert(theColumns.isEmpty || (theColumns.first >= 0.0 && theColumns.last <= rect.width));
+
+    if (theColumns.isNotEmpty || rows.isNotEmpty) {
+      final Paint paint = Paint();
+      final Path path = Path();
+
+      if (theColumns.isNotEmpty) {
+        switch (verticalInside.style) {
+          case BorderStyle.solid:
+            paint
+              ..color = verticalInside.color
+              ..strokeWidth = verticalInside.width
+              ..style = PaintingStyle.stroke;
+            path.reset();
+            for (int index = 0; index < theColumns.length; index += 1) {
+              if (index != skippedColumn - 1 && index != skippedColumn) {
+                final double x = theColumns[index];
+                path.moveTo(rect.left + x, rect.top);
+                path.lineTo(rect.left + x, rect.bottom);
+              }
+            }
+            canvas.drawPath(path, paint);
+          case BorderStyle.none:
+            break;
+        }
+      }
+
+      if (rows.isNotEmpty) {
+        switch (horizontalInside.style) {
+          case BorderStyle.solid:
+            paint
+              ..color = horizontalInside.color
+              ..strokeWidth = horizontalInside.width
+              ..style = PaintingStyle.stroke;
+            path.reset();
+            if (skippedColumn > 0) {
+              final double right = skippedColumn > theColumns.length ? rect.right - rect.left : theColumns[skippedColumn - 1];
+              for (final double y in rows) {
+                path.moveTo(rect.left, rect.top + y);
+                path.lineTo(rect.left + right, rect.top + y);
+              }
+            }
+            if (skippedColumn < theColumns.length) {
+              final double left = theColumns[skippedColumn];
+              for (final double y in rows) {
+                path.moveTo(rect.left + left, rect.top + y);
+                path.lineTo(rect.right, rect.top + y);
+              }
+            }
+            canvas.drawPath(path, paint);
+          case BorderStyle.none:
+            break;
+        }
+      }
+    }
+    if (!isUniform || borderRadius == BorderRadius.zero) {
+      paintBorder(canvas, rect, top: top, right: right, bottom: bottom, left: left);
+    } else {
+      final RRect outer = borderRadius.toRRect(rect);
+      final RRect inner = outer.deflate(top.width);
+      final Paint paint = Paint()..color = top.color;
+      canvas.drawDRRect(outer, inner, paint);
+    }
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    if (other.runtimeType != runtimeType) {
+      return false;
+    }
+    return other is SkipColumnTableBorder &&
+        other.top == top &&
+        other.right == right &&
+        other.bottom == bottom &&
+        other.left == left &&
+        other.horizontalInside == horizontalInside &&
+        other.verticalInside == verticalInside &&
+        other.borderRadius == borderRadius &&
+        other.skippedColumn == skippedColumn;
+  }
+
+  @override
+  int get hashCode => Object.hash(top, right, bottom, left, horizontalInside, verticalInside, borderRadius, skippedColumn);
+
+  @override
+  String toString() => 'SkipColumnTableBorder($top, $right, $bottom, $left, $horizontalInside, $verticalInside, $borderRadius, $skippedColumn)';
 }

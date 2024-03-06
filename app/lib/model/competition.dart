@@ -17,9 +17,33 @@ typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied, bool overridden});
 
 enum PitVisit { yes, no, maybe }
 
+enum Show { all, ifNeeded, none }
+
 enum SpreadTheWealth { allPlaces, winnerOnly, no }
 
 enum AwardOrder { categories, rank }
+
+bool? showToBool(Show value) {
+  switch (value) {
+    case Show.all:
+      return true;
+    case Show.ifNeeded:
+      return null;
+    case Show.none:
+      return false;
+  }
+}
+
+Show boolToShow(bool? value) {
+  switch (value) {
+    case true:
+      return Show.all;
+    case null:
+      return Show.ifNeeded;
+    case false:
+      return Show.none;
+  }
+}
 
 // change notifications are specifically for the color changing
 class Award extends ChangeNotifier {
@@ -371,7 +395,7 @@ class Competition extends ChangeNotifier {
   Future<Directory> get exportDirectory => _exportDirectory ?? exportDirectoryBuilder();
 
   final List<Team> _teams = <Team>[];
-  final List<Team> _previousInspireWinners = <Team>[];
+  final List<Team> _inspireIneligibleTeams = <Team>[];
   final List<Award> _awards = <Award>[];
   final List<Award> _advancingAwards = <Award>[];
   final List<Award> _nonAdvancingAwards = <Award>[];
@@ -379,7 +403,7 @@ class Competition extends ChangeNotifier {
   final Map<Award, Shortlist> _shortlists = <Award, Shortlist>{};
 
   late final UnmodifiableListView<Team> teamsView = UnmodifiableListView<Team>(_teams);
-  late final UnmodifiableListView<Team> previousInspireWinnersView = UnmodifiableListView<Team>(_previousInspireWinners);
+  late final UnmodifiableListView<Team> inspireIneligibleTeamsView = UnmodifiableListView<Team>(_inspireIneligibleTeams);
   late final UnmodifiableListView<Award> awardsView = UnmodifiableListView<Award>(_awards);
   late final UnmodifiableListView<Award> advancingAwardsView = UnmodifiableListView<Award>(_advancingAwards);
   late final UnmodifiableListView<Award> nonAdvancingAwardsView = UnmodifiableListView<Award>(_nonAdvancingAwards);
@@ -581,11 +605,20 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  bool get expandShortlistTables => _expandShortlistTables;
-  bool _expandShortlistTables = false;
-  set expandShortlistTables(bool value) {
-    if (value != _expandShortlistTables) {
-      _expandShortlistTables = value;
+  Show get showNominationComments => _showNominationComments;
+  Show _showNominationComments = Show.none;
+  set showNominationComments(Show value) {
+    if (value != _showNominationComments) {
+      _showNominationComments = value;
+      notifyListeners();
+    }
+  }
+
+  Show get showNominators => _showNominators;
+  Show _showNominators = Show.none;
+  set showNominators(Show value) {
+    if (value != _showNominators) {
+      _showNominators = value;
       notifyListeners();
     }
   }
@@ -636,11 +669,41 @@ class Competition extends ChangeNotifier {
     return false;
   }
 
+  static bool? _parseTristate(Object? cell, String thirdState) {
+    if (cell == thirdState) {
+      return null;
+    }
+    return _parseBool(cell);
+  }
+
+  static Show _parseShow(Object? cell) {
+    switch (cell) {
+      case 'all':
+        return Show.all;
+      case 'if any':
+        return Show.ifNeeded;
+      case 'none':
+        return Show.none;
+    }
+    return Show.none;
+  }
+
+  static String _serializeShow(Show value) {
+    switch (value) {
+      case Show.all:
+        return 'all';
+      case Show.ifNeeded:
+        return 'if any';
+      case Show.none:
+        return 'none';
+    }
+  }
+
   // Data model
 
   void _clearTeams() {
     _teams.clear();
-    _previousInspireWinners.clear();
+    _inspireIneligibleTeams.clear();
     for (final Shortlist shortlist in _shortlists.values) {
       shortlist._clear();
     }
@@ -667,16 +730,16 @@ class Competition extends ChangeNotifier {
         if (row[0] is! int || (row[0] < 0)) {
           throw FormatException('Parse error in teams file row $rowNumber column 1: "${row[0]}" is not a valid team number.');
         }
-        final bool pastInspireWinner = _parseBool(row[3]);
+        final bool inspireEligible = _parseBool(row[3]);
         final Team team = Team(
           number: row[0] as int,
           name: '${row[1]}',
           city: '${row[2]}',
-          inspireEligible: !pastInspireWinner,
+          inspireEligible: inspireEligible,
         );
         _teams.add(team);
-        if (pastInspireWinner) {
-          _previousInspireWinners.add(team);
+        if (!inspireEligible) {
+          _inspireIneligibleTeams.add(team);
         }
         rowNumber += 1;
       }
@@ -693,10 +756,10 @@ class Competition extends ChangeNotifier {
       'Team number', // numeric
       'Team name', // string
       'Team city', // string
-      'Previous Inspire winner', // 'y' or 'n'
+      'Eligible for Inspire award', // 'y' or 'n'
     ]);
     for (final Team team in _teams) {
-      data.add(['${team.number}', team.name, team.city, !team.inspireEligible ? "y" : "n"]);
+      data.add(['${team.number}', team.name, team.city, team.inspireEligible ? "y" : "n"]);
     }
     return const ListToCsvConverter().convert(data);
   }
@@ -763,11 +826,11 @@ class Competition extends ChangeNotifier {
             ),
         };
         final bool isPlacement = _parseBool(row[5]);
-        final PitVisit pitVisit = '${row[6]}' == 'maybe'
-            ? PitVisit.maybe
-            : _parseBool(row[6])
-                ? PitVisit.yes
-                : PitVisit.no;
+        final PitVisit pitVisit = switch (_parseTristate(row[6], 'maybe')) {
+          null => PitVisit.maybe,
+          true => PitVisit.yes,
+          false => PitVisit.no,
+        };
         final String colorAsString = '${row[7]}';
         final Color color;
         if (colors.containsKey(colorAsString)) {
@@ -1157,8 +1220,10 @@ class Competition extends ChangeNotifier {
             'rank' => AwardOrder.rank,
             _ => AwardOrder.categories,
           };
-        case 'expand shortlist tables':
-          _expandShortlistTables = _parseBool(row[1]);
+        case 'show nomination comments':
+          _showNominationComments = _parseShow(row[1]);
+        case 'show nominators':
+          _showNominators = _parseShow(row[1]);
         case 'expand inspire table':
           _expandInspireTable = _parseBool(row[1]);
         case 'pit visits - exclude autovisited teams':
@@ -1173,7 +1238,8 @@ class Competition extends ChangeNotifier {
 
   void resetConfiguration() {
     _awardOrder = AwardOrder.categories;
-    _expandShortlistTables = false;
+    _showNominationComments = Show.none;
+    _showNominators = Show.none;
     _expandInspireTable = false;
     _pitVisitsExcludeAutovisitedTeams = true;
     _pitVisitsHideVisitedTeams = false;
@@ -1193,7 +1259,8 @@ class Competition extends ChangeNotifier {
         AwardOrder.rank => 'rank',
       }
     ]);
-    data.add(['expand shortlist tables', _expandShortlistTables ? 'y' : 'n']);
+    data.add(['show nomination comments', _serializeShow(_showNominationComments)]);
+    data.add(['show nominators', _serializeShow(_showNominators)]);
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
     data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
     data.add(['pit visits - hide visited teams', _pitVisitsHideVisitedTeams ? 'y' : 'n']);

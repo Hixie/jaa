@@ -25,9 +25,8 @@ class ShortlistsPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            PaneHeader(
+            const Heading(
               title: '2. Enter Shortlists',
-              onHeaderButtonPressed: () => exportShortlistsHTML(context, competition),
             ),
             if (competition.teamsView.isEmpty)
               const Padding(
@@ -64,17 +63,18 @@ class ShortlistsPane extends StatelessWidget {
               ),
             if (awards.isNotEmpty)
               CheckboxRow(
-                checked: competition.expandShortlistTables,
-                onChanged: (bool value) {
-                  competition.expandShortlistTables = value;
+                checked: showToBool(competition.showNominationComments),
+                onChanged: (bool? value) {
+                  competition.showNominationComments = boolToShow(value);
                 },
-                label: 'Show nomination comments.',
+                tristate: true,
+                label: 'Show nomination comments (always, if any, never).',
               ),
             if (awards.isNotEmpty)
               ShortlistTables(
                 sortedAwards: awards,
                 competition: competition,
-                showComments: competition.expandShortlistTables,
+                showComments: competition.showNominationComments,
               ),
             if (awards.isNotEmpty)
               AwardOrderSwitch(
@@ -86,13 +86,13 @@ class ShortlistsPane extends StatelessWidget {
     );
   }
 
-  static Future<void> exportShortlistsHTML(BuildContext context, Competition competition) async {
+  static Future<void> exportShortlistsHTML(BuildContext context, Competition competition, List<Award> awards) async {
     final DateTime now = DateTime.now();
     final StringBuffer page = createHtmlPage('Shortlists', now);
-    if (competition.awardsView.isEmpty) {
+    if (awards.isEmpty) {
       page.writeln('<p>No awards loaded.');
     } else {
-      for (final Award award in competition.awardsView) {
+      for (final Award award in awards) {
         page.writeln('<h2>${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank}: " : ""}${escapeHtml(award.name)} award</h2>');
         final String pitVisits = switch (award.pitVisits) {
           PitVisit.yes => 'does involve',
@@ -139,7 +139,7 @@ class ShortlistTables extends StatelessWidget {
 
   final List<Award> sortedAwards;
   final Competition competition;
-  final bool showComments;
+  final Show showComments;
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +152,8 @@ class ShortlistTables extends StatelessWidget {
           ..sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
             return a.key.compareTo(b.key);
           });
+        bool includeCommentsColumn = (showComments == Show.all) ||
+            (showComments == Show.ifNeeded && entries.any((MapEntry<Team, ShortlistEntry> entry) => entry.value.comment.isNotEmpty));
         return ShortlistCard(
           award: award,
           child: shortlist.entriesView.isEmpty
@@ -162,8 +164,8 @@ class ShortlistTables extends StatelessWidget {
                   ),
                   columnWidths: {
                     1: const IntrinsicCellWidth(flex: 1),
-                    if (showComments) 2: const IntrinsicCellWidth(flex: 1),
-                    (showComments ? 3 : 2): FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2),
+                    if (includeCommentsColumn) 2: const IntrinsicCellWidth(flex: 1),
+                    (includeCommentsColumn ? 3 : 2): FixedColumnWidth(DefaultTextStyle.of(context).style.fontSize! + spacing * 2),
                   },
                   defaultColumnWidth: const IntrinsicCellWidth(),
                   defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
@@ -173,7 +175,7 @@ class ShortlistTables extends StatelessWidget {
                       children: [
                         const Cell(Text('#', style: bold), prototype: Text('000000')),
                         const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
-                        if (showComments) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
+                        if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                         TableCell(
                           verticalAlignment: TableCellVerticalAlignment.middle,
                           child: Icon(
@@ -199,7 +201,7 @@ class ShortlistTables extends StatelessWidget {
                               onChanged: (String value) {
                                 entry.nominator = value;
                               },
-                              icons: !showComments && entry.comment.isNotEmpty
+                              icons: !includeCommentsColumn && entry.comment.isNotEmpty
                                   ? [
                                       Tooltip(
                                         message: entry.comment,
@@ -213,7 +215,7 @@ class ShortlistTables extends StatelessWidget {
                                   : null,
                             ),
                           ),
-                          if (showComments)
+                          if (includeCommentsColumn)
                             ListenableBuilder(
                               listenable: entry,
                               builder: (BuildContext context, Widget? child) => TextEntryCell(
