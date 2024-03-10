@@ -134,11 +134,13 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             PaneHeader(
               title: '6. Award Finalists',
               headerButtonLabel: _showOverride ? 'Close override editor' : 'Show override editor',
-              onHeaderButtonPressed: () {
-                setState(() {
-                  _showOverride = !_showOverride;
-                });
-              },
+              onHeaderButtonPressed: widget.competition.awardsView.isEmpty
+                  ? null
+                  : () {
+                      setState(() {
+                        _showOverride = !_showOverride;
+                      });
+                    },
             ),
             if (finalists.isEmpty)
               const Padding(

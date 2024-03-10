@@ -194,7 +194,7 @@ class InspirePane extends StatelessWidget {
                     ),
                   ),
                 ),
-            if (awards.isNotEmpty)
+            if (awards.isNotEmpty && competition.expandInspireTable)
               AwardOrderSwitch(
                 competition: competition,
               ),
