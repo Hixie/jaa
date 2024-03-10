@@ -105,6 +105,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Set<Award> tiedAwards = {};
         final Set<Award> overriddenAwards = {};
         final Set<Award> incompleteAwards = {};
+        final canShowOverrides = widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty;
         for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
           bool hasAny = false;
           // ignore: unused_local_variable
@@ -134,7 +135,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             PaneHeader(
               title: '6. Award Finalists',
               headerButtonLabel: _showOverride ? 'Close override editor' : 'Show override editor',
-              onHeaderButtonPressed: widget.competition.awardsView.isEmpty
+              onHeaderButtonPressed: !canShowOverrides
                   ? null
                   : () {
                       setState(() {
@@ -192,7 +193,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   overflow: TextOverflow.clip,
                 ),
               ),
-            if (finalists.isNotEmpty && _showOverride) OverrideEditor(competition: widget.competition),
+            if (canShowOverrides && _showOverride) OverrideEditor(competition: widget.competition),
             if (overriddenAwards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),

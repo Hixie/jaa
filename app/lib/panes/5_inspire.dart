@@ -24,7 +24,8 @@ class InspirePane extends StatelessWidget {
         final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
         final List<String> categories = competition.categories;
         final List<int> categoryCounts = (candidates.keys.toList()..sort()).reversed.take(competition.minimumInspireCategories).toList();
-        final List<Award> awards = competition.expandInspireTable
+        final canShowAnything = competition.teamsView.isNotEmpty && (competition.inspireAward != null) && categoryCounts.isNotEmpty;
+        final List<Award> awards = canShowAnything && competition.expandInspireTable
             ? (competition.awardsView.where(Award.isInspireQualifyingPredicate).toList()..sort(competition.awardSorter))
             : const [];
         return Column(
@@ -78,12 +79,12 @@ class InspirePane extends StatelessWidget {
                   overflow: TextOverflow.clip,
                 ),
               ),
-            if (competition.inspireAward != null)
+            if (canShowAnything)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
                 child: Text('Candidates for ${competition.inspireAward!.name} award:', style: bold),
               ),
-            if (competition.inspireAward != null)
+            if (canShowAnything)
               CheckboxRow(
                 checked: competition.expandInspireTable,
                 onChanged: (bool? value) {
@@ -194,7 +195,7 @@ class InspirePane extends StatelessWidget {
                     ),
                   ),
                 ),
-            if (awards.isNotEmpty && competition.expandInspireTable)
+            if (awards.isNotEmpty)
               AwardOrderSwitch(
                 competition: competition,
               ),
