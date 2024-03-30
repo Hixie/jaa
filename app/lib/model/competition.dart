@@ -439,6 +439,7 @@ class Competition extends ChangeNotifier {
     if (entry.rank != rank) {
       entry._rank = rank;
       _shortlists[award]!._checkForTies();
+      entry.notifyListeners();
       notifyListeners();
     }
   }
