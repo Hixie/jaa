@@ -207,7 +207,7 @@ class InspirePane extends StatelessWidget {
 
   static Future<void> exportInspireHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    StringBuffer page = createHtmlPage('Inspire', now);
+    StringBuffer page = createHtmlPage(competition, 'Inspire', now);
     final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
     final List<String> categories = competition.categories;
 

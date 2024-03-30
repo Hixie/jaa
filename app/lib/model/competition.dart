@@ -412,6 +412,15 @@ class Competition extends ChangeNotifier {
 
   final Map<Award, Map<int, Set<Team>>> _overrides = {};
 
+  String get eventName => _eventName;
+  String _eventName = '';
+  set eventName(String value) {
+    if (value != _eventName) {
+      _eventName = value;
+      notifyListeners();
+    }
+  }
+
   int get minimumInspireCategories {
     List<String> cachedCategories = categories;
     if (cachedCategories.isEmpty) {
@@ -1215,6 +1224,8 @@ class Competition extends ChangeNotifier {
     }
     for (List<dynamic> row in csvData) {
       switch (row[0]) {
+        case 'event name':
+          _eventName = row[1];
         case 'award order':
           _awardOrder = switch (row[1]) {
             'categories' => AwardOrder.categories,
@@ -1233,11 +1244,11 @@ class Competition extends ChangeNotifier {
           _pitVisitsHideVisitedTeams = _parseBool(row[1]);
       }
     }
-
     notifyListeners();
   }
 
   void resetConfiguration() {
+    _eventName = '';
     _awardOrder = AwardOrder.categories;
     _showNominationComments = Show.none;
     _showNominators = Show.none;
@@ -1253,6 +1264,7 @@ class Competition extends ChangeNotifier {
       'Setting', // string
       'Value', // varies
     ]);
+    data.add(['event name', _eventName]);
     data.add([
       'award order',
       switch (_awardOrder) {
@@ -1341,7 +1353,7 @@ class Competition extends ChangeNotifier {
           '\n'
           'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenameShortlists", and "$filenamePitVisitNotes".\n'
           'The "$filenameFinalistOverrides" file contains any award finalists overrides that are in effect.\n'
-          'The "$filenameConfiguration" file contains settings for the Judge Advisor Assistant app that do not affect the event itself.\n'
+          'The "$filenameConfiguration" file contains settings for the Judge Advisor Assistant app, including the event name.\n'
           '\n'
           'Other files (such as this one) are included for information purposes only. They are not used when reimporting the event state.\n'
           'The "$filenameInspireCandidates" file contains a listing of each team\'s rankings for awards that contribute to Inspire award nominations.\n'

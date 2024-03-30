@@ -104,7 +104,7 @@ class RanksPane extends StatelessWidget {
 
   static Future<void> exportRanksHTML(BuildContext context, Competition competition, List<Award> awards) async {
     final DateTime now = DateTime.now();
-    final StringBuffer page = createHtmlPage('Ranks', now);
+    final StringBuffer page = createHtmlPage(competition, 'Ranks', now);
     if (competition.awardsView.isEmpty) {
       page.writeln('<p>No awards loaded.');
     } else {

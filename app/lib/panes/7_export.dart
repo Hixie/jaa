@@ -121,7 +121,7 @@ class ExportPane extends StatelessWidget {
 
   static Future<void> exportJudgePanelsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    final StringBuffer page = createHtmlPage('Judge Panels', now);
+    final StringBuffer page = createHtmlPage(competition, 'Judge Panels', now);
     page.writeln('<h2>Nominations</h2>');
     final Map<String, Set<(Award, Team, {String comment})>> nominations = <String, Set<(Award, Team, {String comment})>>{};
     int nominationCount = 0;

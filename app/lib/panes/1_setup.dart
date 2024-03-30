@@ -28,7 +28,7 @@ class SetupPane extends StatefulWidget {
 
   static Future<void> exportTeamsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    final StringBuffer page = createHtmlPage('Teams', now);
+    final StringBuffer page = createHtmlPage(competition, 'Teams', now);
     if (competition.teamsView.isEmpty) {
       page.writeln('<p>No teams loaded.');
     } else {
@@ -56,306 +56,352 @@ class SetupPane extends StatefulWidget {
 class _SetupPaneState extends State<SetupPane> {
   bool _teamEditor = false;
   bool _awardEditor = false;
+  final TextEditingController _eventNameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _eventNameController.addListener(() {
+      widget.competition.eventName = _eventNameController.text;
+    });
+    widget.competition.addListener(_handleCompetitionChanged);
+    _handleCompetitionChanged();
+  }
+
+  @override
+  void didUpdateWidget(covariant SetupPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.competition != widget.competition) {
+      oldWidget.competition.removeListener(_handleCompetitionChanged);
+      widget.competition.addListener(_handleCompetitionChanged);
+      _handleCompetitionChanged();
+    }
+  }
+
+  void _handleCompetitionChanged() {
+    setState(() {
+      if (widget.competition.eventName != _eventNameController.text) {
+        _eventNameController.text = widget.competition.eventName;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventNameController.dispose();
+    widget.competition.removeListener(_handleCompetitionChanged);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: widget.competition,
-      builder: (BuildContext context, Widget? child) => Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PaneHeader(
-            title: '1. Setup',
-            headerButtonLabel: widget.competition.teamsView.isEmpty || widget.competition.awardsView.isEmpty
-                ? 'Import event state (ZIP)'
-                : 'Reset everything from saved event state (ZIP)',
-            onHeaderButtonPressed: () async {
-              final PlatformFile? zipFile = await openFile(context, title: 'Import Event State (ZIP)', extension: 'zip');
-              if (zipFile != null) {
-                await showProgress(
-                  context, // ignore: use_build_context_synchronously
-                  message: 'Importing event state...',
-                  task: () => widget.competition.importEventState(zipFile),
-                );
-              }
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-            child: Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: [
-                FilledButton(
-                  child: Text(
-                    widget.competition.teamsView.isEmpty || widget.competition.awardsView.isEmpty
-                        ? 'Import team list (CSV)'
-                        : 'Reset all teams and rankings and import new team list (CSV)',
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onPressed: () async {
-                    final PlatformFile? csvFile = await openFile(context, title: 'Import Team List (CSV)', extension: 'csv');
-                    if (csvFile != null) {
-                      await showProgress(
-                        context, // ignore: use_build_context_synchronously
-                        message: 'Importing teams...',
-                        task: () async => widget.competition.importTeams(await csvFile.readStream!.expand((List<int> fragment) => fragment).toList()),
-                      );
-                    }
-                  },
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PaneHeader(
+          title: '1. Setup',
+          headerButtonLabel: widget.competition.teamsView.isEmpty || widget.competition.awardsView.isEmpty
+              ? 'Import event state (ZIP)'
+              : 'Reset everything from saved event state (ZIP)',
+          onHeaderButtonPressed: () async {
+            final PlatformFile? zipFile = await openFile(context, title: 'Import Event State (ZIP)', extension: 'zip');
+            if (zipFile != null) {
+              await showProgress(
+                context, // ignore: use_build_context_synchronously
+                message: 'Importing event state...',
+                task: () => widget.competition.importEventState(zipFile),
+              );
+            }
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              FilledButton(
+                child: Text(
+                  widget.competition.teamsView.isEmpty || widget.competition.awardsView.isEmpty
+                      ? 'Import team list (CSV)'
+                      : 'Reset all teams and rankings and import new team list (CSV)',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                FilledButton(
-                  onPressed: widget.competition.teamsView.isEmpty
-                      ? null
-                      : () {
-                          setState(() {
-                            _teamEditor = !_teamEditor;
-                          });
-                        },
-                  child: Text(
-                    _teamEditor ? 'Hide team editor' : 'Show team editor',
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (widget.competition.teamsView.isNotEmpty && _teamEditor)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-              child: TeamEditor(
-                competition: widget.competition,
-                onClosed: () {
-                  setState(() {
-                    _teamEditor = false;
-                  });
+                onPressed: () async {
+                  final PlatformFile? csvFile = await openFile(context, title: 'Import Team List (CSV)', extension: 'csv');
+                  if (csvFile != null) {
+                    await showProgress(
+                      context, // ignore: use_build_context_synchronously
+                      message: 'Importing teams...',
+                      task: () async => widget.competition.importTeams(await csvFile.readStream!.expand((List<int> fragment) => fragment).toList()),
+                    );
+                  }
                 },
               ),
+              FilledButton(
+                onPressed: widget.competition.teamsView.isEmpty
+                    ? null
+                    : () {
+                        setState(() {
+                          _teamEditor = !_teamEditor;
+                        });
+                      },
+                child: Text(
+                  _teamEditor ? 'Hide team editor' : 'Show team editor',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (widget.competition.teamsView.isNotEmpty && _teamEditor)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+            child: TeamEditor(
+              competition: widget.competition,
+              onClosed: () {
+                setState(() {
+                  _teamEditor = false;
+                });
+              },
             ),
-          if (widget.competition.teamsView.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
-              child: HorizontalScrollbar(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-                    child: Table(
-                      border: const TableBorder.symmetric(
-                        inside: BorderSide(),
+          ),
+        if (widget.competition.teamsView.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
+            child: HorizontalScrollbar(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+                  child: Table(
+                    border: const TableBorder.symmetric(
+                      inside: BorderSide(),
+                    ),
+                    defaultColumnWidth: const IntrinsicCellWidth(),
+                    children: [
+                      const TableRow(
+                        children: [
+                          Cell(Text('Team Number', style: bold), prototype: Text('000000')),
+                          Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
+                          Cell(Text('Team City', style: bold), prototype: Text('Mooselookmeguntic')),
+                          Cell(Text('Inspire eligible', style: bold), prototype: Text('Yes')),
+                        ],
                       ),
-                      defaultColumnWidth: const IntrinsicCellWidth(),
-                      children: [
-                        const TableRow(
+                      for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))
+                        TableRow(
                           children: [
-                            Cell(Text('Team Number', style: bold), prototype: Text('000000')),
-                            Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
-                            Cell(Text('Team City', style: bold), prototype: Text('Mooselookmeguntic')),
-                            Cell(Text('Inspire eligible', style: bold), prototype: Text('Yes')),
+                            Cell(Text('${team?.number ?? '...'}')),
+                            Cell(Text(team?.name ?? '...')),
+                            Cell(Text(team?.city ?? '...')),
+                            Cell(Text(
+                              team != null
+                                  ? team.inspireEligible
+                                      ? 'Yes'
+                                      : 'No'
+                                  : '...',
+                            )),
                           ],
                         ),
-                        for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))
-                          TableRow(
-                            children: [
-                              Cell(Text('${team?.number ?? '...'}')),
-                              Cell(Text(team?.name ?? '...')),
-                              Cell(Text(team?.city ?? '...')),
-                              Cell(Text(
-                                team != null
-                                    ? team.inspireEligible
-                                        ? 'Yes'
-                                        : 'No'
-                                    : '...',
-                              )),
-                            ],
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-            child: Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: [
-                FilledButton(
-                  child: Text(
-                    widget.competition.teamsView.isEmpty || widget.competition.awardsView.isEmpty
-                        ? 'Import awards (CSV)'
-                        : 'Reset all rankings and import new awards (CSV)',
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onPressed: () async {
-                    final PlatformFile? csvFile = await openFile(context, title: 'Import Awards (CSV)', extension: 'csv');
-                    if (csvFile != null) {
-                      await showProgress(
-                        context, // ignore: use_build_context_synchronously
-                        message: 'Importing awards...',
-                        task: () async => widget.competition.importAwards(await csvFile.readStream!.expand((List<int> fragment) => fragment).toList()),
-                      );
-                    }
-                  },
-                ),
-                FilledButton(
-                  onPressed: widget.competition.awardsView.isEmpty
-                      ? null
-                      : () {
-                          setState(() {
-                            _awardEditor = !_awardEditor;
-                          });
-                        },
-                  child: Text(
-                    _awardEditor ? 'Close event-specific award editor' : 'Add event-specific award...',
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
             ),
           ),
-          if (_awardEditor)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
-              child: AwardEditor(
-                competition: widget.competition,
-                onClosed: () {
-                  setState(() {
-                    _awardEditor = false;
-                  });
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              FilledButton(
+                child: Text(
+                  widget.competition.teamsView.isEmpty || widget.competition.awardsView.isEmpty
+                      ? 'Import awards (CSV)'
+                      : 'Reset all rankings and import new awards (CSV)',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: () async {
+                  final PlatformFile? csvFile = await openFile(context, title: 'Import Awards (CSV)', extension: 'csv');
+                  if (csvFile != null) {
+                    await showProgress(
+                      context, // ignore: use_build_context_synchronously
+                      message: 'Importing awards...',
+                      task: () async => widget.competition.importAwards(await csvFile.readStream!.expand((List<int> fragment) => fragment).toList()),
+                    );
+                  }
                 },
               ),
+              FilledButton(
+                onPressed: widget.competition.awardsView.isEmpty
+                    ? null
+                    : () {
+                        setState(() {
+                          _awardEditor = !_awardEditor;
+                        });
+                      },
+                child: Text(
+                  _awardEditor ? 'Close event-specific award editor' : 'Add event-specific award...',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_awardEditor)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
+            child: AwardEditor(
+              competition: widget.competition,
+              onClosed: () {
+                setState(() {
+                  _awardEditor = false;
+                });
+              },
             ),
-          if (widget.competition.awardsView.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
-              child: HorizontalScrollbar(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-                    child: Table(
-                      border: const TableBorder.symmetric(
-                        inside: BorderSide(),
+          ),
+        if (widget.competition.awardsView.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
+            child: HorizontalScrollbar(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+                  child: Table(
+                    border: const TableBorder.symmetric(
+                      inside: BorderSide(),
+                    ),
+                    columnWidths: const <int, TableColumnWidth>{0: IntrinsicColumnWidth()},
+                    defaultColumnWidth: const IntrinsicCellWidth(),
+                    children: [
+                      const TableRow(
+                        children: [
+                          Cell(Text('Award Name', style: bold)),
+                          Cell(
+                            Text('Award Type', style: bold),
+                            prototype: EventSpecificCell(competition: null, award: null),
+                            padPrototype: false,
+                          ),
+                          Cell(Text('Award Rank', style: bold), prototype: Text('000')),
+                          Cell(Text('Award Count', style: bold), prototype: Text('000')),
+                          Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
+                          Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
+                          Cell(Text('Placement', style: bold), prototype: Text('Yes')),
+                          Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
+                        ],
                       ),
-                      columnWidths: const <int, TableColumnWidth>{0: IntrinsicColumnWidth()},
-                      defaultColumnWidth: const IntrinsicCellWidth(),
-                      children: [
-                        const TableRow(
+                      for (final Award award in widget.competition.awardsView)
+                        TableRow(
                           children: [
-                            Cell(Text('Award Name', style: bold)),
                             Cell(
-                              Text('Award Type', style: bold),
-                              prototype: EventSpecificCell(competition: null, award: null),
-                              padPrototype: false,
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListenableBuilder(
+                                    listenable: award,
+                                    builder: (BuildContext context, Widget? child) {
+                                      return ColorIndicator(
+                                        color: award.color,
+                                        width: 12.0,
+                                        height: 12.0,
+                                        borderRadius: 0.0,
+                                        onSelectFocus: false,
+                                        onSelect: () async {
+                                          Color selectedColor = award.color;
+                                          if (await ColorPicker(
+                                            heading: Text('${award.name} color', style: headingStyle),
+                                            color: selectedColor,
+                                            wheelWidth: indent,
+                                            wheelSquareBorderRadius: indent,
+                                            pickersEnabled: const <ColorPickerType, bool>{
+                                              ColorPickerType.accent: false,
+                                              ColorPickerType.both: false,
+                                              ColorPickerType.bw: false,
+                                              ColorPickerType.custom: false,
+                                              ColorPickerType.primary: false,
+                                              ColorPickerType.wheel: true,
+                                            },
+                                            enableShadesSelection: false,
+                                            showColorName: true,
+                                            showColorCode: true,
+                                            colorCodeHasColor: true,
+                                            copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+                                              parseShortHexCode: true,
+                                              copyFormat: ColorPickerCopyFormat.numHexRRGGBB,
+                                            ),
+                                            actionButtons: const ColorPickerActionButtons(
+                                              dialogActionOrder: ColorPickerActionButtonOrder.adaptive,
+                                            ),
+                                            onColorChanged: (Color color) {
+                                              selectedColor = color;
+                                            },
+                                          ).showPickerDialog(context)) {
+                                            award.updateColor(selectedColor);
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  Text(award.name),
+                                ],
+                              ),
                             ),
-                            Cell(Text('Award Rank', style: bold), prototype: Text('000')),
-                            Cell(Text('Award Count', style: bold), prototype: Text('000')),
-                            Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
-                            Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
-                            Cell(Text('Placement', style: bold), prototype: Text('Yes')),
-                            Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
+                            award.isEventSpecific
+                                ? EventSpecificCell(competition: widget.competition, award: award)
+                                : Cell(
+                                    Text(
+                                      award.isInspire
+                                          ? 'Inspire'
+                                          : award.isAdvancing
+                                              ? 'Advancing'
+                                              : 'Non-Advancing',
+                                    ),
+                                  ),
+                            Cell(Text(award.spreadTheWealth != SpreadTheWealth.no ? '${award.rank}' : '')),
+                            Cell(Text('${award.count}')),
+                            Cell(Text(award.category)),
+                            Cell(Text(switch (award.spreadTheWealth) {
+                              SpreadTheWealth.allPlaces => 'All Places',
+                              SpreadTheWealth.winnerOnly => 'Winner Only',
+                              SpreadTheWealth.no => '',
+                            })),
+                            Cell(Text(award.isPlacement ? 'Yes' : '')),
+                            Cell(Text(switch (award.pitVisits) {
+                              PitVisit.yes => 'Yes',
+                              PitVisit.no => 'No',
+                              PitVisit.maybe => 'Maybe',
+                            })),
                           ],
                         ),
-                        for (final Award award in widget.competition.awardsView)
-                          TableRow(
-                            children: [
-                              Cell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListenableBuilder(
-                                      listenable: award,
-                                      builder: (BuildContext context, Widget? child) {
-                                        return ColorIndicator(
-                                          color: award.color,
-                                          width: 12.0,
-                                          height: 12.0,
-                                          borderRadius: 0.0,
-                                          onSelectFocus: false,
-                                          onSelect: () async {
-                                            Color selectedColor = award.color;
-                                            if (await ColorPicker(
-                                              heading: Text('${award.name} color', style: headingStyle),
-                                              color: selectedColor,
-                                              wheelWidth: indent,
-                                              wheelSquareBorderRadius: indent,
-                                              pickersEnabled: const <ColorPickerType, bool>{
-                                                ColorPickerType.accent: false,
-                                                ColorPickerType.both: false,
-                                                ColorPickerType.bw: false,
-                                                ColorPickerType.custom: false,
-                                                ColorPickerType.primary: false,
-                                                ColorPickerType.wheel: true,
-                                              },
-                                              enableShadesSelection: false,
-                                              showColorName: true,
-                                              showColorCode: true,
-                                              colorCodeHasColor: true,
-                                              copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-                                                parseShortHexCode: true,
-                                                copyFormat: ColorPickerCopyFormat.numHexRRGGBB,
-                                              ),
-                                              actionButtons: const ColorPickerActionButtons(
-                                                dialogActionOrder: ColorPickerActionButtonOrder.adaptive,
-                                              ),
-                                              onColorChanged: (Color color) {
-                                                selectedColor = color;
-                                              },
-                                            ).showPickerDialog(context)) {
-                                              award.updateColor(selectedColor);
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(width: spacing),
-                                    Text(award.name),
-                                  ],
-                                ),
-                              ),
-                              award.isEventSpecific
-                                  ? EventSpecificCell(competition: widget.competition, award: award)
-                                  : Cell(
-                                      Text(
-                                        award.isInspire
-                                            ? 'Inspire'
-                                            : award.isAdvancing
-                                                ? 'Advancing'
-                                                : 'Non-Advancing',
-                                      ),
-                                    ),
-                              Cell(Text(award.spreadTheWealth != SpreadTheWealth.no ? '${award.rank}' : '')),
-                              Cell(Text('${award.count}')),
-                              Cell(Text(award.category)),
-                              Cell(Text(switch (award.spreadTheWealth) {
-                                SpreadTheWealth.allPlaces => 'All Places',
-                                SpreadTheWealth.winnerOnly => 'Winner Only',
-                                SpreadTheWealth.no => '',
-                              })),
-                              Cell(Text(award.isPlacement ? 'Yes' : '')),
-                              Cell(Text(switch (award.pitVisits) {
-                                PitVisit.yes => 'Yes',
-                                PitVisit.no => 'No',
-                                PitVisit.maybe => 'Maybe',
-                              })),
-                            ],
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-          const SizedBox(height: indent),
-        ],
-      ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, spacing + indent, indent, indent),
+          child: Material(
+            type: MaterialType.transparency,
+            child: TextField(
+              controller: _eventNameController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Event Name (optional)',
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

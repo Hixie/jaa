@@ -27,12 +27,13 @@ Future<void> exportHTML(Competition competition, String prefix, DateTime now, St
   await launchUrl(Uri.file(filename));
 }
 
-StringBuffer createHtmlPage(String header, DateTime now) {
+StringBuffer createHtmlPage(Competition competition, String header, DateTime now) {
+  final String eventNamePrefix = competition.eventName.isEmpty ? '' : '${competition.eventName} — ';
   return StringBuffer()
     ..writeln('<!DOCTYPE HTML>')
     ..writeln('<style>$css</style>')
-    ..writeln('<title>${escapeHtml(header)}</title>')
-    ..writeln('<h1>${escapeHtml(header)}</h1>')
+    ..writeln('<title>${escapeHtml("$eventNamePrefix$header")}</title>')
+    ..writeln('<h1>${escapeHtml("$eventNamePrefix$header")}</h1>')
     ..writeln('<p>Exported at: <time>${escapeHtml(now.toIso8601String())}</time></p>');
 }
 

@@ -21,7 +21,7 @@ class PitVisitsPane extends StatefulWidget {
   static Future<void> exportPitVisitsHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
     final List<Award> relevantAwards = computeAffectedAwards(competition);
-    final StringBuffer page = createHtmlPage('Pit Visits', now);
+    final StringBuffer page = createHtmlPage(competition, 'Pit Visits', now);
     if (competition.teamsView.isEmpty) {
       page.writeln('<p>No teams loaded.');
     } else {

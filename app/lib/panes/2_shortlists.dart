@@ -88,7 +88,7 @@ class ShortlistsPane extends StatelessWidget {
 
   static Future<void> exportShortlistsHTML(BuildContext context, Competition competition, List<Award> awards) async {
     final DateTime now = DateTime.now();
-    final StringBuffer page = createHtmlPage('Shortlists', now);
+    final StringBuffer page = createHtmlPage(competition, 'Shortlists', now);
     if (awards.isEmpty) {
       page.writeln('<p>No awards loaded.');
     } else {

@@ -19,7 +19,7 @@ class AwardFinalistsPane extends StatefulWidget {
 
   static Future<void> exportFinalistsTableHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    StringBuffer page = createHtmlPage('Finalists', now);
+    StringBuffer page = createHtmlPage(competition, 'Finalists', now);
     final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
     if (competition.awardsView.isEmpty) {
       page.writeln('<p>No awards loaded.');
@@ -61,7 +61,7 @@ class AwardFinalistsPane extends StatefulWidget {
 
   static Future<void> exportFinalistsScriptHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
-    StringBuffer page = createHtmlPage('Awards Ceremony Script', now);
+    StringBuffer page = createHtmlPage(competition, 'Awards Ceremony Script', now);
     final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
     if (competition.awardsView.isEmpty) {
       page.writeln('<p>This event has no awards.');
