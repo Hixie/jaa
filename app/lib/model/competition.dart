@@ -48,7 +48,7 @@ Show boolToShow(bool? value) {
 // change notifications are specifically for the color changing
 class Award extends ChangeNotifier {
   Award({
-    required this.name,
+    required String name,
     required this.isInspire,
     required this.isAdvancing,
     required this.rank,
@@ -58,10 +58,11 @@ class Award extends ChangeNotifier {
     required this.isPlacement,
     required this.pitVisits,
     required this.isEventSpecific,
+    required this.canBeRenamed,
     required Color color,
-  }) : _color = color;
+  })  : _name = name,
+        _color = color;
 
-  final String name;
   final bool isInspire;
   final bool isAdvancing;
   final int rank;
@@ -71,13 +72,24 @@ class Award extends ChangeNotifier {
   final bool isPlacement;
   final PitVisit pitVisits;
   final bool isEventSpecific;
+  final bool canBeRenamed;
+
+  String get name => _name;
+  String _name;
+  set name(String value) {
+    if (value != _name) {
+      _name = value;
+      notifyListeners();
+    }
+  }
 
   Color _color;
   Color get color => _color;
-
-  void updateColor(Color color) {
-    _color = color;
-    notifyListeners();
+  set color(Color value) {
+    if (value != _color) {
+      _color = value;
+      notifyListeners();
+    }
   }
 
   String get description {
@@ -562,6 +574,7 @@ class Competition extends ChangeNotifier {
       isPlacement: isPlacement,
       pitVisits: pitVisit,
       isEventSpecific: true,
+      canBeRenamed: true,
       color: const Color(0xFFFFFFFF),
     );
     _awards.add(award);
@@ -856,6 +869,7 @@ class Competition extends ChangeNotifier {
           color = Color(0xFF000000 | colorAsInt);
         }
         final bool isEventSpecific = row.length > 8 ? _parseBool(row[8]) : false;
+        final bool canBeRenamed = row.length > 9 ? _parseBool(row[9]) : false;
         final Award award = Award(
           name: name,
           isInspire: isInspire,
@@ -867,6 +881,7 @@ class Competition extends ChangeNotifier {
           isPlacement: isPlacement,
           pitVisits: pitVisit,
           isEventSpecific: isEventSpecific,
+          canBeRenamed: canBeRenamed,
           color: color,
         );
         _awards.add(award);
@@ -905,7 +920,8 @@ class Competition extends ChangeNotifier {
       'Placement', // 'y' or 'n'
       'Pit visits', // 'y', 'n', 'maybe'
       'Color', // #XXXXXX
-      if (_awards.any((Award award) => award.isEventSpecific)) 'Event-Specific', // 'y', 'n'
+      'Event-specific', // 'y', 'n'
+      'Can be renamed', // 'y', 'n'
     ]);
     for (final Award award in _awards) {
       data.add([
@@ -921,7 +937,8 @@ class Competition extends ChangeNotifier {
         award.isPlacement ? 'y' : 'n',
         switch (award.pitVisits) { PitVisit.yes => 'y', PitVisit.no => 'n', PitVisit.maybe => 'maybe' },
         '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}',
-        if (_awards.any((Award award) => award.isEventSpecific)) award.isEventSpecific ? 'y' : 'n'
+        award.isEventSpecific ? 'y' : 'n',
+        award.canBeRenamed ? 'y' : 'n',
       ]);
     }
     return const ListToCsvConverter().convert(data);

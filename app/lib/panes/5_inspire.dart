@@ -82,7 +82,12 @@ class InspirePane extends StatelessWidget {
             if (canShowAnything)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Candidates for ${competition.inspireAward!.name} award:', style: bold),
+                child: ListenableBuilder(
+                  listenable: competition.inspireAward!,
+                  builder: (BuildContext context, Widget? child) {
+                    return Text('Candidates for ${competition.inspireAward!.name} award:', style: bold);
+                  },
+                ),
               ),
             if (canShowAnything)
               CheckboxRow(
@@ -107,9 +112,14 @@ class InspirePane extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Candidates in $categoryCount categories'
-                              '${categoryCount < competition.minimumInspireCategories ? " (insufficient to qualify for ${competition.inspireAward!.name} award)" : ""}:',
+                            ListenableBuilder(
+                              listenable: competition.inspireAward!,
+                              builder: (BuildContext context, Widget? child) {
+                                return Text(
+                                  'Candidates in $categoryCount categories'
+                                  '${categoryCount < competition.minimumInspireCategories ? " (insufficient to qualify for ${competition.inspireAward!.name} award)" : ""}:',
+                                );
+                              },
                             ),
                             const SizedBox(height: spacing),
                             Table(

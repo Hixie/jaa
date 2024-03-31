@@ -155,31 +155,40 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             else if (widget.competition.inspireAward != null && emptyAwards.contains(widget.competition.inspireAward))
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No finalists designated for the ${widget.competition.inspireAward!.name} award. '
-                  'Use the Inspire pane to assign the ${widget.competition.inspireAward!.name} winner and runner-ups.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
+                child: ListenableBuilder(
+                  listenable: widget.competition.inspireAward!,
+                  builder: (BuildContext context, Widget? child) => Text(
+                    'No finalists designated for the ${widget.competition.inspireAward!.name} award. '
+                    'Use the Inspire pane to assign the ${widget.competition.inspireAward!.name} winner and runner-ups.',
+                    softWrap: true,
+                    overflow: TextOverflow.clip,
+                  ),
                 ),
               )
             else if (emptyAwards.length > 1)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'Some awards have no ranked qualifying teams. Use the Ranks pane to assign ranks for teams in award shortlists. '
-                  'The following awards are affected: ${emptyAwards.map((Award award) => award.name).join(", ")}.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
+                child: ListenableBuilder(
+                  listenable: Listenable.merge(emptyAwards),
+                  builder: (BuildContext context, Widget? child) => Text(
+                    'Some awards have no ranked qualifying teams. Use the Ranks pane to assign ranks for teams in award shortlists. '
+                    'The following awards are affected: ${emptyAwards.map((Award award) => award.name).join(", ")}.',
+                    softWrap: true,
+                    overflow: TextOverflow.clip,
+                  ),
                 ),
               )
             else if (emptyAwards.length == 1)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'The ${emptyAwards.single.name} award has no ranked qualifying teams. '
-                  'Use the Ranks pane to assign ranks for teams in award shortlists.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
+                child: ListenableBuilder(
+                  listenable: emptyAwards.single,
+                  builder: (BuildContext context, Widget? child) => Text(
+                    'The ${emptyAwards.single.name} award has no ranked qualifying teams. '
+                    'Use the Ranks pane to assign ranks for teams in award shortlists.',
+                    softWrap: true,
+                    overflow: TextOverflow.clip,
+                  ),
                 ),
               )
             else if (incompleteAwards.isNotEmpty)
@@ -264,7 +273,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                         if (tied)
                                           ErrorCell(message: 'Tied for ${placementDescriptor(rank)}')
                                         else if (otherAward != null)
-                                          Cell(Text('${otherAward.name} ${placementDescriptor(rank)}'))
+                                          Cell(
+                                            ListenableBuilder(
+                                              listenable: otherAward,
+                                              builder: (context, child) => Text('${otherAward.name} ${placementDescriptor(rank)}'),
+                                            ),
+                                          )
                                         else
                                           Cell(
                                             Text(
@@ -482,13 +496,16 @@ class _OverrideEditorState extends State<OverrideEditor> {
                 listenable: widget.competition.shortlistsView[_award]!,
                 builder: (BuildContext context, Widget? child) => InlineScrollableCard(
                   children: [
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(text: 'Override placement for '),
-                          TextSpan(text: _award!.name, style: bold),
-                          TextSpan(text: ' (${_award!.description}):'),
-                        ],
+                    ListenableBuilder(
+                      listenable: _award!,
+                      builder: (context, child) => Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(text: 'Override placement for '),
+                            TextSpan(text: _award!.name, style: bold),
+                            TextSpan(text: ' (${_award!.description}):'),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: spacing),

@@ -170,12 +170,14 @@ class TextEntryCell extends StatefulWidget {
     required this.onChanged,
     this.hintText = 'none',
     this.icons,
+    this.padding = const EdgeInsets.symmetric(horizontal: spacing),
   });
 
   final String value;
   final ValueSetter<String> onChanged;
   final String hintText;
   final List<Widget>? icons;
+  final EdgeInsets padding;
 
   @override
   State<TextEntryCell> createState() => _TextEntryCellState();
@@ -215,7 +217,7 @@ class _TextEntryCellState extends State<TextEntryCell> {
   Widget build(BuildContext context) {
     final TextStyle textStyle = DefaultTextStyle.of(context).style;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: spacing),
+      padding: widget.padding,
       child: ConstrainedBox(
         constraints: BoxConstraints(minWidth: DefaultTextStyle.of(context).style.fontSize! * 4.0),
         child: Row(
