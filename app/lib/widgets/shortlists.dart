@@ -290,21 +290,73 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   }
 }
 
-class ShortlistSummary extends StatelessWidget {
+class ShortlistSummary extends StatefulWidget {
   const ShortlistSummary({super.key, required this.competition});
 
   final Competition competition;
 
-  String _generateSummary(
-    int targetCategories,
-    Map<int, Map<Team, Set<String>>> candidates,
-    String requiredAwards,
-  ) {
+  @override
+  State<ShortlistSummary> createState() => _ShortlistSummaryState();
+}
+
+class _ShortlistSummaryState extends State<ShortlistSummary> {
+  @override
+  void initState() {
+    super.initState();
+    widget.competition.addListener(_updateSummary);
+    _updateSummary();
+  }
+
+  @override
+  void didUpdateWidget(covariant ShortlistSummary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.competition != oldWidget.competition) {
+      oldWidget.competition.removeListener(_updateSummary);
+      widget.competition.addListener(_updateSummary);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.competition.removeListener(_updateSummary);
+    super.dispose();
+  }
+
+  late String _summary;
+  void _updateSummary() {
+    setState(() {
+      _summary = _generateSummary();
+    });
+  }
+
+  String _generateSummary() {
+    if (widget.competition.inspireAward == null) {
+      return '';
+    }
+    final Map<int, Map<Team, Set<String>>> candidates = widget.competition.computeInspireCandidates();
+    final List<String> categories = widget.competition.categories;
+    final int targetCategories = categories.length;
+    if (targetCategories == 0) {
+      return '';
+    }
+    final String requiredAwards;
+    if (targetCategories == 1) {
+      final List<Award> inspireAwards = widget.competition.awardsView.where(Award.isInspireQualifyingPredicate).toList();
+      if (inspireAwards.length == 1) {
+        requiredAwards = 'the ${inspireAwards.single.name} award';
+      } else {
+        requiredAwards = 'any of the ${categories.single} category awards';
+      }
+    } else if (targetCategories == 2) {
+      requiredAwards = 'awards in both advancing award categories';
+    } else {
+      requiredAwards = 'awards in all $targetCategories advancing award categories';
+    }
     if (!candidates.containsKey(targetCategories)) {
       return 'No teams are nominated for $requiredAwards, '
-          'and thus no teams yet fully qualify for the ${competition.inspireAward!.name} award.';
+          'and thus no teams yet fully qualify for the ${widget.competition.inspireAward!.name} award.';
     }
-    final int nomineeTarget = competition.inspireAward!.count;
+    final int nomineeTarget = widget.competition.inspireAward!.count;
     final int totalNomineeCount = candidates[targetCategories]!.length;
     final int qualifyingNomineeCount = candidates[targetCategories]!.keys.where((Team team) => team.inspireEligible).length;
     final int ineligibleCount = totalNomineeCount - qualifyingNomineeCount;
@@ -319,79 +371,37 @@ class ShortlistSummary extends StatelessWidget {
       if (qualifyingNomineeCount == 0) {
         assert(ineligibleCount > 0);
         return 'No eligible team is nominated for $requiredAwards '
-            'so no team qualifies for the ${competition.inspireAward!.name} award'
+            'so no team qualifies for the ${widget.competition.inspireAward!.name} award'
             '$nonqualifying.';
       }
-      assert(competition.inspireAward!.count > 1);
-      if (competition.inspireAward!.count == 2) {
+      assert(widget.competition.inspireAward!.count > 1);
+      if (widget.competition.inspireAward!.count == 2) {
         return 'Insufficient teams are nominated for $requiredAwards '
-            'to have winners for both places of the ${competition.inspireAward!.name} award'
+            'to have winners for both places of the ${widget.competition.inspireAward!.name} award'
             '$nonqualifying.';
       }
       return 'Insufficient teams are nominated for $requiredAwards '
-          'to have winners for all $nomineeTarget places of the ${competition.inspireAward!.name} award'
+          'to have winners for all $nomineeTarget places of the ${widget.competition.inspireAward!.name} award'
           '$nonqualifying.';
     }
     if (qualifyingNomineeCount == 1) {
-      return 'A team has qualified for the ${competition.inspireAward!.name} award.';
+      return 'A team has qualified for the ${widget.competition.inspireAward!.name} award.';
     }
-    return '$qualifyingNomineeCount teams qualify for the ${competition.inspireAward!.name} award.';
+    return '$qualifyingNomineeCount teams qualify for the ${widget.competition.inspireAward!.name} award.';
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: competition,
-      builder: (BuildContext context, Widget? child) {
-        if (competition.inspireAward == null) {
-          return const SizedBox.shrink();
-        }
-        final List<String> categories = competition.categories;
-        final int targetCategories = categories.length;
-        if (targetCategories == 0) {
-          return const SizedBox.shrink();
-        }
-        final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
-        return ListenableBuilder(
-          listenable: competition.inspireAward!,
-          builder: (BuildContext context, Widget? child) {
-            List<Award>? inspireAwards;
-            Award? onlyInspireAward;
-            if (targetCategories == 1) {
-              inspireAwards = competition.awardsView.where(Award.isInspireQualifyingPredicate).toList();
-              if (inspireAwards.length == 1) {
-                onlyInspireAward = inspireAwards.single;
-              }
-            }
-
-            Widget builder(BuildContext context, Widget? child) {
-              final String requiredAwards;
-              if (onlyInspireAward != null) {
-                requiredAwards = 'the ${onlyInspireAward.name} award';
-              } else if (targetCategories == 1) {
-                requiredAwards = 'any of the ${categories.single} category awards';
-              } else if (targetCategories == 2) {
-                requiredAwards = 'awards in both advancing award categories';
-              } else {
-                requiredAwards = 'awards in all $targetCategories advancing award categories';
-              }
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  _generateSummary(targetCategories, candidates, requiredAwards),
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              );
-            }
-
-            if (onlyInspireAward == null) {
-              return builder(context, null);
-            }
-            return ListenableBuilder(listenable: onlyInspireAward, builder: builder);
-          },
-        );
-      },
+    if (_summary.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+      child: Text(
+        _summary,
+        softWrap: true,
+        overflow: TextOverflow.clip,
+      ),
     );
   }
 }
@@ -438,7 +448,7 @@ class RemoveFromShortlistCell extends StatelessWidget {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: ListenableBuilder(
-        listenable: Listenable.merge([competition, award]),
+        listenable: competition,
         builder: (BuildContext context, Widget? child) => IconButton(
           onPressed: () {
             competition.removeFromShortlist(award, team);

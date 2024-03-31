@@ -377,14 +377,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                   onVisitedChanged: _handleVisitedChanged,
                                 ),
                                 if (!widget.competition.pitVisitsExcludeAutovisitedTeams)
-                                  ListenableBuilder(
-                                    listenable: Listenable.merge(team.shortlistedAwardsWithPitVisits),
-                                    builder: (BuildContext context, Widget? child) => Cell(
-                                      Text(
-                                        team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '),
-                                      ),
-                                    ),
-                                  ),
+                                  Cell(Text(team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '))),
                               ],
                             ),
                         ],

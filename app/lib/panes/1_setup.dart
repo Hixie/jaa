@@ -258,7 +258,7 @@ class _SetupPaneState extends State<SetupPane> {
         if (_awardEditor)
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
-            child: NewAwardCard(
+            child: AwardEditor(
               competition: widget.competition,
               onClosed: () {
                 setState(() {
@@ -282,89 +282,77 @@ class _SetupPaneState extends State<SetupPane> {
                     columnWidths: const <int, TableColumnWidth>{0: IntrinsicColumnWidth()},
                     defaultColumnWidth: const IntrinsicCellWidth(),
                     children: [
-                      TableRow(
+                      const TableRow(
                         children: [
-                          Cell(Text('Award Name${widget.competition.awardsView.any((Award award) => award.canBeRenamed) ? " ✎_" : ""}', style: bold)),
-                          const Cell(
+                          Cell(Text('Award Name', style: bold)),
+                          Cell(
                             Text('Award Type', style: bold),
                             prototype: EventSpecificCell(competition: null, award: null),
                             padPrototype: false,
                           ),
-                          const Cell(Text('Award Rank', style: bold), prototype: Text('000')),
-                          const Cell(Text('Award Count', style: bold), prototype: Text('000')),
-                          const Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
-                          const Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
-                          const Cell(Text('Placement', style: bold), prototype: Text('Yes')),
-                          const Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
+                          Cell(Text('Award Rank', style: bold), prototype: Text('000')),
+                          Cell(Text('Award Count', style: bold), prototype: Text('000')),
+                          Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
+                          Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
+                          Cell(Text('Placement', style: bold), prototype: Text('Yes')),
+                          Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
                         ],
                       ),
                       for (final Award award in widget.competition.awardsView)
                         TableRow(
                           children: [
                             Cell(
-                              ListenableBuilder(
-                                listenable: award,
-                                builder: (BuildContext context, Widget? child) => Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ColorIndicator(
-                                      color: award.color,
-                                      width: 12.0,
-                                      height: 12.0,
-                                      borderRadius: 0.0,
-                                      onSelectFocus: false,
-                                      onSelect: () async {
-                                        Color selectedColor = award.color;
-                                        if (await ColorPicker(
-                                          // we don't bother updating the name live if it changes in the background
-                                          heading: Text('${award.name} color', style: headingStyle),
-                                          color: selectedColor,
-                                          wheelWidth: indent,
-                                          wheelSquareBorderRadius: indent,
-                                          pickersEnabled: const <ColorPickerType, bool>{
-                                            ColorPickerType.accent: false,
-                                            ColorPickerType.both: false,
-                                            ColorPickerType.bw: false,
-                                            ColorPickerType.custom: false,
-                                            ColorPickerType.primary: false,
-                                            ColorPickerType.wheel: true,
-                                          },
-                                          enableShadesSelection: false,
-                                          showColorName: true,
-                                          showColorCode: true,
-                                          colorCodeHasColor: true,
-                                          copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-                                            parseShortHexCode: true,
-                                            copyFormat: ColorPickerCopyFormat.numHexRRGGBB,
-                                          ),
-                                          actionButtons: const ColorPickerActionButtons(
-                                            dialogActionOrder: ColorPickerActionButtonOrder.adaptive,
-                                          ),
-                                          onColorChanged: (Color color) {
-                                            selectedColor = color;
-                                          },
-                                        ).showPickerDialog(context)) {
-                                          award.color = selectedColor;
-                                        }
-                                      },
-                                    ),
-                                    const SizedBox(width: spacing),
-                                    Expanded(
-                                      child: (!award.canBeRenamed)
-                                          ? Text(award.name)
-                                          : Material(
-                                              type: MaterialType.transparency,
-                                              child: TextEntryCell(
-                                                value: award.name,
-                                                onChanged: (String value) {
-                                                  award.name = value;
-                                                },
-                                                padding: EdgeInsets.zero,
-                                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListenableBuilder(
+                                    listenable: award,
+                                    builder: (BuildContext context, Widget? child) {
+                                      return ColorIndicator(
+                                        color: award.color,
+                                        width: 12.0,
+                                        height: 12.0,
+                                        borderRadius: 0.0,
+                                        onSelectFocus: false,
+                                        onSelect: () async {
+                                          Color selectedColor = award.color;
+                                          if (await ColorPicker(
+                                            heading: Text('${award.name} color', style: headingStyle),
+                                            color: selectedColor,
+                                            wheelWidth: indent,
+                                            wheelSquareBorderRadius: indent,
+                                            pickersEnabled: const <ColorPickerType, bool>{
+                                              ColorPickerType.accent: false,
+                                              ColorPickerType.both: false,
+                                              ColorPickerType.bw: false,
+                                              ColorPickerType.custom: false,
+                                              ColorPickerType.primary: false,
+                                              ColorPickerType.wheel: true,
+                                            },
+                                            enableShadesSelection: false,
+                                            showColorName: true,
+                                            showColorCode: true,
+                                            colorCodeHasColor: true,
+                                            copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+                                              parseShortHexCode: true,
+                                              copyFormat: ColorPickerCopyFormat.numHexRRGGBB,
                                             ),
-                                    ),
-                                  ],
-                                ),
+                                            actionButtons: const ColorPickerActionButtons(
+                                              dialogActionOrder: ColorPickerActionButtonOrder.adaptive,
+                                            ),
+                                            onColorChanged: (Color color) {
+                                              selectedColor = color;
+                                            },
+                                          ).showPickerDialog(context)) {
+                                            award.updateColor(selectedColor);
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  Text(award.name),
+                                ],
                               ),
                             ),
                             award.isEventSpecific
@@ -598,21 +586,18 @@ class _TeamEditorState extends State<TeamEditor> {
             children: [
               const Text('• '),
               Expanded(
-                child: ListenableBuilder(
-                  listenable: award,
-                  builder: (BuildContext context, Widget? child) => Text.rich(
-                    TextSpan(
-                      text: '${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
-                          '${award.name}'
-                          '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
-                          '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
-                      children: [
-                        if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
-                      ],
-                    ),
-                    softWrap: true,
-                    overflow: TextOverflow.clip,
+                child: Text.rich(
+                  TextSpan(
+                    text: '${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
+                        '${award.name}'
+                        '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
+                        '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
+                    children: [
+                      if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
+                    ],
                   ),
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
                 ),
               ),
             ],
@@ -622,14 +607,7 @@ class _TeamEditorState extends State<TeamEditor> {
       teamNotes.add(const SizedBox(height: spacing));
       List<Award> pitVisitAwards = _team!.shortlistsView.keys.where((Award award) => award.pitVisits == PitVisit.yes).toList();
       if (pitVisitAwards.isNotEmpty) {
-        teamNotes.add(
-          ListenableBuilder(
-            listenable: Listenable.merge(pitVisitAwards),
-            builder: (BuildContext context, Widget? child) => Text(
-              'Team will be visited as part of judging for: ${pitVisitAwards.map((Award award) => award.name).join(', ')}',
-            ),
-          ),
-        );
+        teamNotes.add(Text('Team will be visited as part of judging for: ${pitVisitAwards.map((Award award) => award.name).join(', ')}'));
       } else {
         teamNotes.add(const Text('Team will not be automatically visited as part of judging.'));
       }
@@ -689,8 +667,8 @@ class _TeamEditorState extends State<TeamEditor> {
   }
 }
 
-class NewAwardCard extends StatefulWidget {
-  const NewAwardCard({
+class AwardEditor extends StatefulWidget {
+  const AwardEditor({
     super.key,
     required this.competition,
     required this.onClosed,
@@ -700,10 +678,10 @@ class NewAwardCard extends StatefulWidget {
   final VoidCallback onClosed;
 
   @override
-  State<NewAwardCard> createState() => _NewAwardCardState();
+  State<AwardEditor> createState() => _AwardEditorState();
 }
 
-class _NewAwardCardState extends State<NewAwardCard> {
+class _AwardEditorState extends State<AwardEditor> {
   final TextEditingController _nameController = TextEditingController();
   int _count = 1;
   SpreadTheWealth _spreadTheWealth = SpreadTheWealth.no;
@@ -719,7 +697,7 @@ class _NewAwardCardState extends State<NewAwardCard> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_nameController, ...widget.competition.awardsView, widget.competition]),
+      listenable: Listenable.merge([_nameController, widget.competition]),
       builder: (BuildContext context, Widget? child) {
         bool nameIsUnique = !widget.competition.awardsView.any((Award award) => award.name == _nameController.text);
         return InlineScrollableCard(
