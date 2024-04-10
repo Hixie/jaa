@@ -56,11 +56,13 @@ class AwardCard extends StatelessWidget {
     required this.award,
     this.showAwardRanks = false,
     required this.child,
+    this.intrisicallySized = true,
   });
 
   final Award award;
   final bool showAwardRanks;
   final Widget child;
+  final bool intrisicallySized;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +71,31 @@ class AwardCard extends StatelessWidget {
       child: child,
       builder: (BuildContext context, Widget? child) {
         final Color foregroundColor = textColorForColor(award.color);
+        Widget inner = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(spacing),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    if (award.spreadTheWealth != SpreadTheWealth.no) TextSpan(text: '#${award.rank}: '),
+                    TextSpan(text: award.name, style: bold),
+                    if (award.category.isNotEmpty)
+                      TextSpan(
+                        text: ' (${award.category})',
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            child!,
+          ],
+        );
+        if (intrisicallySized) {
+          inner = IntrinsicWidth(child: inner);
+        }
         return Card(
           elevation: teamListElevation,
           color: award.color,
@@ -76,30 +103,7 @@ class AwardCard extends StatelessWidget {
           child: FocusTraversalGroup(
             child: DefaultTextStyle.merge(
               style: TextStyle(color: foregroundColor),
-              child: IntrinsicWidth(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(spacing),
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            if (award.spreadTheWealth != SpreadTheWealth.no) TextSpan(text: '#${award.rank}: '),
-                            TextSpan(text: award.name, style: bold),
-                            if (award.category.isNotEmpty)
-                              TextSpan(
-                                text: ' (${award.category})',
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    child!,
-                  ],
-                ),
-              ),
+              child: inner,
             ),
           ),
         );

@@ -290,36 +290,12 @@ class RankCell extends StatelessWidget {
   }
 }
 
-@immutable
-class _InspirePlacementIdentity {
-  const _InspirePlacementIdentity(
-    this.competition,
-    this.team,
-    this.award,
-  );
-
-  final Competition competition;
-  final Team team;
-  final Award award;
-
-  @override
-  bool operator ==(Object other) {
-    if (other.runtimeType != runtimeType) {
-      return false;
-    }
-    return other is _InspirePlacementIdentity && other.competition == competition && other.team == team && other.award == award;
-  }
-
-  @override
-  int get hashCode => Object.hash(competition, team, award);
-}
-
 class InspirePlacementCell extends StatefulWidget {
   InspirePlacementCell({
     required this.competition,
     required this.team,
     required this.award,
-  }) : super(key: ValueKey(_InspirePlacementIdentity(competition, team, award)));
+  }) : super(key: ValueKey(TripleIdentity<InspirePlacementCell, Competition, Award, Team>(competition, award, team)));
 
   final Competition competition;
   final Team team;

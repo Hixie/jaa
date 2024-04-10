@@ -155,6 +155,12 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   late final Set<String> shortlistedAdvancingCategories = UnmodifiableSetView(_shortlistedAdvancingCategories);
   final Set<String> _shortlistedAdvancingCategories = <String>{};
 
+  late final UnmodifiableMapView<Award, String> blurbsView = UnmodifiableMapView(_blurbs);
+  final Map<Award, String> _blurbs = <Award, String>{};
+
+  late final UnmodifiableMapView<Award, String> awardSubnamesView = UnmodifiableMapView(_awardSubnames);
+  final Map<Award, String> _awardSubnames = <Award, String>{};
+
   // only meaningful when compared to teams with the same number of shortlistedAdvancingCategories
   int? get rankScore => _rankScore;
   int? _rankScore;
@@ -198,6 +204,12 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     }
     _shortlists.clear();
     _shortlistedAdvancingCategories.clear();
+    notifyListeners();
+  }
+
+  void _clearBlurbs() {
+    _blurbs.clear();
+    _awardSubnames.clear();
     notifyListeners();
   }
 
@@ -435,6 +447,27 @@ class Competition extends ChangeNotifier {
   void updateTeam(Team team, String name, String city) {
     team._name = name;
     team._city = city;
+    notifyListeners();
+  }
+
+  void updateBlurb(Team team, Award award, String blurb) {
+    if (blurb.isEmpty) {
+      team._blurbs.remove(award);
+    } else {
+      team._blurbs[award] = blurb;
+    }
+    team.notifyListeners();
+    notifyListeners();
+  }
+
+  void updateAwardSubname(Team team, Award award, String awardSubname) {
+    if (awardSubname.isEmpty) {
+      team._awardSubnames.remove(award);
+    } else {
+      assert(!award.isPlacement);
+      team._awardSubnames[award] = awardSubname;
+    }
+    team.notifyListeners();
     notifyListeners();
   }
 
@@ -719,6 +752,7 @@ class Competition extends ChangeNotifier {
     }
     for (final Team team in _teams) {
       team._clearShortlists();
+      team._clearBlurbs();
     }
     _overrides.clear();
     notifyListeners();
@@ -783,6 +817,7 @@ class Competition extends ChangeNotifier {
     _categories.clear();
     for (final Team team in _teams) {
       team._clearShortlists();
+      team._clearBlurbs();
     }
     _overrides.clear();
     notifyListeners();
@@ -1115,6 +1150,68 @@ class Competition extends ChangeNotifier {
     return const ListToCsvConverter().convert(data);
   }
 
+  Future<void> importBlurbs(List<int> csvFile) async {
+    final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
+    final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
+    if (csvData.isEmpty) {
+      throw const FormatException('Blurbs file corrupted.');
+    }
+    Map<int, Team> teamMap = {
+      for (final Team team in _teams) team.number: team,
+    };
+    Map<String, Award> awardMap = {
+      for (final Award award in _awards) award.name: award,
+    };
+    for (List<dynamic> row in csvData.skip(1)) {
+      if (row.length < 3) {
+        throw const FormatException('Blurbs file contains a row with less than three cells.');
+      }
+      if (row[0] is! int || (row[0] < 0)) {
+        throw FormatException('Parse error in blurbs file: "${row[0]}" is not a valid team number.');
+      }
+      if (!teamMap.containsKey(row[0] as int)) {
+        throw FormatException('Parse error in blurbs file: team "${row[0]}" not recognised.');
+      }
+      final Team team = teamMap[row[0] as int]!;
+      if (!awardMap.containsKey('${row[1]}')) {
+        throw FormatException('Parse error in blurbs file: award "${row[1]}" not recognized.');
+      }
+      final Award award = awardMap['${row[1]}']!;
+      final String blurb = '${row[2]}';
+      final String awardSubname = row.length > 3 ? '${row[3]}' : '';
+      if (blurb.isNotEmpty) {
+        team._blurbs[award] = blurb;
+      }
+      if (awardSubname.isNotEmpty) {
+        team._awardSubnames[award] = awardSubname;
+      }
+    }
+    notifyListeners();
+  }
+
+  String blurbsToCsv() {
+    final List<List<Object?>> data = [];
+    data.add([
+      'Team number', // numeric
+      'Award name', // string
+      'Blurb', // string (HTML fragment)
+      'Award subname', // string (optional)
+    ]);
+    for (final Team team in _teams) {
+      for (final Award award in _awards) {
+        if (team._blurbs.containsKey(award) || team._awardSubnames.containsKey(award)) {
+          data.add([
+            team.number,
+            award.name,
+            team._blurbs[award] ?? '',
+            team._awardSubnames[award] ?? '',
+          ]);
+        }
+      }
+    }
+    return const ListToCsvConverter().convert(data);
+  }
+
   // Derived artifacts
 
   String inspireCandiatesToCsv() {
@@ -1284,6 +1381,7 @@ class Competition extends ChangeNotifier {
   static const String filenameAwards = 'awards.csv';
   static const String filenamePitVisitNotes = 'pit visit notes.csv';
   static const String filenameShortlists = 'shortlists.csv';
+  static const String filenameBlurbs = 'blurbs.csv';
   static const String filenameFinalistOverrides = 'finalist overrides.csv';
   static const String filenameInspireCandidates = 'inspire candidates.csv';
   static const String filenameFinalistsTable = 'finalists table.csv';
@@ -1315,6 +1413,9 @@ class Competition extends ChangeNotifier {
         await importAwards(zip.findFile(filenameAwards)!.content, expectAwards: false);
         await importPitVisitNotes(zip.findFile(filenamePitVisitNotes)!.content);
         await importShortlists(zip.findFile(filenameShortlists)!.content);
+        if (zip.findFile(filenameBlurbs) != null) {
+          await importBlurbs(zip.findFile(filenameBlurbs)!.content);
+        }
         if (zip.findFile(filenameFinalistOverrides) != null) {
           await importFinalistOverrides(zip.findFile(filenameFinalistOverrides)!.content);
         }
@@ -1351,7 +1452,7 @@ class Competition extends ChangeNotifier {
           '\n'
           'This archive contains data that can be opened by the FIRST Tech Challenge Judge Advisor Assistant.\n'
           '\n'
-          'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenameShortlists", and "$filenamePitVisitNotes".\n'
+          'The following files describe the event state: "$filenameTeams", "$filenameAwards", "$filenameShortlists", "$filenameBlurbs", and "$filenamePitVisitNotes".\n'
           'The "$filenameFinalistOverrides" file contains any award finalists overrides that are in effect.\n'
           'The "$filenameConfiguration" file contains settings for the Judge Advisor Assistant app, including the event name.\n'
           '\n'
@@ -1365,6 +1466,7 @@ class Competition extends ChangeNotifier {
     zip.addFile(ArchiveFile(filenameTeams, -1, utf8.encode(teamsToCsv())));
     zip.addFile(ArchiveFile(filenameAwards, -1, utf8.encode(awardsToCsv())));
     zip.addFile(ArchiveFile(filenameShortlists, -1, utf8.encode(shortlistsToCsv())));
+    zip.addFile(ArchiveFile(filenameBlurbs, -1, utf8.encode(blurbsToCsv())));
     zip.addFile(ArchiveFile(filenamePitVisitNotes, -1, utf8.encode(pitVisitNotesToCsv())));
     zip.addFile(ArchiveFile(filenameFinalistOverrides, -1, utf8.encode(finalistOverridesToCsv())));
     zip.addFile(ArchiveFile(filenameConfiguration, -1, utf8.encode(configurationToCsv())));

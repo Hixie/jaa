@@ -29,7 +29,7 @@ class ExportPane extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Heading(title: '7. Export'),
+            const Heading(title: '8. Export'),
             const Padding(
               padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
               child: Text('For printing:', style: bold),

@@ -54,6 +54,8 @@ h2 { margin: 1rem 0 0.5rem 0; }
 h3 { margin: 0 0 0.5rem 0; }
 p { margin: 0 0 1rem 0; }
 li:not([value]) { list-style-type: disc; }
+blockquote { margin: 2em 0 0.5em 0; }
+h2 + blockquote, h3 + blockquote { margin-top: 0; }
 ''';
 
 const String currentHelp = 'Event On-Call Support # 603-206-2412';

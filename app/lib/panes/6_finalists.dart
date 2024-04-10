@@ -68,16 +68,23 @@ class AwardFinalistsPane extends StatefulWidget {
     } else {
       for (final (Award award, List<AwardFinalistEntry> entry) in finalists.reversed) {
         bool includedHeader = false;
+        bool multipleWinners = !award.isPlacement && entry.length > 1;
         for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool _) in entry.reversed) {
           final bool winner = team != null && otherAward == null && rank <= award.count;
           if (winner) {
             if (!includedHeader) {
               page.writeln(
                 '<h2>${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank}: " : ""}'
-                '${escapeHtml(award.name)} award'
+                '${escapeHtml(award.name)} award${multipleWinners ? "s" : ""}'
                 '${award.category.isNotEmpty ? " (${award.category} category)" : ""}</h2>',
               );
               includedHeader = true;
+            }
+            if (!award.isPlacement) {
+              page.writeln('<h3>${escapeHtml(team.awardSubnamesView[award] ?? award.name)}</h3>');
+            }
+            if (team.blurbsView.containsKey(award)) {
+              page.writeln('<blockquote>${team.blurbsView[award]}</blockquote>');
             }
             page.writeln(
               '<p>'

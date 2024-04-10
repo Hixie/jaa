@@ -12,7 +12,8 @@ import 'panes/3_pitvisits.dart';
 import 'panes/4_ranks.dart';
 import 'panes/5_inspire.dart';
 import 'panes/6_finalists.dart';
-import 'panes/7_export.dart';
+import 'panes/7_script.dart';
+import 'panes/8_export.dart';
 import 'widgets/widgets.dart';
 
 void main() async {
@@ -43,6 +44,7 @@ enum Pane {
   ranks,
   inspire,
   awardFinalists,
+  script,
   export,
 }
 
@@ -209,7 +211,7 @@ class _MainAppState extends State<MainApp> {
                               children: [
                                 if (widget.competition.teamsView.isNotEmpty)
                                   Text(
-                                    '${widget.competition.teamsView.length} Teams.',
+                                    '${widget.competition.eventName.isEmpty ? "" : "${widget.competition.eventName}. "}${widget.competition.teamsView.length} Teams.',
                                     style: bold,
                                   ),
                                 if (widget.competition.awardsView.isNotEmpty)
@@ -289,10 +291,17 @@ class _MainAppState extends State<MainApp> {
                           ),
                           const SizedBox(width: spacing),
                           SelectableButton<Pane>(
+                            value: Pane.script,
+                            selection: _pane,
+                            onChanged: _selectPane,
+                            child: const Text('7. Script'),
+                          ),
+                          const SizedBox(width: spacing),
+                          SelectableButton<Pane>(
                             value: Pane.export,
                             selection: _pane,
                             onChanged: _selectPane,
-                            child: const Text('7. Export'),
+                            child: const Text('8. Export'),
                           ),
                         ],
                       ),
@@ -323,6 +332,7 @@ class _MainAppState extends State<MainApp> {
                             Pane.ranks => RanksPane(competition: widget.competition),
                             Pane.inspire => InspirePane(competition: widget.competition),
                             Pane.awardFinalists => AwardFinalistsPane(competition: widget.competition),
+                            Pane.script => ScriptPane(competition: widget.competition),
                             Pane.export => ExportPane(competition: widget.competition),
                           },
                         ),
@@ -388,7 +398,7 @@ class AboutPane extends StatelessWidget {
               showLicensePage(
                 context: context,
                 applicationName: 'FIRST Tech Challenge Judge Advisor Assistant',
-                applicationVersion: 'Version 1.0',
+                applicationVersion: 'Version 1.0.0',
                 applicationLegalese: 'Created for Playing at Learning\n© copyright 2024 Ian Hickson',
               );
             },

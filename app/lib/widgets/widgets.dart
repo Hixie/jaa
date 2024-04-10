@@ -22,6 +22,30 @@ String placementDescriptor(int rank) {
   return '${rank}th';
 }
 
+@immutable
+class TripleIdentity<T, A, B, C> {
+  const TripleIdentity(
+    this.a,
+    this.b,
+    this.c,
+  );
+
+  final A a;
+  final B b;
+  final C c;
+
+  @override
+  bool operator ==(Object other) {
+    if (other.runtimeType != runtimeType) {
+      return false;
+    }
+    return other is TripleIdentity<T, A, B, C> && other.a == a && other.b == b && other.c == c;
+  }
+
+  @override
+  int get hashCode => Object.hash(a, b, c);
+}
+
 class SelectableButton<T> extends StatefulWidget {
   const SelectableButton({
     super.key,
@@ -115,15 +139,17 @@ class ExportButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
+    this.padding = const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
   });
 
   final String label;
   final VoidCallback? onPressed;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+      padding: padding,
       child: FilledButton(
         onPressed: onPressed,
         child: Text(
