@@ -74,7 +74,7 @@ class _MainAppState extends State<MainApp> {
       home: FilledButtonTheme(
         data: const FilledButtonThemeData(
           style: ButtonStyle(
-            shape: MaterialStatePropertyAll(
+            shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.all(Radius.circular(spacing / 2.0)),
               ),

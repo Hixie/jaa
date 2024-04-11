@@ -67,14 +67,14 @@ class SelectableButton<T> extends StatefulWidget {
 }
 
 class _SelectableButtonState<T> extends State<SelectableButton<T>> {
-  late final MaterialStatesController statesController;
+  late final WidgetStatesController statesController;
 
   @override
   void initState() {
     super.initState();
-    statesController = MaterialStatesController(
-      <MaterialState>{
-        if (widget.selected) MaterialState.selected,
+    statesController = WidgetStatesController(
+      <WidgetState>{
+        if (widget.selected) WidgetState.selected,
       },
     );
   }
@@ -83,7 +83,7 @@ class _SelectableButtonState<T> extends State<SelectableButton<T>> {
   void didUpdateWidget(SelectableButton<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.selected != oldWidget.selected) {
-      statesController.update(MaterialState.selected, widget.selected);
+      statesController.update(WidgetState.selected, widget.selected);
     }
   }
 
@@ -93,17 +93,17 @@ class _SelectableButtonState<T> extends State<SelectableButton<T>> {
     result = TextButton(
       statesController: statesController,
       style: ButtonStyle(
-        foregroundColor: MaterialStateProperty.resolveWith<Color?>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.selected)) {
+        foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+          (Set<WidgetState> states) {
+            if (states.contains(WidgetState.selected)) {
               return Theme.of(context).colorScheme.onPrimary;
             }
             return null; // defer to the defaults
           },
         ),
-        backgroundColor: MaterialStateProperty.resolveWith<Color?>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.selected)) {
+        backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+          (Set<WidgetState> states) {
+            if (states.contains(WidgetState.selected)) {
               return Theme.of(context).colorScheme.primary;
             }
             return null; // defer to the defaults

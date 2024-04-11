@@ -313,11 +313,18 @@ class _ScriptAwardSubnameEditorState extends State<ScriptAwardSubnameEditor> {
     if (_locked) {
       return;
     }
-    widget.competition.updateAwardSubname(widget.team, widget.award, _controller.text);
+    _locked = true;
+    try {
+      widget.competition.updateAwardSubname(widget.team, widget.award, _controller.text);
+    } finally {
+      _locked = false;
+    }
   }
 
   void _handleTeamChanged() {
-    assert(!_locked);
+    if (_locked) {
+      return;
+    }
     _locked = true;
     try {
       _controller.text = widget.team.awardSubnamesView[widget.award] ?? '';

@@ -451,24 +451,28 @@ class Competition extends ChangeNotifier {
   }
 
   void updateBlurb(Team team, Award award, String blurb) {
-    if (blurb.isEmpty) {
-      team._blurbs.remove(award);
-    } else {
-      team._blurbs[award] = blurb;
+    if ((team._blurbs[award] ?? '') != blurb) {
+      if (blurb.isEmpty) {
+        team._blurbs.remove(award);
+      } else {
+        team._blurbs[award] = blurb;
+      }
+      team.notifyListeners();
+      notifyListeners();
     }
-    team.notifyListeners();
-    notifyListeners();
   }
 
   void updateAwardSubname(Team team, Award award, String awardSubname) {
-    if (awardSubname.isEmpty) {
-      team._awardSubnames.remove(award);
-    } else {
-      assert(!award.isPlacement);
-      team._awardSubnames[award] = awardSubname;
+    if ((team._awardSubnames[award] ?? '') != awardSubname) {
+      if (awardSubname.isEmpty) {
+        team._awardSubnames.remove(award);
+      } else {
+        assert(!award.isPlacement);
+        team._awardSubnames[award] = awardSubname;
+      }
+      team.notifyListeners();
+      notifyListeners();
     }
-    team.notifyListeners();
-    notifyListeners();
   }
 
   void updateTeamVisited(Team team, {required bool visited}) {

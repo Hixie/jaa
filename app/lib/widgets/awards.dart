@@ -207,7 +207,7 @@ class AwardOrderSwitch extends StatelessWidget {
                     listenable: competition,
                     builder: (BuildContext context, Widget? child) => Switch.adaptive(
                       value: competition.awardOrder == AwardOrder.categories,
-                      thumbIcon: MaterialStateProperty.all(const Icon(Symbols.trophy)),
+                      thumbIcon: WidgetStateProperty.all(const Icon(Symbols.trophy)),
                       onChanged: (bool value) {
                         competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
                       },

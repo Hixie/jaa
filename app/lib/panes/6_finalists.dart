@@ -509,7 +509,7 @@ class _OverrideEditorState extends State<OverrideEditor> {
                           requestFocusOnTap: true,
                           enableFilter: true,
                           menuStyle: const MenuStyle(
-                            maximumSize: MaterialStatePropertyAll(
+                            maximumSize: WidgetStatePropertyAll(
                               Size(double.infinity, indent * 11.0),
                             ),
                           ),

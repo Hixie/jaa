@@ -641,7 +641,7 @@ class _TeamEditorState extends State<TeamEditor> {
                   requestFocusOnTap: true,
                   enableFilter: true,
                   menuStyle: const MenuStyle(
-                    maximumSize: MaterialStatePropertyAll(
+                    maximumSize: WidgetStatePropertyAll(
                       Size(double.infinity, indent * 11.0),
                     ),
                   ),
