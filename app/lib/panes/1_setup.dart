@@ -37,14 +37,14 @@ class SetupPane extends StatefulWidget {
       page.writeln('<tr>');
       page.writeln('<th>Team');
       page.writeln('<th>Name');
-      page.writeln('<th>City');
+      page.writeln('<th>Location');
       page.writeln('<th>Notes');
       page.writeln('<tbody>');
       for (final Team team in competition.teamsView) {
         page.writeln('<tr>');
         page.writeln('<td>${team.number}');
         page.writeln('<td>${escapeHtml(team.name)}');
-        page.writeln('<td>${escapeHtml(team.city)}');
+        page.writeln('<td>${escapeHtml(team.location)}');
         page.writeln('<td>${team.visited ? "Visited." : ""} ${escapeHtml(team.visitingJudgesNotes)}');
       }
       page.writeln('</table>');
@@ -188,7 +188,7 @@ class _SetupPaneState extends State<SetupPane> {
                         children: [
                           Cell(Text('Team Number', style: bold), prototype: Text('000000')),
                           Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
-                          Cell(Text('Team City', style: bold), prototype: Text('Mooselookmeguntic')),
+                          Cell(Text('Team Location', style: bold), prototype: Text('Mooselookmeguntic')),
                           Cell(Text('Inspire eligible', style: bold), prototype: Text('Yes')),
                         ],
                       ),
@@ -197,7 +197,7 @@ class _SetupPaneState extends State<SetupPane> {
                           children: [
                             Cell(Text('${team?.number ?? '...'}')),
                             Cell(Text(team?.name ?? '...')),
-                            Cell(Text(team?.city ?? '...')),
+                            Cell(Text(team?.location ?? '...')),
                             Cell(Text(
                               team != null
                                   ? team.inspireEligible
@@ -464,7 +464,7 @@ class TeamEditor extends StatefulWidget {
 class _TeamEditorState extends State<TeamEditor> {
   final TextEditingController _teamController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
 
   Team? _team;
 
@@ -475,14 +475,14 @@ class _TeamEditorState extends State<TeamEditor> {
     super.initState();
     _teamController.addListener(_handleTeamTextChange);
     _nameController.addListener(_handleTeamDetailsTextChange);
-    _cityController.addListener(_handleTeamDetailsTextChange);
+    _locationController.addListener(_handleTeamDetailsTextChange);
   }
 
   @override
   void dispose() {
     _teamController.dispose();
     _nameController.dispose();
-    _cityController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -490,7 +490,7 @@ class _TeamEditorState extends State<TeamEditor> {
     setState(() {
       _team = null;
       _nameController.text = team?.name ?? '';
-      _cityController.text = team?.city ?? '';
+      _locationController.text = team?.location ?? '';
       _team = team;
     });
   }
@@ -507,7 +507,7 @@ class _TeamEditorState extends State<TeamEditor> {
 
   void _handleTeamDetailsTextChange() {
     if (_team != null) {
-      widget.competition.updateTeam(_team!, _nameController.text, _cityController.text);
+      widget.competition.updateTeam(_team!, _nameController.text, _locationController.text);
       _teamController.text = _currentTeamLabel;
     }
   }
@@ -542,10 +542,10 @@ class _TeamEditorState extends State<TeamEditor> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: indent * 20.0),
                     child: TextField(
-                      controller: _cityController,
+                      controller: _locationController,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: 'Team City',
+                        labelText: 'Team Location',
                       ),
                       enabled: _team != null,
                     ),

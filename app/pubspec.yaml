@@ -1,21 +1,22 @@
 name: jaa
 description: "FIRST Tech Challenge Judge Advisor Assistant App"
 publish_to: 'none'
-version: 1.0.0
+version: 1.1.0
 
 environment:
   sdk: '>=3.4.0-15.0.dev <4.0.0'
 
 dependencies:
   archive: ^3.4.10
-  csv: ^5.1.1
+  csv: ^6.0.0
   elapsed_time_display: ^1.0.0
-  file_picker: ^6.1.1
+  file_picker: ^8.0.0+1
   fleather: ^1.14.3
   flex_color_picker: ^3.3.1
   flutter:
     sdk: flutter
   material_symbols_icons: ^4.2719.1
+  package_info_plus: ^7.0.0
   parchment: ^1.14.0
   parchment_delta: ^1.0.0
   path: ^1.9.0

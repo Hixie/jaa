@@ -133,11 +133,11 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   Team({
     required this.number,
     required String name,
-    required String city,
+    required String location,
     required this.inspireEligible,
     bool visited = false,
   })  : _name = name,
-        _city = city,
+        _location = location,
         _visited = visited;
 
   final int number;
@@ -146,8 +146,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   String get name => _name;
   String _name;
 
-  String get city => _city;
-  String _city;
+  String get location => _location;
+  String _location;
 
   late final UnmodifiableMapView<Award, ShortlistEntry> shortlistsView = UnmodifiableMapView(_shortlists);
   final Map<Award, ShortlistEntry> _shortlists = <Award, ShortlistEntry>{};
@@ -444,9 +444,9 @@ class Competition extends ChangeNotifier {
     return cachedCategories.length - 1;
   }
 
-  void updateTeam(Team team, String name, String city) {
+  void updateTeam(Team team, String name, String location) {
     team._name = name;
-    team._city = city;
+    team._location = location;
     notifyListeners();
   }
 
@@ -782,7 +782,7 @@ class Competition extends ChangeNotifier {
         final Team team = Team(
           number: row[0] as int,
           name: '${row[1]}',
-          city: '${row[2]}',
+          location: '${row[2]}',
           inspireEligible: inspireEligible,
         );
         _teams.add(team);
@@ -803,11 +803,11 @@ class Competition extends ChangeNotifier {
     data.add([
       'Team number', // numeric
       'Team name', // string
-      'Team city', // string
+      'Team location', // string
       'Eligible for Inspire award', // 'y' or 'n'
     ]);
     for (final Team team in _teams) {
-      data.add(['${team.number}', team.name, team.city, team.inspireEligible ? "y" : "n"]);
+      data.add(['${team.number}', team.name, team.location, team.inspireEligible ? "y" : "n"]);
     }
     return const ListToCsvConverter().convert(data);
   }

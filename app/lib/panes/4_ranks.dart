@@ -120,7 +120,7 @@ class RanksPane extends StatelessWidget {
         page.writeln(
           '<p>'
           'Category: ${award.category.isEmpty ? "<i>none</i>" : escapeHtml(award.category)}. '
-          '${award.count} ${award.isPlacement ? 'ranked places to be awarded.' : 'equal winners to be awarded.'} '
+          '${award.count} ${award.count == 1 ? "winner" : award.isPlacement ? 'ranked places' : 'equal winners'} to be awarded. '
           'Judging ${escapeHtml(pitVisits)} a pit visit.'
           '</p>',
         );
@@ -169,7 +169,8 @@ class RanksPane extends StatelessWidget {
         }
       }
     }
-    return exportHTML(competition, 'ranks', now, page.toString());
+    String suffix = awards.length == 1 ? escapeFilename(awards.single.name) : "all";
+    return exportHTML(competition, 'ranks.$suffix', now, page.toString());
   }
 }
 

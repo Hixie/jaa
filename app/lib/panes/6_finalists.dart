@@ -89,7 +89,7 @@ class AwardFinalistsPane extends StatefulWidget {
             page.writeln(
               '<p>'
               '${tied ? "Tied for " : ""}${escapeHtml(award.isPlacement ? placementDescriptor(rank) : "Win")}: '
-              '${team.number} <i>${escapeHtml(team.name)}</i> from ${escapeHtml(team.city)}',
+              '${team.number} <i>${escapeHtml(team.name)}</i> from ${escapeHtml(team.location)}',
             );
           }
         }

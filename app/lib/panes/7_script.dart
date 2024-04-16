@@ -120,7 +120,7 @@ class AwardScriptEditor extends StatelessWidget {
                           children: [
                             TextSpan(text: 'Winner: ${team.number} '),
                             TextSpan(text: team.name, style: italic),
-                            TextSpan(text: ' from ${team.city}'),
+                            TextSpan(text: ' from ${team.location}'),
                           ],
                         ),
                       ),

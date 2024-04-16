@@ -41,6 +41,10 @@ String escapeHtml(String raw) {
   return raw.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
+String escapeFilename(String raw) {
+  return raw.replaceAll(RegExp(r'[:/\\]'), '_').replaceAll(RegExp(r'\.+$'), '');
+}
+
 Future<PlatformFile?> openFile(
   BuildContext context, {
   required String title,

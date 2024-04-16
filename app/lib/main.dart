@@ -1,6 +1,7 @@
 import 'package:elapsed_time_display/elapsed_time_display.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'constants.dart';
@@ -16,8 +17,11 @@ import 'panes/7_script.dart';
 import 'panes/8_export.dart';
 import 'widgets/widgets.dart';
 
+late final PackageInfo appInfo;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  appInfo = await PackageInfo.fromPlatform();
   runApp(MainApp(
     competition: Competition(
       autosaveDirectory: await getApplicationDocumentsDirectory(),
@@ -397,8 +401,8 @@ class AboutPane extends StatelessWidget {
             onPressed: () {
               showLicensePage(
                 context: context,
-                applicationName: 'FIRST Tech Challenge Judge Advisor Assistant',
-                applicationVersion: 'Version 1.0.0',
+                applicationName: appInfo.appName,
+                applicationVersion: appInfo.version,
                 applicationLegalese: 'Created for Playing at Learning\n© copyright 2024 Ian Hickson',
               );
             },

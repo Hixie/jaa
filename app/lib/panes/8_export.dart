@@ -139,14 +139,30 @@ class ExportPane extends StatelessWidget {
     } else if (nominations.isEmpty) {
       page.writeln('<p>No nominations specify a judge panel.');
     } else {
-      for (final String judgePanel in nominations.keys) {
+      final List<String> judgePanels = nominations.keys.toList()..sort();
+      for (final String judgePanel in judgePanels) {
         page.writeln('<h3>${escapeHtml(judgePanel)}</h3>');
         page.writeln('<ul>');
-        for (final (Award award, Team team, comment: String comment) in nominations[judgePanel]!) {
+        final List<(Award, Team, {String comment})> panelNominations = nominations[judgePanel]!.toList()
+          ..sort(
+            ((Award, Team, {String comment}) a, (Award, Team, {String comment}) b) {
+              if (a.$1 == b.$1) {
+                return a.$2.number - b.$2.number;
+              }
+              return a.$1.rank - b.$1.rank;
+            },
+          );
+        Award? lastAward;
+        for (final (Award award, Team team, comment: String comment) in panelNominations) {
+          if (lastAward != null && award != lastAward) {
+            page.writeln('</ul>');
+            page.writeln('<ul>');
+          }
           page.writeln('<li>${team.number} <i>${escapeHtml(team.name)}</i> for ${award.spreadTheWealth != SpreadTheWealth.no ? "#${award.rank} " : ""}'
               '${escapeHtml(award.name)} award'
               '${award.category.isNotEmpty ? " (${award.category} category)" : ""}');
           if (comment.isNotEmpty) page.writeln('<br><i>${escapeHtml(comment)}</i>');
+          lastAward = award;
         }
         page.writeln('</ul>');
       }
@@ -159,9 +175,10 @@ class ExportPane extends StatelessWidget {
       }
     }
     if (pitVisits.isEmpty) {
-      page.writeln('<p>No teams have a judging team assigend for extra pit visits.');
+      page.writeln('<p>No teams have a judging team assigned for extra pit visits.');
     } else {
-      for (final String judgePanel in pitVisits.keys) {
+      final List<String> judgePanels = pitVisits.keys.toList()..sort();
+      for (final String judgePanel in judgePanels) {
         page.writeln('<h3>${escapeHtml(judgePanel)}</h3>');
         page.writeln('<ul>');
         for (final Team team in pitVisits[judgePanel]!) {

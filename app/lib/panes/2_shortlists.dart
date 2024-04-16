@@ -102,11 +102,11 @@ class ShortlistsPane extends StatelessWidget {
         page.writeln(
           '<p>'
           'Category: ${award.category.isEmpty ? "<i>none</i>" : escapeHtml(award.category)}. '
-          '${award.count} ${award.isPlacement ? 'ranked places to be awarded.' : 'equal winners to be awarded.'} '
+          '${award.count} ${award.count == 1 ? "winner" : award.isPlacement ? 'ranked places' : 'equal winners'} to be awarded. '
           'Judging ${escapeHtml(pitVisits)} a pit visit.'
           '</p>',
         );
-        List<Team> teams = competition.shortlistsView[award]!.entriesView.keys.toList();
+        List<Team> teams = competition.shortlistsView[award]!.entriesView.keys.toList()..sort((Team a, Team b) => a.number - b.number);
         if (teams.isEmpty) {
           page.writeln('<p>No nominees.</p>');
         } else {
@@ -125,7 +125,8 @@ class ShortlistsPane extends StatelessWidget {
         }
       }
     }
-    return exportHTML(competition, 'shortlists', now, page.toString());
+    String suffix = awards.length == 1 ? escapeFilename(awards.single.name) : "all";
+    return exportHTML(competition, 'shortlists.$suffix', now, page.toString());
   }
 }
 
