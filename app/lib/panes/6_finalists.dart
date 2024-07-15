@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../constants.dart';
-import '../io.dart';
+import '../utils/constants.dart';
+import '../utils/io.dart';
 import '../model/competition.dart';
 import '../widgets/awards.dart';
 import '../widgets/cells.dart';
@@ -499,65 +499,73 @@ class _OverrideEditorState extends State<OverrideEditor> {
                       ),
                     ),
                     const SizedBox(height: spacing),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DropdownMenu<Team>(
-                          focusNode: _teamFocusNode,
-                          controller: _teamController,
-                          onSelected: _handleTeamChange,
-                          requestFocusOnTap: true,
-                          enableFilter: true,
-                          menuStyle: const MenuStyle(
-                            maximumSize: WidgetStatePropertyAll(
-                              Size(double.infinity, indent * 11.0),
+                    LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        final double rankWidth = DefaultTextStyle.of(context).style.fontSize! * 6.0;
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: constraints.maxWidth - spacing - rankWidth - spacing - kMinInteractiveDimension),
+                              child: DropdownMenu<Team>(
+                                focusNode: _teamFocusNode,
+                                controller: _teamController,
+                                onSelected: _handleTeamChange,
+                                requestFocusOnTap: true,
+                                enableFilter: true,
+                                menuStyle: const MenuStyle(
+                                  maximumSize: WidgetStatePropertyAll(
+                                    Size(double.infinity, indent * 11.0),
+                                  ),
+                                ),
+                                label: const Text(
+                                  'Team',
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
+                                  return DropdownMenuEntry<Team>(
+                                    value: team,
+                                    label: '${team.number} ${team.name}',
+                                  );
+                                }).toList(),
+                              ),
                             ),
-                          ),
-                          label: const Text(
-                            'Team',
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
-                            return DropdownMenuEntry<Team>(
-                              value: team,
-                              label: '${team.number} ${team.name}',
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(width: spacing),
-                        SizedBox(
-                          width: DefaultTextStyle.of(context).style.fontSize! * 6.0,
-                          child: TextField(
-                            controller: _rankController,
-                            focusNode: _rankFocusNode,
-                            decoration: InputDecoration(
-                              labelText: 'Rank',
-                              hintText: '1..${_award!.count}',
-                              border: const OutlineInputBorder(),
+                            const SizedBox(width: spacing),
+                            SizedBox(
+                              width: rankWidth,
+                              child: TextField(
+                                controller: _rankController,
+                                focusNode: _rankFocusNode,
+                                decoration: InputDecoration(
+                                  labelText: 'Rank',
+                                  hintText: '1..${_award!.count}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                keyboardType: TextInputType.number,
+                                onSubmitted: (String value) {
+                                  if (_team == null) {
+                                    _teamFocusNode.requestFocus();
+                                  } else if (_rank == null) {
+                                    _rankFocusNode.requestFocus();
+                                  } else {
+                                    _addOverride();
+                                  }
+                                },
+                              ),
                             ),
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            keyboardType: TextInputType.number,
-                            onSubmitted: (String value) {
-                              if (_team == null) {
-                                _teamFocusNode.requestFocus();
-                              } else if (_rank == null) {
-                                _rankFocusNode.requestFocus();
-                              } else {
-                                _addOverride();
-                              }
-                            },
-                          ),
-                        ),
-                        const Spacer(),
-                        const SizedBox(width: spacing),
-                        IconButton.filledTonal(
-                          onPressed: _team != null && _rank != null ? _addOverride : null,
-                          icon: const Icon(
-                            Symbols.playlist_add,
-                          ),
-                        ),
-                      ],
+                            const Spacer(),
+                            const SizedBox(width: spacing),
+                            IconButton.filledTonal(
+                              onPressed: _team != null && _rank != null ? _addOverride : null,
+                              icon: const Icon(
+                                Symbols.playlist_add,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                   onClosed: () {

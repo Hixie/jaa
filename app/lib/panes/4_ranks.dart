@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../constants.dart';
-import '../io.dart';
+import '../utils/constants.dart';
+import '../utils/io.dart';
 import '../model/competition.dart';
 import '../widgets/awards.dart';
 import '../widgets/cells.dart';

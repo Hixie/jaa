@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../constants.dart';
-import '../io.dart';
+import '../utils/constants.dart';
+import '../utils/io.dart';
 import '../model/competition.dart';
 import '../widgets/cells.dart';
 import '../widgets/widgets.dart';

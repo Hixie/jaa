@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../constants.dart';
+import '../utils/constants.dart';
 import '../model/competition.dart';
 import 'widgets.dart';
 

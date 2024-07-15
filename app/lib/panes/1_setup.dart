@@ -1,10 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../constants.dart';
-import '../io.dart';
+import '../utils/constants.dart';
+import '../utils/io.dart';
 import '../model/competition.dart';
 import '../widgets/cells.dart';
 import '../widgets/widgets.dart';
@@ -401,6 +404,18 @@ class _SetupPaneState extends State<SetupPane> {
             ),
           ),
         ),
+        if (!kReleaseMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
+            child: FilledButton(
+              onPressed: () => widget.competition.debugGenerateRandomData(math.Random(0)),
+              child: const Text(
+                'Generate random data (debug only)',
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -635,27 +650,29 @@ class _TeamEditorState extends State<TeamEditor> {
                   child: Text('Edit team:', style: bold),
                 ),
                 const SizedBox(width: indent),
-                DropdownMenu<Team>(
-                  controller: _teamController,
-                  onSelected: _handleTeamChange,
-                  requestFocusOnTap: true,
-                  enableFilter: true,
-                  menuStyle: const MenuStyle(
-                    maximumSize: WidgetStatePropertyAll(
-                      Size(double.infinity, indent * 11.0),
+                Flexible(
+                  child: DropdownMenu<Team>(
+                    controller: _teamController,
+                    onSelected: _handleTeamChange,
+                    requestFocusOnTap: true,
+                    enableFilter: true,
+                    menuStyle: const MenuStyle(
+                      maximumSize: WidgetStatePropertyAll(
+                        Size(double.infinity, indent * 11.0),
+                      ),
                     ),
+                    label: const Text(
+                      'Team',
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
+                      return DropdownMenuEntry<Team>(
+                        value: team,
+                        label: '${team.number} ${team.name}',
+                      );
+                    }).toList(),
                   ),
-                  label: const Text(
-                    'Team',
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
-                    return DropdownMenuEntry<Team>(
-                      value: team,
-                      label: '${team.number} ${team.name}',
-                    );
-                  }).toList(),
                 ),
               ],
             ),

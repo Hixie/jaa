@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jaa/widgets/awards.dart';
 
-import '../constants.dart';
+import '../utils/constants.dart';
 import '../exporters.dart';
-import '../io.dart';
+import '../utils/io.dart';
 import '../model/competition.dart';
 import '../panes/1_setup.dart';
 import '../widgets/widgets.dart';

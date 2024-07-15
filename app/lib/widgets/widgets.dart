@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../constants.dart';
+import '../utils/constants.dart';
 
 Color textColorForColor(Color color) => color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 

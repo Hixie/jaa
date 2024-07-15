@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'constants.dart';
-import 'io.dart';
+import 'utils/constants.dart';
+import 'utils/io.dart';
 import 'model/competition.dart';
 import 'panes/1_setup.dart';
 import 'panes/2_shortlists.dart';

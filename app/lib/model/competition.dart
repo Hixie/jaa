@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' show Color;
 
 import 'package:archive/archive_io.dart';
@@ -11,7 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
 import '../widgets/widgets.dart';
-import '../colors.dart';
+import '../utils/colors.dart';
+import '../utils/randomizer.dart';
 
 typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied, bool overridden});
 
@@ -59,7 +61,8 @@ class Award extends ChangeNotifier {
     required this.pitVisits,
     required this.isEventSpecific,
     required Color color,
-  }) : _color = color;
+  })  : _color = color,
+        assert(count > 0);
 
   final String name;
   final bool isInspire;
@@ -581,6 +584,25 @@ class Competition extends ChangeNotifier {
     return _cachedFinalists!;
   }
 
+  void _addAward(Award award) {
+    assert(award.rank == (_awards.isEmpty ? 1 : _awards.last.rank + 1));
+    assert(!award.isEventSpecific || award.category == '');
+    assert(!award.isEventSpecific || !award.isAdvancing);
+    _awards.add(award);
+    if (award.isInspire) {
+      assert(award.isAdvancing);
+      assert(_advancingAwards.isEmpty);
+      assert(_inspireAward == null);
+      _inspireAward = award;
+    }
+    if (award.isAdvancing) {
+      _advancingAwards.add(award);
+    } else {
+      _nonAdvancingAwards.add(award);
+    }
+    _shortlists[award] = Shortlist();
+  }
+
   void addEventAward({
     required String name,
     required int count,
@@ -601,11 +623,10 @@ class Competition extends ChangeNotifier {
       isEventSpecific: true,
       color: const Color(0xFFFFFFFF),
     );
-    _awards.add(award);
-    _shortlists[award] = Shortlist();
     // event awards cannot affect Inspire logic:
     assert(award.category == '');
     assert(!award.isAdvancing);
+    _addAward(award);
     notifyListeners();
   }
 
@@ -908,16 +929,7 @@ class Competition extends ChangeNotifier {
           isEventSpecific: isEventSpecific,
           color: color,
         );
-        _awards.add(award);
-        if (award.isAdvancing) {
-          _advancingAwards.add(award);
-        } else {
-          _nonAdvancingAwards.add(award);
-        }
-        if (isInspire) {
-          _inspireAward = award;
-        }
-        _shortlists[award] = Shortlist();
+        _addAward(award);
         rank += 1;
       }
       if (!seenInspire && expectAwards) {
@@ -1031,7 +1043,9 @@ class Competition extends ChangeNotifier {
     assert(_shortlists[award]!.entriesView.containsKey(team));
     _shortlists[award]!._remove(team);
     team._removeFromShortlist(award);
-    if (inspireAward != null && team._shortlistedAdvancingCategories.length < minimumInspireCategories) {
+    if (inspireAward != null &&
+        _shortlists[inspireAward]!.entriesView.containsKey(team) &&
+        team._shortlistedAdvancingCategories.length < minimumInspireCategories) {
       _shortlists[inspireAward]!._remove(team);
       team._removeFromShortlist(inspireAward!);
     }
@@ -1317,6 +1331,8 @@ class Competition extends ChangeNotifier {
     return const ListToCsvConverter().convert(data);
   }
 
+  // Configuration
+
   Future<void> importConfiguration(List<int> csvFile) async {
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
     final List<List<dynamic>> csvData = await compute(const CsvToListConverter(eol: '\n').convert, csvText);
@@ -1348,7 +1364,7 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  void resetConfiguration() {
+  void _resetConfiguration() {
     _eventName = '';
     _awardOrder = AwardOrder.categories;
     _showNominationComments = Show.none;
@@ -1399,6 +1415,7 @@ class Competition extends ChangeNotifier {
     try {
       _clearTeams();
       _clearAwards();
+      _resetConfiguration();
       try {
         final Archive zip = ZipDecoder().decodeBytes(await zipFile.readStream!.expand<int>((List<int> fragment) => fragment).toList());
         if (zip.findFile(filenameTeams) == null) {
@@ -1423,9 +1440,7 @@ class Competition extends ChangeNotifier {
         if (zip.findFile(filenameFinalistOverrides) != null) {
           await importFinalistOverrides(zip.findFile(filenameFinalistOverrides)!.content);
         }
-        if (zip.findFile(filenameConfiguration) == null) {
-          resetConfiguration();
-        } else {
+        if (zip.findFile(filenameConfiguration) != null) {
           await importConfiguration(zip.findFile(filenameConfiguration)!.content);
         }
         _lastAutosaveMessage = 'Imported event state.';
@@ -1508,6 +1523,12 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  @override
+  void dispose() {
+    _autosaveTimer?.cancel();
+    super.dispose();
+  }
+
   String get _autosaveTempPath => path.join(autosaveDirectory.path, r'jaa_autosave.$$$');
   String get _autosaveFinalPath => path.join(autosaveDirectory.path, r'jaa_autosave.zip');
 
@@ -1551,6 +1572,99 @@ class Competition extends ChangeNotifier {
       notifyListeners();
       _autosaving = false;
     }
+  }
+
+  void debugGenerateRandomData(math.Random random) {
+    if (kReleaseMode) {
+      return;
+    }
+    _clearAwards();
+    _clearTeams();
+    _resetConfiguration();
+    final Randomizer randomizer = Randomizer(random);
+    if (random.nextInt(5) > 2) {
+      _eventName = randomizer.generatePhrase();
+    }
+    if (random.nextBool()) {
+      _awardOrder = AwardOrder.rank;
+    }
+    _showNominationComments = randomizer.randomItem(Show.values);
+    _showNominators = randomizer.randomItem(Show.values);
+    _expandInspireTable = random.nextBool();
+    _pitVisitsExcludeAutovisitedTeams = random.nextBool();
+    _pitVisitsHideVisitedTeams = random.nextBool();
+    final List<String> categories = List<String>.generate(4, (int index) => randomizer.generatePhrase(random.nextInt(2) + 1));
+    final int awardCount = random.nextInt(10) + 2;
+    bool seenInspire = false;
+    final int seed = random.nextInt(1 << 16);
+    for (int index = 0; index < awardCount; index += 1) {
+      bool isAdvancing = !seenInspire || random.nextInt(6) > 0;
+      String category = isAdvancing && seenInspire ? randomizer.randomItem(categories) : '';
+      final Award award = Award(
+        name: randomizer.generatePhrase(random.nextInt(2) + 1),
+        isInspire: isAdvancing && !seenInspire,
+        isAdvancing: isAdvancing,
+        rank: index + 1,
+        count: random.nextInt(5) + 1,
+        category: category,
+        spreadTheWealth: randomizer.randomItem(SpreadTheWealth.values),
+        isPlacement: random.nextInt(7) > 0,
+        pitVisits: randomizer.randomItem(PitVisit.values),
+        isEventSpecific: !isAdvancing && random.nextInt(5) == 0,
+        color: Color(math.Random(seed ^ category.hashCode).nextInt(0x1000000) + 0xFF000000 |
+            (random.nextInt(0x22) + random.nextInt(0x22) << 8 + random.nextInt(0x22) << 16)),
+      );
+      seenInspire = seenInspire || isAdvancing;
+      _addAward(award);
+    }
+    _categories
+      ..addAll(awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet())
+      ..sort();
+    final int teamCount = random.nextInt(1024 - 16) + 16;
+    for (int index = 0; index < teamCount; index += 1) {
+      bool isInspireEligible = random.nextInt(teamCount) > 0;
+      final Team team = Team(
+        number: random.nextInt(100000),
+        name: randomizer.generatePhrase(),
+        location: randomizer.generatePhrase(),
+        inspireEligible: isInspireEligible,
+      );
+      _teams.add(team);
+      if (!isInspireEligible) {
+        _inspireIneligibleTeams.add(team);
+      }
+      team._visited = random.nextBool();
+      if (random.nextInt(5) > 0) {
+        team.visitingJudgesNotes = randomizer.generatePhrase(random.nextInt(30) + 2);
+      }
+    }
+    final List<String> judges = List<String>.generate(random.nextInt(12) + 1, (int index) => randomizer.generatePhrase(random.nextInt(4) + 1));
+    for (Award award in _awards) {
+      for (Team team in _teams) {
+        if (random.nextInt(teamCount ~/ 5) == 0) {
+          addToShortlist(
+            award,
+            team,
+            ShortlistEntry(
+              lateEntry: random.nextInt(64) == 0,
+              nominator: randomizer.randomItem(judges),
+              comment: randomizer.generatePhrase(random.nextInt(30)),
+              rank: random.nextInt(32),
+            ),
+          );
+        }
+        if (random.nextInt(teamCount) == 0) {
+          addOverride(award, team, random.nextInt(10));
+        }
+        if (random.nextInt(5) == 0) {
+          team._blurbs[award] = randomizer.generatePhrase(128);
+        }
+        if (!award.isPlacement && award.count > 1 && random.nextInt(3) == 0) {
+          team._awardSubnames[award] = randomizer.generatePhrase();
+        }
+      }
+    }
+    notifyListeners();
   }
 }
 

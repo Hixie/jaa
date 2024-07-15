@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import 'io.dart';
+import 'utils/io.dart';
 import 'model/competition.dart';
 
 // TODO: support Android and iOS using https://pub.dev/packages/flutter_file_dialog

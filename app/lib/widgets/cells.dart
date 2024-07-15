@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../model/competition.dart';
-import '../constants.dart';
+import '../utils/constants.dart';
 
 class Cell extends StatelessWidget {
   const Cell(

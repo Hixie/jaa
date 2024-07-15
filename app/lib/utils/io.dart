@@ -6,7 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'constants.dart';
-import 'model/competition.dart';
+import '../model/competition.dart';
 
 Route _createModalBackdrop() => PageRouteBuilder<void>(
       opaque: false,

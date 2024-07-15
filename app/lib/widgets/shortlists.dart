@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../constants.dart';
+import '../utils/constants.dart';
 import '../model/competition.dart';
 import 'awards.dart';
 import 'widgets.dart';
@@ -177,57 +177,62 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                               ),
                             ),
                             const SizedBox(height: spacing),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                DropdownMenu<Team>(
-                                  focusNode: _teamFocusNode,
-                                  controller: _teamController,
-                                  onSelected: _handleTeamChange,
-                                  requestFocusOnTap: true,
-                                  enableFilter: true,
-                                  menuStyle: const MenuStyle(
-                                    maximumSize: WidgetStatePropertyAll(
-                                      Size(double.infinity, indent * 11.0),
-                                    ),
-                                  ),
-                                  label: const Text(
-                                    'Team',
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  dropdownMenuEntries: remainingTeams.map<DropdownMenuEntry<Team>>((Team team) {
-                                    return DropdownMenuEntry<Team>(
-                                      value: team,
-                                      label: '${team.number} ${team.name}',
-                                    );
-                                  }).toList(),
-                                ),
-                                const SizedBox(width: spacing),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _nominatorController,
-                                    focusNode: _nominatorFocusNode,
-                                    decoration: const InputDecoration(
-                                      label: Text(
-                                        'Nominator',
+                            LayoutBuilder(
+                              builder: (BuildContext context, BoxConstraints constraints) => Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 7 - spacing),
+                                    child: DropdownMenu<Team>(
+                                      focusNode: _teamFocusNode,
+                                      controller: _teamController,
+                                      onSelected: _handleTeamChange,
+                                      requestFocusOnTap: true,
+                                      enableFilter: true,
+                                      menuStyle: const MenuStyle(
+                                        maximumSize: WidgetStatePropertyAll(
+                                          Size(double.infinity, indent * 11.0),
+                                        ),
+                                      ),
+                                      label: const Text(
+                                        'Team',
                                         softWrap: false,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      border: OutlineInputBorder(),
+                                      dropdownMenuEntries: remainingTeams.map<DropdownMenuEntry<Team>>((Team team) {
+                                        return DropdownMenuEntry<Team>(
+                                          value: team,
+                                          label: '${team.number} ${team.name}',
+                                        );
+                                      }).toList(),
                                     ),
-                                    onSubmitted: (String value) {
-                                      if (_team == null) {
-                                        _teamFocusNode.requestFocus();
-                                      } else if (_commentController.text.isEmpty) {
-                                        _commentFocusNode.requestFocus();
-                                      } else {
-                                        _addTeamToShortlist();
-                                      }
-                                    },
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: spacing),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _nominatorController,
+                                      focusNode: _nominatorFocusNode,
+                                      decoration: const InputDecoration(
+                                        label: Text(
+                                          'Nominator',
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onSubmitted: (String value) {
+                                        if (_team == null) {
+                                          _teamFocusNode.requestFocus();
+                                        } else if (_commentController.text.isEmpty) {
+                                          _commentFocusNode.requestFocus();
+                                        } else {
+                                          _addTeamToShortlist();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: spacing),
                             Row(
