@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 
-import '../widgets/widgets.dart';
 import 'constants.dart';
 import '../model/competition.dart';
+import '../widgets/widgets.dart';
 
 Route _createModalBackdrop() => PageRouteBuilder<void>(
       opaque: false,
