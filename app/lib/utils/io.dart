@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../widgets/widgets.dart';
 import 'constants.dart';
 import '../model/competition.dart';
 
@@ -140,6 +141,8 @@ Future<T> showProgress<T>(
     switch (e) {
       case FormatException(message: final String m):
         message = m;
+      case FileSystemException(message: final String m, path: final String p, osError: final OSError o):
+        message = '$m ($p) — ${o.message} (error code ${o.errorCode})';
       default:
         message = '$e';
     }
@@ -149,7 +152,7 @@ Future<T> showProgress<T>(
         title: const Text('Error'),
         content: Text(message),
         actions: [
-          TextButton(
+          AdaptiveButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
