@@ -106,6 +106,14 @@ class ExportPane extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+              child: Text('For transfer to FIRST scoring software:', style: bold),
+            ),
+            ExportButton(
+              label: 'Export scores (JSON)',
+              onPressed: () => exportScoresJSON(context, competition),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
               child: Text('For archiving:', style: bold),
             ),
             ExportButton(

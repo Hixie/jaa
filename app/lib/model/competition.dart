@@ -1496,6 +1496,39 @@ class Competition extends ChangeNotifier {
     output.closeSync();
   }
 
+  // must contain no sensitive data
+  String scoresToJson() {
+    final Map<String, Object?> results = <String, Object?>{};
+    final Map<String, Object?> root = <String, Object>{
+      'generator': 'FIRST Tech Challenge Judge Advisor Assistant app',
+      'timestamp': DateTime.now().toIso8601String(),
+      if (_eventName.isNotEmpty) 'eventName': _eventName,
+      'awards': results,
+    };
+    for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
+      final List<Object?> awardResults = <Object?>[];
+      // ignore: unused_local_variable
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
+        if (team != null && otherAward == null) {
+          awardResults.add(<String, Object?>{
+            'team': team.number,
+            if (award.isPlacement) 'rank': rank,
+            if (team._blurbs.containsKey(award)) 'blurb': team._blurbs[award],
+            if (team._awardSubnames.containsKey(award)) 'awardName': team._awardSubnames[award],
+          });
+        }
+      }
+      if (awardResults.isNotEmpty) {
+        results[award.name] = <String, Object?>{
+          if (award.category.isNotEmpty) 'category': award.category,
+          if (award.isEventSpecific) 'eventSpecific': true,
+          'results': awardResults,
+        };
+      }
+    }
+    return const JsonEncoder.withIndent('  ').convert(root);
+  }
+
   bool _dirty = false;
   bool _loading = false; // blocks autosave
   bool _autosaving = false;

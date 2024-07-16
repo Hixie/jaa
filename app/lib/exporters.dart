@@ -25,6 +25,22 @@ Future<void> exportEventState(BuildContext context, Competition competition) asy
   }
 }
 
+Future<void> exportScoresJSON(BuildContext context, Competition competition) async {
+  final String? filename = await saveFile(
+    context,
+    title: 'Export scores (JSON)',
+    filename: 'scores.json',
+    extension: 'json',
+  );
+  if (filename != null) {
+    await showProgress(
+      context, // ignore: use_build_context_synchronously
+      message: 'Exporting scores...',
+      task: () => File(filename).writeAsString(competition.scoresToJson()),
+    );
+  }
+}
+
 Future<void> exportPitVisitNotes(BuildContext context, Competition competition) async {
   final String? filename = await saveFile(
     context,
