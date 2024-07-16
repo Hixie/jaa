@@ -173,7 +173,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  'Some awards have no ranked qualifying teams. Use the Ranks pane to assign ranks for teams in award shortlists. '
+                  'Some awards have no ranked qualifying teams. Use the Ranks pane to assign ranks for teams in award shortlists.\n'
                   'The following awards are affected: ${emptyAwards.map((Award award) => award.name).join(", ")}.',
                   softWrap: true,
                   overflow: TextOverflow.clip,
@@ -193,9 +193,17 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  'Not all awards have had teams selected for all available places.\n'
-                  'For advice with handling difficult cases, consider calling FIRST:\n'
-                  '$currentHelp',
+                  'Not all awards have had teams selected for all available places.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              ),
+            if (finalists.isNotEmpty && (emptyAwards.isNotEmpty || incompleteAwards.isNotEmpty))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'For advice with handling difficult cases, consider calling FIRST: '
+                  '${currentHelp.replaceAll(' ', '\u00A0')}',
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
