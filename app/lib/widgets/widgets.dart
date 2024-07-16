@@ -446,6 +446,50 @@ class AdaptiveButton extends StatelessWidget {
   }
 }
 
+class DropdownList<T> extends StatelessWidget {
+  const DropdownList({
+    super.key,
+    this.focusNode,
+    required this.controller,
+    required this.onSelected,
+    required this.label,
+    required this.values,
+  });
+
+  final FocusNode? focusNode;
+  final TextEditingController controller;
+  final ValueChanged<T?>? onSelected;
+  final String label;
+  final Map<T, String> values;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownMenu<T>(
+      focusNode: focusNode,
+      controller: controller,
+      onSelected: onSelected,
+      requestFocusOnTap: true,
+      enableFilter: true,
+      menuStyle: const MenuStyle(
+        maximumSize: WidgetStatePropertyAll(
+          Size(double.infinity, indent * 11.0),
+        ),
+      ),
+      label: Text(
+        label,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+      ),
+      dropdownMenuEntries: values.keys.map<DropdownMenuEntry<T>>((T value) {
+        return DropdownMenuEntry<T>(
+          value: value,
+          label: values[value]!,
+        );
+      }).toList(),
+    );
+  }
+}
+
 class ContinuousAnimationBuilder extends StatefulWidget {
   const ContinuousAnimationBuilder({
     super.key,

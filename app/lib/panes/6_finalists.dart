@@ -515,28 +515,12 @@ class _OverrideEditorState extends State<OverrideEditor> {
                           children: [
                             ConstrainedBox(
                               constraints: BoxConstraints(maxWidth: constraints.maxWidth - spacing - rankWidth - spacing - kMinInteractiveDimension),
-                              child: DropdownMenu<Team>(
+                              child: DropdownList<Team>(
                                 focusNode: _teamFocusNode,
                                 controller: _teamController,
                                 onSelected: _handleTeamChange,
-                                requestFocusOnTap: true,
-                                enableFilter: true,
-                                menuStyle: const MenuStyle(
-                                  maximumSize: WidgetStatePropertyAll(
-                                    Size(double.infinity, indent * 11.0),
-                                  ),
-                                ),
-                                label: const Text(
-                                  'Team',
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                dropdownMenuEntries: widget.competition.teamsView.map<DropdownMenuEntry<Team>>((Team team) {
-                                  return DropdownMenuEntry<Team>(
-                                    value: team,
-                                    label: '${team.number} ${team.name}',
-                                  );
-                                }).toList(),
+                                label: 'Team',
+                                values: Map<Team, String>.fromIterable(widget.competition.teamsView, value: (dynamic team) => '${team.number} ${team.name}'),
                               ),
                             ),
                             const SizedBox(width: spacing),
