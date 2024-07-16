@@ -439,7 +439,7 @@ class _RankCellState extends State<RankCell> {
               child: TextField(
                 controller: _controller,
                 decoration: InputDecoration.collapsed(
-                  hintText: '·',
+                  hintText: bullet,
                   hintStyle: textStyle,
                 ),
                 style: _error

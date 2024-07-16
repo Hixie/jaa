@@ -59,3 +59,4 @@ h2 + blockquote, h3 + blockquote { margin-top: 0; }
 ''';
 
 const String currentHelp = 'Event On-Call Support # 603-206-2412';
+const String bullet = '•';

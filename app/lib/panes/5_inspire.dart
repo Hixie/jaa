@@ -265,7 +265,7 @@ class RankCell extends StatelessWidget {
                   ? ''
                   : entry!.rank != null
                       ? '${entry!.rank}'
-                      : '·',
+                      : bullet,
             ),
           ),
           if (entry != null && entry!.nominator.isNotEmpty)
