@@ -477,3 +477,69 @@ class _ContinuousAnimationBuilderState extends State<ContinuousAnimationBuilder>
     return ValueListenableBuilder(valueListenable: _controller, builder: widget.builder, child: widget.child);
   }
 }
+
+class TriggerAnimation extends StatefulWidget {
+  const TriggerAnimation({super.key, required this.trigger, required this.child});
+
+  final ChangeNotifier trigger;
+  final Widget child;
+
+  @override
+  State<TriggerAnimation> createState() => _TriggerAnimationState();
+}
+
+class _TriggerAnimationState extends State<TriggerAnimation> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    duration: const Duration(milliseconds: 240),
+    vsync: this,
+  );
+
+  late final Animation<double> _animation = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOutBack,
+    reverseCurve: Curves.elasticIn,
+  ).drive(Tween<double>(begin: 1.0, end: 1.02));
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addStatusListener(_statusListener);
+    widget.trigger.addListener(_trigger);
+  }
+
+  @override
+  void didUpdateWidget(covariant TriggerAnimation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.trigger != widget.trigger) {
+      oldWidget.trigger.removeListener(_trigger);
+      widget.trigger.addListener(_trigger);
+    }
+  }
+
+  void _statusListener(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _controller.reverse();
+    }
+  }
+
+  void _trigger() {
+    if (_controller.status == AnimationStatus.dismissed) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.trigger.removeListener(_trigger);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _animation,
+      child: widget.child,
+    );
+  }
+}

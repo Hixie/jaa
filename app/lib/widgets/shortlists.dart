@@ -6,6 +6,10 @@ import '../model/competition.dart';
 import 'awards.dart';
 import 'widgets.dart';
 
+class TriggerNotifier extends ChangeNotifier {
+  void trigger() => notifyListeners();
+}
+
 class ShortlistEditor extends StatefulWidget {
   const ShortlistEditor({
     super.key,
@@ -29,6 +33,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   final FocusNode _teamFocusNode = FocusNode();
   final FocusNode _nominatorFocusNode = FocusNode();
   final FocusNode _commentFocusNode = FocusNode();
+  final TriggerNotifier _addedTrigger = TriggerNotifier();
 
   Award? _award;
   Team? _team;
@@ -118,6 +123,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
         lateEntry: widget.lateEntry,
       ),
     );
+    _addedTrigger.trigger();
     _teamController.clear();
     // we intentionally don't clear the nominator field
     _commentController.clear();
@@ -143,151 +149,154 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
             ),
           ),
         if (_award != null)
-          Padding(
-            key: _cardKey,
-            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-            child: ListenableBuilder(
-              listenable: _award!,
+          TriggerAnimation(
+            trigger: _addedTrigger,
+            child: Padding(
+              key: _cardKey,
+              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
               child: ListenableBuilder(
-                listenable: widget.competition.shortlistsView[_award]!,
-                builder: (BuildContext context, Widget? child) {
-                  final Set<Team> shortlistedTeams = widget.competition.shortlistsView[_award]!.entriesView.keys.toSet();
-                  final List<Team> remainingTeams = widget.competition.teamsView.where((Team team) => !shortlistedTeams.contains(team)).toList();
-                  return InlineScrollableCard(
-                    children: remainingTeams.isEmpty
-                        ? [
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  const TextSpan(text: 'All the teams have already been shortlisted for the '),
-                                  TextSpan(text: _award!.name, style: bold),
-                                  TextSpan(text: ' (${_award!.description}) award!'),
-                                ],
+                listenable: _award!,
+                child: ListenableBuilder(
+                  listenable: widget.competition.shortlistsView[_award]!,
+                  builder: (BuildContext context, Widget? child) {
+                    final Set<Team> shortlistedTeams = widget.competition.shortlistsView[_award]!.entriesView.keys.toSet();
+                    final List<Team> remainingTeams = widget.competition.teamsView.where((Team team) => !shortlistedTeams.contains(team)).toList();
+                    return InlineScrollableCard(
+                      children: remainingTeams.isEmpty
+                          ? [
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    const TextSpan(text: 'All the teams have already been shortlisted for the '),
+                                    TextSpan(text: _award!.name, style: bold),
+                                    TextSpan(text: ' (${_award!.description}) award!'),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ]
-                        : [
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  const TextSpan(text: 'Nominate team for '),
-                                  TextSpan(text: _award!.name, style: bold),
-                                  TextSpan(text: ' (${_award!.description})${widget.lateEntry ? " as a late entry" : ""}:'),
-                                ],
+                            ]
+                          : [
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    const TextSpan(text: 'Nominate team for '),
+                                    TextSpan(text: _award!.name, style: bold),
+                                    TextSpan(text: ' (${_award!.description})${widget.lateEntry ? " as a late entry" : ""}:'),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: spacing),
-                            LayoutBuilder(
-                              builder: (BuildContext context, BoxConstraints constraints) => Row(
+                              const SizedBox(height: spacing),
+                              LayoutBuilder(
+                                builder: (BuildContext context, BoxConstraints constraints) => Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 7 - spacing),
+                                      child: DropdownMenu<Team>(
+                                        focusNode: _teamFocusNode,
+                                        controller: _teamController,
+                                        onSelected: _handleTeamChange,
+                                        requestFocusOnTap: true,
+                                        enableFilter: true,
+                                        menuStyle: const MenuStyle(
+                                          maximumSize: WidgetStatePropertyAll(
+                                            Size(double.infinity, indent * 11.0),
+                                          ),
+                                        ),
+                                        label: const Text(
+                                          'Team',
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        dropdownMenuEntries: remainingTeams.map<DropdownMenuEntry<Team>>((Team team) {
+                                          return DropdownMenuEntry<Team>(
+                                            value: team,
+                                            label: '${team.number} ${team.name}',
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: spacing),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _nominatorController,
+                                        focusNode: _nominatorFocusNode,
+                                        decoration: const InputDecoration(
+                                          label: Text(
+                                            'Nominator',
+                                            softWrap: false,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          border: OutlineInputBorder(),
+                                        ),
+                                        onSubmitted: (String value) {
+                                          if (_team == null) {
+                                            _teamFocusNode.requestFocus();
+                                          } else if (_commentController.text.isEmpty) {
+                                            _commentFocusNode.requestFocus();
+                                          } else {
+                                            _addTeamToShortlist();
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: spacing),
+                              Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 7 - spacing),
-                                    child: DropdownMenu<Team>(
-                                      focusNode: _teamFocusNode,
-                                      controller: _teamController,
-                                      onSelected: _handleTeamChange,
-                                      requestFocusOnTap: true,
-                                      enableFilter: true,
-                                      menuStyle: const MenuStyle(
-                                        maximumSize: WidgetStatePropertyAll(
-                                          Size(double.infinity, indent * 11.0),
-                                        ),
-                                      ),
-                                      label: const Text(
-                                        'Team',
-                                        softWrap: false,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      dropdownMenuEntries: remainingTeams.map<DropdownMenuEntry<Team>>((Team team) {
-                                        return DropdownMenuEntry<Team>(
-                                          value: team,
-                                          label: '${team.number} ${team.name}',
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                  const SizedBox(width: spacing),
                                   Expanded(
                                     child: TextField(
-                                      controller: _nominatorController,
-                                      focusNode: _nominatorFocusNode,
+                                      controller: _commentController,
+                                      focusNode: _commentFocusNode,
                                       decoration: const InputDecoration(
                                         label: Text(
-                                          'Nominator',
+                                          'Comment',
                                           softWrap: false,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         border: OutlineInputBorder(),
                                       ),
                                       onSubmitted: (String value) {
-                                        if (_team == null) {
-                                          _teamFocusNode.requestFocus();
-                                        } else if (_commentController.text.isEmpty) {
-                                          _commentFocusNode.requestFocus();
-                                        } else {
+                                        if (_team != null) {
                                           _addTeamToShortlist();
+                                        } else {
+                                          _teamFocusNode.requestFocus();
                                         }
                                       },
                                     ),
                                   ),
+                                  const SizedBox(width: spacing),
+                                  IconButton.filledTonal(
+                                    onPressed: _team != null ? _addTeamToShortlist : null,
+                                    icon: const Icon(
+                                      Symbols.heart_plus,
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(height: spacing),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _commentController,
-                                    focusNode: _commentFocusNode,
-                                    decoration: const InputDecoration(
-                                      label: Text(
-                                        'Comment',
-                                        softWrap: false,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onSubmitted: (String value) {
-                                      if (_team != null) {
-                                        _addTeamToShortlist();
-                                      } else {
-                                        _teamFocusNode.requestFocus();
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: spacing),
-                                IconButton.filledTonal(
-                                  onPressed: _team != null ? _addTeamToShortlist : null,
-                                  icon: const Icon(
-                                    Symbols.heart_plus,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                    onClosed: () {
-                      setState(() {
-                        _award = null;
-                        _team = null;
-                        _teamController.clear();
-                        _nominatorController.clear();
-                      });
-                    },
+                            ],
+                      onClosed: () {
+                        setState(() {
+                          _award = null;
+                          _team = null;
+                          _teamController.clear();
+                          _nominatorController.clear();
+                        });
+                      },
+                    );
+                  },
+                ),
+                builder: (BuildContext context, Widget? child) {
+                  return Theme(
+                    data: ThemeData.from(
+                      colorScheme: ColorScheme.fromSeed(seedColor: _award!.color),
+                    ),
+                    child: child!,
                   );
                 },
               ),
-              builder: (BuildContext context, Widget? child) {
-                return Theme(
-                  data: ThemeData.from(
-                    colorScheme: ColorScheme.fromSeed(seedColor: _award!.color),
-                  ),
-                  child: child!,
-                );
-              },
             ),
           ),
       ],
