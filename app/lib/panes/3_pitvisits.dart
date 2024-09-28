@@ -268,14 +268,18 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               ),
             if (totalCount > 0)
               CheckboxRow(
-                checked: !widget.competition.pitVisitsHideVisitedTeams,
+                checked: widget.competition.pitVisitsHideVisitedTeams
+                    ? _legacyTeams.isEmpty
+                        ? false
+                        : null
+                    : true,
                 onChanged: (bool? value) {
                   widget.competition.pitVisitsHideVisitedTeams = !value!;
                   setState(() {
                     _legacyTeams.clear();
                   });
                 },
-                tristate: false,
+                tristate: widget.competition.pitVisitsHideVisitedTeams && _legacyTeams.isNotEmpty,
                 label: 'Include teams that are already marked as visited.',
               ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)

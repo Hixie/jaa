@@ -203,9 +203,12 @@ class _SetupPaneState extends State<SetupPane> {
                             Cell(Text(team?.location ?? '...')),
                             Cell(Text(
                               team != null
-                                  ? team.inspireEligible
-                                      ? 'Yes'
-                                      : 'No'
+                                  ? switch (team.inspireStatus) {
+                                      InspireStatus.eligible => 'Yes',
+                                      InspireStatus.ineligible => 'Ineligible',
+                                      InspireStatus.hidden => 'Yes (hidden)',
+                                      InspireStatus.exhibition => 'Not competing',
+                                    }
                                   : '...',
                             )),
                           ],
@@ -586,53 +589,94 @@ class _TeamEditorState extends State<TeamEditor> {
         ),
       );
       teamNotes.add(const SizedBox(height: spacing * 2.0));
-      if (!_team!.inspireEligible) {
-        teamNotes.add(const Text('Team is not eligible for an Inspire award at this event.'));
-      }
-      if (_team!.shortlistsView.isEmpty) {
-        teamNotes.add(const Text('Team is not currently nominated for any awards.'));
-      } else {
-        teamNotes.add(const Text('Team is nominated for:'));
-        for (final Award award in _team!.shortlistsView.keys) {
-          ShortlistEntry entry = _team!.shortlistsView[award]!;
-          teamNotes.add(Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              const Text('• '),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: '${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
-                        '${award.name}'
-                        '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
-                        '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
-                    children: [
-                      if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
-                    ],
-                  ),
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
+      switch (_team!.inspireStatus) {
+        case InspireStatus.eligible:
+        case InspireStatus.exhibition:
+          teamNotes.add(
+            CheckboxRow(
+              checked: _team!.inspireStatus == InspireStatus.exhibition,
+              onChanged: _team!.inspireStatus != InspireStatus.eligible && _team!.inspireStatus != InspireStatus.exhibition
+                  ? null
+                  : (bool? value) {
+                      if (value!) {
+                        widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.exhibition);
+                      } else {
+                        widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.eligible);
+                      }
+                    },
+              tristate: false,
+              label: 'Remove team from judging lists (exhibition team).',
+              includePadding: false,
+            ),
+          );
+          if (_team!.inspireStatus == InspireStatus.exhibition) {
+            teamNotes.add(const SizedBox(height: spacing));
+            teamNotes.add(const Text('Team is an exhibition team at this event, they are not eligible for any awards.'));
+          }
+        case InspireStatus.ineligible:
+          teamNotes.add(const Text('Team is not eligible for an Inspire award at this event.'));
+        case InspireStatus.hidden:
+          teamNotes.add(const Text('Team is currently hidden on the Inspire pane.'));
+          teamNotes.add(
+            FilledButton(
+              onPressed: () {
+                widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.eligible);
+              },
+              child: const Text(
+                'Unhide team',
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ));
-        }
+            ),
+          );
       }
       teamNotes.add(const SizedBox(height: spacing));
-      List<Award> pitVisitAwards = _team!.shortlistsView.keys.where((Award award) => award.pitVisits == PitVisit.yes).toList();
-      if (pitVisitAwards.isNotEmpty) {
-        teamNotes.add(Text('Team will be visited as part of judging for: ${pitVisitAwards.map((Award award) => award.name).join(', ')}'));
-      } else {
-        teamNotes.add(const Text('Team will not be automatically visited as part of judging.'));
+      if (_team!.inspireStatus == InspireStatus.eligible || _team!.inspireStatus == InspireStatus.hidden) {
+        if (_team!.shortlistsView.isEmpty) {
+          teamNotes.add(const Text('Team is not currently nominated for any awards.'));
+        } else {
+          teamNotes.add(const Text('Team is nominated for:'));
+          for (final Award award in _team!.shortlistsView.keys) {
+            ShortlistEntry entry = _team!.shortlistsView[award]!;
+            teamNotes.add(Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                const Text('• '),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: '${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
+                          '${award.name}'
+                          '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
+                          '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
+                      children: [
+                        if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
+                      ],
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.clip,
+                  ),
+                ),
+              ],
+            ));
+          }
+        }
+        teamNotes.add(const SizedBox(height: spacing));
+        List<Award> pitVisitAwards = _team!.shortlistsView.keys.where((Award award) => award.pitVisits == PitVisit.yes).toList();
+        if (pitVisitAwards.isNotEmpty) {
+          teamNotes.add(Text('Team will be visited as part of judging for: ${pitVisitAwards.map((Award award) => award.name).join(', ')}'));
+        } else {
+          teamNotes.add(const Text('Team will not be automatically visited as part of judging.'));
+        }
+        teamNotes.add(
+          VisitedCell(
+            label: const Text('Visted?'),
+            competition: widget.competition,
+            team: _team!,
+          ),
+        );
       }
-      teamNotes.add(
-        VisitedCell(
-          label: const Text('Visted?'),
-          competition: widget.competition,
-          team: _team!,
-        ),
-      );
     }
     return ListenableBuilder(
       listenable: widget.competition,

@@ -11,199 +11,13 @@ import '../widgets/awards.dart';
 import '../widgets/cells.dart';
 import '../widgets/widgets.dart';
 
-class InspirePane extends StatelessWidget {
+class InspirePane extends StatefulWidget {
   const InspirePane({super.key, required this.competition});
 
   final Competition competition;
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: competition,
-      builder: (BuildContext context, Widget? child) {
-        final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
-        final List<String> categories = competition.categories;
-        final List<int> categoryCounts = (candidates.keys.toList()..sort()).reversed.take(competition.minimumInspireCategories).toList();
-        final canShowAnything = competition.teamsView.isNotEmpty && (competition.inspireAward != null) && categoryCounts.isNotEmpty;
-        final List<Award> awards = canShowAnything && competition.expandInspireTable
-            ? (competition.awardsView.where(Award.isInspireQualifyingPredicate).toList()..sort(competition.awardSorter))
-            : const [];
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Heading(title: '5. Inspire'),
-            if (competition.teamsView.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-                child: Text(
-                  'No teams loaded. Use the Setup pane to import a teams list.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              )
-            else if (competition.awardsView.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-                child: Text(
-                  'No awards loaded. Use the Setup pane to import an awards list.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              )
-            else if (competition.inspireAward == null)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-                child: Text(
-                  'No Inspire award defined. Use the Setup pane to import an awards list with an Inspire award.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              )
-            else if (candidates.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-                child: Text(
-                  'No teams shortlisted for sufficient advancing award categories. Use the Shortlists pane to nominate teams.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              )
-            else if (categoryCounts.first < categories.length)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Text(
-                  'No teams are shortlisted for ${categories.length == 2 ? 'both' : 'all ${categories.length}'} categories.',
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              ),
-            if (canShowAnything)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Candidates for ${competition.inspireAward!.name} award:', style: bold),
-              ),
-            if (canShowAnything)
-              CheckboxRow(
-                checked: competition.expandInspireTable,
-                onChanged: (bool? value) {
-                  competition.expandInspireTable = value!;
-                },
-                tristate: false,
-                label: 'Show rankings for all awards in addition to categories.',
-              ),
-            if (competition.inspireAward != null) const SizedBox(height: indent),
-            if (competition.inspireAward != null)
-              for (final int categoryCount in categoryCounts)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, indent),
-                  child: HorizontalScrollbar(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Candidates in $categoryCount categories'
-                              '${categoryCount < competition.minimumInspireCategories ? " (insufficient to qualify for ${competition.inspireAward!.name} award)" : ""}:',
-                            ),
-                            const SizedBox(height: spacing),
-                            Table(
-                              border: awards.isEmpty
-                                  ? const TableBorder.symmetric(
-                                      inside: BorderSide(),
-                                    )
-                                  : SkipColumnTableBorder.symmetric(
-                                      inside: const BorderSide(),
-                                      skippedColumn: 1 + categories.length + 1 + (categoryCount >= competition.minimumInspireCategories ? 1 : 0),
-                                    ),
-                              defaultColumnWidth: const IntrinsicCellWidth(),
-                              columnWidths: {
-                                if (awards.isNotEmpty)
-                                  1 + categories.length + 1 + (categoryCount >= competition.minimumInspireCategories ? 1 : 0):
-                                      const FixedColumnWidth(indent * 2.0),
-                              },
-                              defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                TableRow(
-                                  children: [
-                                    const Cell(Text('#', style: bold), prototype: Text('000000')),
-                                    for (final String category in categories)
-                                      Cell(
-                                        Text(category, style: bold),
-                                        prototype: const Text('unranked'),
-                                      ),
-                                    const Cell(Text('Rank Score', style: bold), prototype: Text('000')),
-                                    if (categoryCount >= competition.minimumInspireCategories)
-                                      const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
-                                    if (awards.isNotEmpty) const SizedBox.shrink(),
-                                    for (final Award award in awards)
-                                      ListenableBuilder(
-                                        listenable: award,
-                                        builder: (BuildContext context, Widget? child) {
-                                          return ColoredBox(
-                                            color: award.color,
-                                            child: Cell(
-                                              Text(
-                                                award.name,
-                                                style: bold.copyWith(
-                                                  color: textColorForColor(award.color),
-                                                ),
-                                              ),
-                                              prototype: const Text('0000 XX'),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                  ],
-                                ),
-                                for (final Team team in candidates[categoryCount]!.keys.toList()..sort(Team.inspireCandidateComparator))
-                                  TableRow(
-                                    children: [
-                                      Tooltip(
-                                        message: team.name,
-                                        child: Cell(Text('${team.number}')),
-                                      ),
-                                      for (final String category in categories) Cell(Text(team.bestRankFor(category, 'unranked', ''))),
-                                      Cell(Text('${team.rankScore ?? ""}')),
-                                      if (categoryCount >= competition.minimumInspireCategories)
-                                        if (!team.inspireEligible)
-                                          const Cell(Text('Not eligible'))
-                                        else
-                                          InspirePlacementCell(
-                                            competition: competition,
-                                            team: team,
-                                            award: competition.inspireAward!,
-                                          ),
-                                      if (awards.isNotEmpty) const SizedBox.shrink(),
-                                      for (final Award award in awards)
-                                        RankCell(
-                                          entry: competition.shortlistsView[award]!.entriesView[team],
-                                        ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            if (awards.isNotEmpty)
-              AwardOrderSwitch(
-                competition: competition,
-              ),
-          ],
-        );
-      },
-    );
-  }
+  State<InspirePane> createState() => _InspirePaneState();
 
   static Future<void> exportInspireHTML(BuildContext context, Competition competition) async {
     final DateTime now = DateTime.now();
@@ -233,16 +47,268 @@ class InspirePane extends StatelessWidget {
             page.writeln('<td>${escapeHtml(team.bestRankFor(category, 'unranked', ''))}');
           }
           page.writeln('<td>${team.rankScore ?? ""}');
-          if (team.inspireEligible) {
-            page.writeln('<td>${team.shortlistsView[competition.inspireAward!]?.rank ?? "<i>Not placed</i>"}');
-          } else {
-            page.writeln('<td><i>Not eligible</i>');
+          switch (team.inspireStatus) {
+            case InspireStatus.eligible:
+            case InspireStatus.hidden:
+              page.writeln('<td>${team.shortlistsView[competition.inspireAward!]?.rank ?? "<i>Not placed</i>"}');
+            case InspireStatus.ineligible:
+              page.writeln('<td><i>Not eligible</i>');
+            case InspireStatus.exhibition:
+              page.writeln('<td><i>Not competing</i>');
           }
         }
         page.writeln('</table>');
       }
     }
     return exportHTML(competition, 'inspire', now, page.toString());
+  }
+}
+
+class _InspirePaneState extends State<InspirePane> {
+  final Set<Team> _legacyTeams = <Team>{};
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.competition,
+      builder: (BuildContext context, Widget? child) {
+        final Map<int, Map<Team, Set<String>>> candidates = widget.competition.computeInspireCandidates();
+        final List<String> categories = widget.competition.categories;
+        final List<int> categoryCounts = (candidates.keys.toList()..sort()).reversed.take(widget.competition.minimumInspireCategories).toList();
+        final canShowAnything = widget.competition.teamsView.isNotEmpty && (widget.competition.inspireAward != null) && categoryCounts.isNotEmpty;
+        final List<Award> awards = canShowAnything && widget.competition.expandInspireTable
+            ? (widget.competition.awardsView.where(Award.isInspireQualifyingPredicate).toList()..sort(widget.competition.awardSorter))
+            : const [];
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Heading(title: '5. Inspire'),
+            if (widget.competition.teamsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+                child: Text(
+                  'No teams loaded. Use the Setup pane to import a teams list.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              )
+            else if (widget.competition.awardsView.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+                child: Text(
+                  'No awards loaded. Use the Setup pane to import an awards list.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              )
+            else if (widget.competition.inspireAward == null)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+                child: Text(
+                  'No Inspire award defined. Use the Setup pane to import an awards list with an Inspire award.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              )
+            else if (candidates.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+                child: Text(
+                  'No teams shortlisted for sufficient advancing award categories. Use the Shortlists pane to nominate teams.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              )
+            else if (categoryCounts.first < categories.length)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'No teams are shortlisted for ${categories.length == 2 ? 'both' : 'all ${categories.length}'} categories.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              ),
+            if (canShowAnything)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Candidates for ${widget.competition.inspireAward!.name} award:', style: bold),
+              ),
+            if (canShowAnything)
+              CheckboxRow(
+                checked: widget.competition.expandInspireTable,
+                onChanged: (bool? value) {
+                  widget.competition.expandInspireTable = value!;
+                  setState(() {
+                    _legacyTeams.clear();
+                  });
+                },
+                tristate: false,
+                label: 'Show rankings for all awards in addition to categories.',
+              ),
+            if (canShowAnything)
+              CheckboxRow(
+                checked: widget.competition.hideInspireHiddenTeams
+                    ? _legacyTeams.isEmpty
+                        ? false
+                        : null
+                    : true,
+                onChanged: (bool? value) {
+                  widget.competition.hideInspireHiddenTeams = !value!;
+                  setState(() {
+                    _legacyTeams.clear();
+                  });
+                },
+                tristate: widget.competition.hideInspireHiddenTeams && _legacyTeams.isNotEmpty,
+                label: 'Include ineligible teams and teams marked as hidden.',
+              ),
+            if (widget.competition.inspireAward != null) const SizedBox(height: indent),
+            if (widget.competition.inspireAward != null)
+              for (final int categoryCount in categoryCounts)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, indent),
+                  child: HorizontalScrollbar(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, indent),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Candidates in $categoryCount categories'
+                              '${categoryCount < widget.competition.minimumInspireCategories ? " (insufficient to qualify for ${widget.competition.inspireAward!.name} award)" : ""}:',
+                            ),
+                            const SizedBox(height: spacing),
+                            Builder(builder: (context) {
+                              final List<Team> teams = candidates[categoryCount]!.keys.toList()..sort(Team.inspireCandidateComparator);
+                              if (widget.competition.hideInspireHiddenTeams) {
+                                teams.removeWhere((Team team) => !_legacyTeams.contains(team) && team.inspireStatus != InspireStatus.eligible);
+                              }
+                              if (teams.isEmpty) {
+                                return const Text('All eligible teams are hidden.');
+                              }
+                              return Table(
+                                border: awards.isEmpty
+                                    ? const TableBorder.symmetric(
+                                        inside: BorderSide(),
+                                      )
+                                    : SkipColumnTableBorder.symmetric(
+                                        inside: const BorderSide(),
+                                        skippedColumn: 1 + categories.length + 2 + (categoryCount >= widget.competition.minimumInspireCategories ? 1 : 0),
+                                      ),
+                                defaultColumnWidth: const IntrinsicCellWidth(),
+                                columnWidths: {
+                                  if (awards.isNotEmpty)
+                                    1 + categories.length + 2 + (categoryCount >= widget.competition.minimumInspireCategories ? 1 : 0):
+                                        const FixedColumnWidth(indent * 2.0),
+                                },
+                                defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  TableRow(
+                                    children: [
+                                      const Cell(Text('#', style: bold), prototype: Text('000000')),
+                                      for (final String category in categories)
+                                        Cell(
+                                          Text(category, style: bold),
+                                          prototype: const Text('unranked'),
+                                        ),
+                                      const Cell(Text('Rank Score', style: bold), prototype: Text('000')),
+                                      if (categoryCount >= widget.competition.minimumInspireCategories)
+                                        const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
+                                      const Cell(Text('Hide?', style: bold), prototype: SizedBox(width: kMinInteractiveDimension)),
+                                      if (awards.isNotEmpty) const SizedBox.shrink(),
+                                      for (final Award award in awards)
+                                        ListenableBuilder(
+                                          listenable: award,
+                                          builder: (BuildContext context, Widget? child) {
+                                            return ColoredBox(
+                                              color: award.color,
+                                              child: Cell(
+                                                Text(
+                                                  award.name,
+                                                  style: bold.copyWith(
+                                                    color: textColorForColor(award.color),
+                                                  ),
+                                                ),
+                                                prototype: const Text('0000 XX'),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                  for (final Team team in teams)
+                                    TableRow(
+                                      decoration:
+                                          widget.competition.hideInspireHiddenTeams && team.inspireStatus == InspireStatus.hidden && _legacyTeams.contains(team)
+                                              ? BoxDecoration(color: Colors.grey.shade100)
+                                              : null,
+                                      children: [
+                                        Tooltip(
+                                          message: team.name,
+                                          child: Cell(Text('${team.number}')),
+                                        ),
+                                        for (final String category in categories) Cell(Text(team.bestRankFor(category, 'unranked', ''))),
+                                        Cell(Text('${team.rankScore ?? ""}')),
+                                        if (categoryCount >= widget.competition.minimumInspireCategories)
+                                          if (!team.inspireEligible)
+                                            const Cell(Text('Not eligible'))
+                                          else
+                                            InspirePlacementCell(
+                                              competition: widget.competition,
+                                              team: team,
+                                              award: widget.competition.inspireAward!,
+                                            ),
+                                        TableCell(
+                                          verticalAlignment: TableCellVerticalAlignment.fill,
+                                          child: Material(
+                                            type: MaterialType.transparency,
+                                            child: Checkbox(
+                                              key: ValueKey<Team>(team),
+                                              value: !team.inspireEligible || (team.inspireStatus == InspireStatus.hidden),
+                                              onChanged: !team.inspireEligible
+                                                  ? null
+                                                  : (bool? value) {
+                                                      value!;
+                                                      if (value) {
+                                                        _legacyTeams.add(team);
+                                                      }
+                                                      widget.competition.updateTeamInspireStatus(
+                                                        team,
+                                                        status: value ? InspireStatus.hidden : InspireStatus.eligible,
+                                                      );
+                                                    },
+                                            ),
+                                          ),
+                                        ),
+                                        if (awards.isNotEmpty) const SizedBox.shrink(),
+                                        for (final Award award in awards)
+                                          RankCell(
+                                            entry: widget.competition.shortlistsView[award]!.entriesView[team],
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            if (awards.isNotEmpty)
+              AwardOrderSwitch(
+                competition: widget.competition,
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 

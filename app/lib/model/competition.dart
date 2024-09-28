@@ -132,19 +132,24 @@ class Award extends ChangeNotifier {
   }
 }
 
+// hidden is a substate of eligible
+enum InspireStatus { eligible, ineligible, hidden, exhibition }
+
 class Team extends ChangeNotifier implements Comparable<Team> {
   Team({
     required this.number,
     required String name,
     required String location,
-    required this.inspireEligible,
+    required InspireStatus inspireStatus,
     bool visited = false,
   })  : _name = name,
         _location = location,
-        _visited = visited;
+        _visited = visited,
+        _inspireStatus = inspireStatus;
 
   final int number;
-  final bool inspireEligible;
+
+  bool get inspireEligible => inspireStatus == InspireStatus.eligible || inspireStatus == InspireStatus.hidden;
 
   String get name => _name;
   String _name;
@@ -168,8 +173,11 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   int? get rankScore => _rankScore;
   int? _rankScore;
 
+  InspireStatus get inspireStatus => _inspireStatus;
+  InspireStatus _inspireStatus;
+
   bool get visited => _visited;
-  bool _visited = false;
+  bool _visited;
 
   String _visitingJudgesNotes = '';
   String get visitingJudgesNotes => _visitingJudgesNotes;
@@ -483,6 +491,17 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTeamInspireStatus(Team team, {required InspireStatus status}) {
+    team._inspireStatus = status;
+    if (status == InspireStatus.ineligible || status == InspireStatus.exhibition) {
+      _inspireIneligibleTeams.add(team);
+    } else {
+      _inspireIneligibleTeams.remove(team);
+    }
+    _inspireIneligibleTeams.sort();
+    notifyListeners();
+  }
+
   void updateShortlistRank(Award award, Team team, int? rank) {
     ShortlistEntry entry = _shortlists[award]!._entries[team]!;
     if (entry.rank != rank) {
@@ -718,6 +737,15 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  bool get hideInspireHiddenTeams => _hideInspireHiddenTeams;
+  bool _hideInspireHiddenTeams = false;
+  set hideInspireHiddenTeams(bool value) {
+    if (value != _hideInspireHiddenTeams) {
+      _hideInspireHiddenTeams = value;
+      notifyListeners();
+    }
+  }
+
   // IMPORT/EXPORT
 
   static bool _parseBool(Object? cell) {
@@ -742,6 +770,39 @@ class Competition extends ChangeNotifier {
       return null;
     }
     return _parseBool(cell);
+  }
+
+  static InspireStatus _parseInspireStatus(Object? cell) {
+    if (cell is int) {
+      return cell != 0 ? InspireStatus.eligible : InspireStatus.ineligible;
+    }
+    if (cell is double) {
+      return cell != 0.0 ? InspireStatus.eligible : InspireStatus.ineligible;
+    }
+    switch (cell) {
+      case 'eligible':
+        return InspireStatus.eligible;
+      case 'ineligible':
+        return InspireStatus.ineligible;
+      case 'hidden':
+        return InspireStatus.hidden;
+      case 'exhibition':
+        return InspireStatus.exhibition;
+    }
+    return InspireStatus.eligible;
+  }
+
+  static String _serializeInspireStatus(InspireStatus value) {
+    switch (value) {
+      case InspireStatus.eligible:
+        return 'eligible';
+      case InspireStatus.ineligible:
+        return 'ineligible';
+      case InspireStatus.hidden:
+        return 'hidden';
+      case InspireStatus.exhibition:
+        return 'exhibition';
+    }
   }
 
   static Show _parseShow(Object? cell) {
@@ -799,15 +860,15 @@ class Competition extends ChangeNotifier {
         if (row[0] is! int || (row[0] < 0)) {
           throw FormatException('Parse error in teams file row $rowNumber column 1: "${row[0]}" is not a valid team number.');
         }
-        final bool inspireEligible = _parseBool(row[3]);
+        final InspireStatus inspireStatus = _parseInspireStatus(row[3]);
         final Team team = Team(
           number: row[0] as int,
           name: '${row[1]}',
           location: '${row[2]}',
-          inspireEligible: inspireEligible,
+          inspireStatus: inspireStatus,
         );
         _teams.add(team);
-        if (!inspireEligible) {
+        if (inspireStatus == InspireStatus.ineligible || inspireStatus == InspireStatus.exhibition) {
           _inspireIneligibleTeams.add(team);
         }
         rowNumber += 1;
@@ -816,6 +877,7 @@ class Competition extends ChangeNotifier {
       _clearTeams();
       rethrow;
     }
+    _inspireIneligibleTeams.sort();
     notifyListeners();
   }
 
@@ -828,7 +890,7 @@ class Competition extends ChangeNotifier {
       'Eligible for Inspire award', // 'y' or 'n'
     ]);
     for (final Team team in _teams) {
-      data.add(['${team.number}', team.name, team.location, team.inspireEligible ? "y" : "n"]);
+      data.add(['${team.number}', team.name, team.location, _serializeInspireStatus(team.inspireStatus)]);
     }
     return const ListToCsvConverter().convert(data);
   }
@@ -1243,7 +1305,12 @@ class Competition extends ChangeNotifier {
           if (team.shortlistsView.containsKey(award)) team.shortlistsView[award]!.rank ?? "?" else "",
         categories.length,
         team.rankScore ?? '',
-        team.inspireEligible ? '' : 'Ineligible',
+        switch (team.inspireStatus) {
+          InspireStatus.eligible => '',
+          InspireStatus.ineligible => 'Ineligible',
+          InspireStatus.hidden => '',
+          InspireStatus.exhibition => 'Not competing',
+        }
       ]);
     }
     data.insert(0, [
@@ -1355,6 +1422,8 @@ class Competition extends ChangeNotifier {
           _showNominators = _parseShow(row[1]);
         case 'expand inspire table':
           _expandInspireTable = _parseBool(row[1]);
+        case 'hide hidden teams':
+          _hideInspireHiddenTeams = _parseBool(row[1]);
         case 'pit visits - exclude autovisited teams':
           _pitVisitsExcludeAutovisitedTeams = _parseBool(row[1]);
         case 'pit visits - hide visited teams':
@@ -1370,6 +1439,7 @@ class Competition extends ChangeNotifier {
     _showNominationComments = Show.none;
     _showNominators = Show.none;
     _expandInspireTable = false;
+    _hideInspireHiddenTeams = false;
     _pitVisitsExcludeAutovisitedTeams = true;
     _pitVisitsHideVisitedTeams = false;
     notifyListeners();
@@ -1392,6 +1462,7 @@ class Competition extends ChangeNotifier {
     data.add(['show nomination comments', _serializeShow(_showNominationComments)]);
     data.add(['show nominators', _serializeShow(_showNominators)]);
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
+    data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
     data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
     data.add(['pit visits - hide visited teams', _pitVisitsHideVisitedTeams ? 'y' : 'n']);
     return const ListToCsvConverter().convert(data);
@@ -1655,15 +1726,15 @@ class Competition extends ChangeNotifier {
       ..sort();
     final int teamCount = random.nextInt(1024 - 16) + 16;
     for (int index = 0; index < teamCount; index += 1) {
-      bool isInspireEligible = random.nextInt(teamCount) > 0;
+      InspireStatus inspireStatus = randomizer.randomItem(InspireStatus.values);
       final Team team = Team(
         number: random.nextInt(100000),
         name: randomizer.generatePhrase(),
         location: randomizer.generatePhrase(),
-        inspireEligible: isInspireEligible,
+        inspireStatus: inspireStatus,
       );
       _teams.add(team);
-      if (!isInspireEligible) {
+      if (inspireStatus == InspireStatus.ineligible || inspireStatus == InspireStatus.exhibition) {
         _inspireIneligibleTeams.add(team);
       }
       team._visited = random.nextBool();
@@ -1697,6 +1768,7 @@ class Competition extends ChangeNotifier {
         }
       }
     }
+    _inspireIneligibleTeams.sort();
     notifyListeners();
   }
 }

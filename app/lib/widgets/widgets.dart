@@ -170,53 +170,61 @@ class CheckboxRow extends StatelessWidget {
     required this.checked,
     required this.onChanged,
     required this.tristate,
+    this.includePadding = true,
   });
 
   final String label;
   final bool? checked;
-  final ValueSetter<bool?> onChanged;
+  final ValueSetter<bool?>? onChanged;
   final bool tristate;
+  final bool includePadding;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-      child: MergeSemantics(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Material(
-              type: MaterialType.transparency,
-              child: Checkbox(
-                value: checked,
-                tristate: tristate,
-                onChanged: (bool? value) => onChanged(value),
+    final Widget result = MergeSemantics(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Material(
+            type: MaterialType.transparency,
+            child: Checkbox(
+              value: checked,
+              tristate: tristate,
+              onChanged: onChanged == null ? null : (bool? value) => onChanged!(value),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: onChanged == null
+                  ? null
+                  : () {
+                      if (tristate) {
+                        onChanged!(switch (checked) {
+                          true => null,
+                          null => false,
+                          false => true,
+                        });
+                      } else {
+                        onChanged!(!checked!);
+                      }
+                    },
+              child: Text(
+                label,
+                softWrap: true,
+                overflow: TextOverflow.clip,
               ),
             ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  if (tristate) {
-                    onChanged(switch (checked) {
-                      true => null,
-                      null => false,
-                      false => true,
-                    });
-                  } else {
-                    onChanged(!checked!);
-                  }
-                },
-                child: Text(
-                  label,
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+    if (includePadding) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+        child: result,
+      );
+    }
+    return result;
   }
 }
 
