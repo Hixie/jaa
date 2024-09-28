@@ -125,14 +125,14 @@ class _MainAppState extends State<MainApp> {
                                   message: 'Changes will be autosaved shortly.',
                                   child: Text(
                                     'Changed',
-                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
                                   ),
                                 );
                               }
                               if (widget.competition.loading) {
                                 return Text(
                                   'Loading...',
-                                  style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                  style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
                                 );
                               }
                               if (widget.competition.dirty) {
@@ -144,7 +144,7 @@ class _MainAppState extends State<MainApp> {
                                     builder: (BuildContext context, double value, Widget? child) => Text(
                                       'Autosave failed.',
                                       style: TextStyle(
-                                        color: Colors.red.withOpacity(0.25 + value * 0.75),
+                                        color: Colors.red.withValues(alpha: 0.25 + value * 0.75),
                                         fontVariations: [FontVariation.weight(1 + value * 999.0)],
                                       ),
                                     ),
@@ -156,7 +156,7 @@ class _MainAppState extends State<MainApp> {
                                   message: widget.competition.lastAutosaveMessage,
                                   child: Text(
                                     'Saved',
-                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withOpacity(0.25)),
+                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
                                   ),
                                 );
                               }

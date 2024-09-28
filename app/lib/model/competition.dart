@@ -1033,7 +1033,7 @@ class Competition extends ChangeNotifier {
         },
         award.isPlacement ? 'y' : 'n',
         switch (award.pitVisits) { PitVisit.yes => 'y', PitVisit.no => 'n', PitVisit.maybe => 'maybe' },
-        '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}',
+        '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}', // ignore: deprecated_member_use
         if (_awards.any((Award award) => award.isEventSpecific)) award.isEventSpecific ? 'y' : 'n'
       ]);
     }
