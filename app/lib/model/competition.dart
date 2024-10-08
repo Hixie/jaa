@@ -84,7 +84,6 @@ class AutonominateIfRemainingCategory extends AutonominationRule {
         }
       }
     }
-    print('${team.number} ${candidateAward.name}: $nominatedCategories vs $allCategories');
     if (nominatedCategories.length == allCategories.length - 1) {
       return true;
     }
