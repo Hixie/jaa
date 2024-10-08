@@ -300,6 +300,7 @@ class _SetupPaneState extends State<SetupPane> {
                           Cell(Text('Award Count', style: bold), prototype: Text('000')),
                           Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
                           Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
+                          Cell(Text('Autonomination rule', style: bold), prototype: Text('Enabled')),
                           Cell(Text('Placement', style: bold), prototype: Text('Yes')),
                           Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
                         ],
@@ -380,6 +381,12 @@ class _SetupPaneState extends State<SetupPane> {
                               SpreadTheWealth.winnerOnly => 'Winner Only',
                               SpreadTheWealth.no => '',
                             })),
+                            Cell(
+                              Tooltip(
+                                message: award.autonominationRule?.description ?? '',
+                                child: Text(award.autonominationRule?.name ?? ''),
+                              ),
+                            ),
                             Cell(Text(award.isPlacement ? 'Yes' : '')),
                             Cell(Text(switch (award.pitVisits) {
                               PitVisit.yes => 'Yes',

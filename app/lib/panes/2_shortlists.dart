@@ -175,7 +175,7 @@ class ShortlistTables extends StatelessWidget {
                     TableRow(
                       children: [
                         const Cell(Text('#', style: bold), prototype: Text('000000')),
-                        const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
+                        const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Autonominated')),
                         if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                         TableCell(
                           verticalAlignment: TableCellVerticalAlignment.middle,

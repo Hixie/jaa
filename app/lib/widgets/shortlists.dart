@@ -196,8 +196,10 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                         controller: _teamController,
                                         onSelected: _handleTeamChange,
                                         label: 'Team',
-                                        values: Map<Team, String>.fromIterable(widget.competition.teamsView,
-                                            value: (dynamic team) => '${team.number} ${team.name}'),
+                                        values: Map<Team, String>.fromIterable(
+                                          widget.competition.teamsView.where((Team team) => !team.shortlistsView.containsKey(_award)),
+                                          value: (dynamic team) => '${team.number} ${team.name}',
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: spacing),
@@ -448,21 +450,37 @@ class RemoveFromShortlistCell extends StatelessWidget {
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: ListenableBuilder(
         listenable: competition,
-        builder: (BuildContext context, Widget? child) => IconButton(
-          onPressed: () {
-            competition.removeFromShortlist(award, team);
-          },
-          padding: EdgeInsets.zero,
-          iconSize: DefaultTextStyle.of(context).style.fontSize,
-          visualDensity: VisualDensity.compact,
-          color: foregroundColor,
-          tooltip: competition.removingFromShortlistWillRemoveInspireRank(award, team)
-              ? 'Unnominating team ${team.number} will remove them from the rankings for the ${competition.inspireAward!.name} award'
-              : null,
-          icon: const Icon(
-            Symbols.heart_minus,
-          ),
-        ),
+        builder: (BuildContext context, Widget? child) {
+          if (competition.awardIsAutonominated(award, team)) {
+            return Tooltip(
+              message: 'Team is currently autonominated for this award.',
+              child: IconTheme.merge(
+                data: IconThemeData(
+                  size: DefaultTextStyle.of(context).style.fontSize,
+                  color: foregroundColor,
+                ),
+                child: const Icon(
+                  Symbols.smart_toy,
+                ),
+              ),
+            );
+          }
+          return IconButton(
+            onPressed: () {
+              competition.removeFromShortlist(award, team);
+            },
+            padding: EdgeInsets.zero,
+            iconSize: DefaultTextStyle.of(context).style.fontSize,
+            visualDensity: VisualDensity.compact,
+            color: foregroundColor,
+            tooltip: competition.removingFromShortlistWillRemoveInspireRank(award, team)
+                ? 'Unnominating team ${team.number} will remove them from the rankings for the ${competition.inspireAward!.name} award'
+                : null,
+            icon: const Icon(
+              Symbols.heart_minus,
+            ),
+          );
+        },
       ),
     );
   }

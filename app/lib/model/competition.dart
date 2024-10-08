@@ -3,12 +3,12 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui' show Color;
 
 import 'package:archive/archive_io.dart';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
 import '../widgets/widgets.dart';
@@ -47,6 +47,60 @@ Show boolToShow(bool? value) {
   }
 }
 
+sealed class AutonominationRule {
+  const AutonominationRule();
+
+  static AutonominationRule? parseFromCSV(String rule) {
+    if (rule == 'if last category') {
+      return const AutonominateIfRemainingCategory();
+    }
+    return null;
+  }
+
+  bool shouldAutonominate(Team team, Award candidateAward, Iterable<Award> awards);
+
+  String get name;
+
+  String get description;
+
+  String toCSV();
+}
+
+class AutonominateIfRemainingCategory extends AutonominationRule {
+  const AutonominateIfRemainingCategory();
+
+  @override
+  bool shouldAutonominate(Team team, Award candidateAward, Iterable<Award> awards) {
+    if (candidateAward.category == '') {
+      return false;
+    }
+    final Set<String> allCategories = <String>{};
+    final Set<String> nominatedCategories = <String>{};
+    for (Award award in awards) {
+      if (award.category != '') {
+        allCategories.add(award.category);
+        if (award != candidateAward && team.shortlistsView.containsKey(award)) {
+          nominatedCategories.add(award.category);
+        }
+      }
+    }
+    print('${team.number} ${candidateAward.name}: $nominatedCategories vs $allCategories');
+    if (nominatedCategories.length == allCategories.length - 1) {
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  String get name => 'Enabled'; // if we add other rules, change this name
+
+  @override
+  String get description => 'Teams will be autonominated to this award if they are nominated in every other category.';
+
+  @override
+  String toCSV() => 'if last category';
+}
+
 // change notifications are specifically for the color changing
 class Award extends ChangeNotifier {
   Award({
@@ -57,6 +111,7 @@ class Award extends ChangeNotifier {
     required this.count,
     required this.category,
     required this.spreadTheWealth,
+    required this.autonominationRule,
     required this.isPlacement,
     required this.pitVisits,
     required this.isEventSpecific,
@@ -71,6 +126,7 @@ class Award extends ChangeNotifier {
   final int count;
   final String category;
   final SpreadTheWealth spreadTheWealth;
+  final AutonominationRule? autonominationRule;
   final bool isPlacement;
   final PitVisit pitVisits;
   final bool isEventSpecific;
@@ -637,6 +693,7 @@ class Competition extends ChangeNotifier {
       count: count,
       category: '',
       spreadTheWealth: spreadTheWealth,
+      autonominationRule: null,
       isPlacement: isPlacement,
       pitVisits: pitVisit,
       isEventSpecific: true,
@@ -978,6 +1035,12 @@ class Competition extends ChangeNotifier {
           color = Color(0xFF000000 | colorAsInt);
         }
         final bool isEventSpecific = row.length > 8 ? _parseBool(row[8]) : false;
+        final AutonominationRule? autonominationRule = row.length > 9 ? AutonominationRule.parseFromCSV(row[9]) : null;
+        if (isInspire && autonominationRule != null) {
+          throw FormatException(
+            'Parse error in awards file row $rank column 10: the first Advancing award is the Inspire award and cannot have an autonomination rule as teams are not nominated for the Inspire award.',
+          );
+        }
         final Award award = Award(
           name: name,
           isInspire: isInspire,
@@ -986,6 +1049,7 @@ class Competition extends ChangeNotifier {
           count: count,
           category: category,
           spreadTheWealth: spreadTheWealth,
+          autonominationRule: autonominationRule,
           isPlacement: isPlacement,
           pitVisits: pitVisit,
           isEventSpecific: isEventSpecific,
@@ -1018,7 +1082,8 @@ class Competition extends ChangeNotifier {
       'Placement', // 'y' or 'n'
       'Pit visits', // 'y', 'n', 'maybe'
       'Color', // #XXXXXX
-      if (_awards.any((Award award) => award.isEventSpecific)) 'Event-Specific', // 'y', 'n'
+      'Event-Specific', // 'y', 'n'
+      'Autonomination rule', // empty or 'if last category'
     ]);
     for (final Award award in _awards) {
       data.add([
@@ -1032,9 +1097,14 @@ class Competition extends ChangeNotifier {
           SpreadTheWealth.no => 'no',
         },
         award.isPlacement ? 'y' : 'n',
-        switch (award.pitVisits) { PitVisit.yes => 'y', PitVisit.no => 'n', PitVisit.maybe => 'maybe' },
+        switch (award.pitVisits) {
+          PitVisit.yes => 'y',
+          PitVisit.no => 'n',
+          PitVisit.maybe => 'maybe'
+        },
         '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}', // ignore: deprecated_member_use
-        if (_awards.any((Award award) => award.isEventSpecific)) award.isEventSpecific ? 'y' : 'n'
+        award.isEventSpecific ? 'y' : 'n',
+        award.autonominationRule?.toCSV() ?? '',
       ]);
     }
     return const ListToCsvConverter().convert(data);
@@ -1088,9 +1158,24 @@ class Competition extends ChangeNotifier {
     return const ListToCsvConverter().convert(data);
   }
 
+  bool awardIsAutonominated(Award award, Team team) {
+    return award.autonominationRule?.shouldAutonominate(team, award, awardsView) ?? false;
+  }
+
+  void _checkTeamForAutonominations(Team team, bool lateEntry) {
+    for (Award award in _awards) {
+      if (!team.shortlistsView.containsKey(award) && awardIsAutonominated(award, team)) {
+        addToShortlist(award, team, ShortlistEntry(nominator: 'Autonominated', lateEntry: lateEntry));
+        // addToShortlist will call us re-entrantly, so end this iteration now.
+        return;
+      }
+    }
+  }
+
   void addToShortlist(Award award, Team team, ShortlistEntry entry) {
     _shortlists[award]!._add(team, entry);
     team._addToShortlist(award, entry);
+    _checkTeamForAutonominations(team, entry.lateEntry);
     notifyListeners();
   }
 
@@ -1712,6 +1797,7 @@ class Competition extends ChangeNotifier {
         count: random.nextInt(5) + 1,
         category: category,
         spreadTheWealth: randomizer.randomItem(SpreadTheWealth.values),
+        autonominationRule: null, // TODO: test autonomination
         isPlacement: random.nextInt(7) > 0,
         pitVisits: randomizer.randomItem(PitVisit.values),
         isEventSpecific: !isAdvancing && random.nextInt(5) == 0,

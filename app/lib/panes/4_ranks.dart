@@ -253,7 +253,7 @@ class RankTables extends StatelessWidget {
                           children: [
                             const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
                             const Cell(Text('#', style: bold), prototype: Text('000000')),
-                            if (includeNominatorColumn) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Judging Panel')),
+                            if (includeNominatorColumn) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Autonominated')),
                             if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                             TableCell(
                               verticalAlignment: TableCellVerticalAlignment.middle,
