@@ -194,8 +194,8 @@ class _TextEntryCellState extends State<TextEntryCell> {
   @override
   void didUpdateWidget(TextEntryCell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value) {
-      _controller.text = widget.value;
+    if (_controller.text != widget.value) {
+      _controller.text = widget.value; // for some reason this changes the selection
     }
   }
 

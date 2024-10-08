@@ -84,7 +84,7 @@ class AutonominateIfRemainingCategory extends AutonominationRule {
         }
       }
     }
-    if (nominatedCategories.length == allCategories.length - 1) {
+    if (!nominatedCategories.contains(candidateAward.category) && nominatedCategories.length == allCategories.length - 1) {
       return true;
     }
     return false;
