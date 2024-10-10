@@ -190,6 +190,8 @@ class Award extends ChangeNotifier {
 // hidden is a substate of eligible
 enum InspireStatus { eligible, ineligible, hidden, exhibition }
 
+typedef TeamComparatorCallback = int Function(Team a, Team b);
+
 class Team extends ChangeNotifier implements Comparable<Team> {
   Team({
     required this.number,
@@ -227,6 +229,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   // only meaningful when compared to teams with the same number of shortlistedAdvancingCategories
   int? get rankScore => _rankScore;
   int? _rankScore;
+
+  int get rankedCount => _shortlists.values.where((ShortlistEntry entry) => entry.rank != null).length;
 
   InspireStatus get inspireStatus => _inspireStatus;
   InspireStatus _inspireStatus;
@@ -343,6 +347,17 @@ class Team extends ChangeNotifier implements Comparable<Team> {
       return -1;
     }
     return a.rankScore! - b.rankScore!;
+  }
+
+  static int rankedCountComparator(Team a, Team b) {
+    if (a.rankedCount == b.rankedCount) {
+      return inspireCandidateComparator(a, b);
+    }
+    return b.rankedCount - a.rankedCount;
+  }
+
+  static int teamNumberComparator(Team a, Team b) {
+    return a.number - b.number;
   }
 }
 
@@ -798,6 +813,15 @@ class Competition extends ChangeNotifier {
   set hideInspireHiddenTeams(bool value) {
     if (value != _hideInspireHiddenTeams) {
       _hideInspireHiddenTeams = value;
+      notifyListeners();
+    }
+  }
+
+  TeamComparatorCallback get inspireSortOrder => _inspireSortOrder;
+  TeamComparatorCallback _inspireSortOrder = Team.teamNumberComparator;
+  set inspireSortOrder(TeamComparatorCallback value) {
+    if (value != _inspireSortOrder) {
+      _inspireSortOrder = value;
       notifyListeners();
     }
   }
@@ -1389,6 +1413,7 @@ class Competition extends ChangeNotifier {
           if (team.shortlistsView.containsKey(award)) team.shortlistsView[award]!.rank ?? "?" else "",
         categories.length,
         team.rankScore ?? '',
+        team.rankedCount,
         switch (team.inspireStatus) {
           InspireStatus.eligible => '',
           InspireStatus.ineligible => 'Ineligible',
@@ -1402,11 +1427,13 @@ class Competition extends ChangeNotifier {
       for (final Award award in awards) award.name, // numeric (rank) or ""
       'Category Count',
       'Rank Score',
+      'Rank Count',
       'Eligibility',
     ]);
     data.insert(1, [
       '',
       for (final Award award in awards) award.category,
+      '',
       '',
       '',
       '',
@@ -1508,6 +1535,12 @@ class Competition extends ChangeNotifier {
           _expandInspireTable = _parseBool(row[1]);
         case 'hide hidden teams':
           _hideInspireHiddenTeams = _parseBool(row[1]);
+        case 'inspire sort order':
+          _inspireSortOrder = switch (row[1]) {
+            'rank score' => Team.inspireCandidateComparator,
+            'rank count' => Team.rankedCountComparator,
+            _ => Team.teamNumberComparator,
+          };
         case 'pit visits - exclude autovisited teams':
           _pitVisitsExcludeAutovisitedTeams = _parseBool(row[1]);
         case 'pit visits - hide visited teams':
@@ -1524,6 +1557,7 @@ class Competition extends ChangeNotifier {
     _showNominators = Show.none;
     _expandInspireTable = false;
     _hideInspireHiddenTeams = false;
+    _inspireSortOrder = Team.teamNumberComparator;
     _pitVisitsExcludeAutovisitedTeams = true;
     _pitVisitsHideVisitedTeams = false;
     notifyListeners();
@@ -1547,6 +1581,14 @@ class Competition extends ChangeNotifier {
     data.add(['show nominators', _serializeShow(_showNominators)]);
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
+    data.add([
+      'inspire sort order',
+      switch (_inspireSortOrder) {
+        Team.inspireCandidateComparator => 'rank score',
+        Team.rankedCountComparator => 'rank count',
+        _ => 'team number', // Team.teamNumberComparator
+      }
+    ]);
     data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
     data.add(['pit visits - hide visited teams', _pitVisitsHideVisitedTeams ? 'y' : 'n']);
     return const ListToCsvConverter().convert(data);

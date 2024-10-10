@@ -12,11 +12,13 @@ class Cell extends StatelessWidget {
     super.key,
     this.prototype,
     this.padPrototype = true,
+    this.highlight = false,
   });
 
   final Widget child;
   final Widget? prototype;
   final bool padPrototype;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +45,9 @@ class Cell extends StatelessWidget {
         padding: const EdgeInsets.all(spacing),
         child: result,
       );
+    }
+    if (highlight) {
+      result = ColoredBox(color: Theme.of(context).colorScheme.secondaryContainer, child: result);
     }
     return result;
   }
