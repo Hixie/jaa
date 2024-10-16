@@ -115,7 +115,9 @@ class Award extends ChangeNotifier {
     required this.pitVisits,
     required this.isEventSpecific,
     required Color color,
+    required String comment,
   })  : _color = color,
+        _comment = comment,
         assert(count > 0);
 
   final String name;
@@ -135,6 +137,14 @@ class Award extends ChangeNotifier {
 
   void updateColor(Color color) {
     _color = color;
+    notifyListeners();
+  }
+
+  String _comment;
+  String get comment => _comment;
+
+  void updateComment(String comment) {
+    _comment = comment;
     notifyListeners();
   }
 
@@ -722,6 +732,7 @@ class Competition extends ChangeNotifier {
       pitVisits: pitVisit,
       isEventSpecific: true,
       color: const Color(0xFFFFFFFF),
+      comment: '',
     );
     // event awards cannot affect Inspire logic:
     assert(award.category == '');
@@ -1074,6 +1085,7 @@ class Competition extends ChangeNotifier {
             'Parse error in awards file row $rank column 10: the first Advancing award is the Inspire award and cannot have an autonomination rule as teams are not nominated for the Inspire award.',
           );
         }
+        final String comment = row.length > 10 ? row[10] : '';
         final Award award = Award(
           name: name,
           isInspire: isInspire,
@@ -1087,6 +1099,7 @@ class Competition extends ChangeNotifier {
           pitVisits: pitVisit,
           isEventSpecific: isEventSpecific,
           color: color,
+          comment: comment,
         );
         _addAward(award);
         rank += 1;
@@ -1116,7 +1129,8 @@ class Competition extends ChangeNotifier {
       'Pit visits', // 'y', 'n', 'maybe'
       'Color', // #XXXXXX
       'Event-Specific', // 'y', 'n'
-      'Autonomination rule', // empty or 'if last category'
+      'Autonomination rule', // empty or 'if last category',
+      'Comment', // string
     ]);
     for (final Award award in _awards) {
       data.add([
@@ -1138,6 +1152,7 @@ class Competition extends ChangeNotifier {
         '#${(award.color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}', // ignore: deprecated_member_use
         award.isEventSpecific ? 'y' : 'n',
         award.autonominationRule?.toCSV() ?? '',
+        award.comment,
       ]);
     }
     return const ListToCsvConverter().convert(data);
@@ -1872,6 +1887,7 @@ class Competition extends ChangeNotifier {
         isEventSpecific: !isAdvancing && random.nextInt(5) == 0,
         color: Color(math.Random(seed ^ category.hashCode).nextInt(0x1000000) + 0xFF000000 |
             (random.nextInt(0x22) + random.nextInt(0x22) << 8 + random.nextInt(0x22) << 16)),
+        comment: random.nextInt(7) > 0 ? randomizer.generatePhrase(random.nextInt(5) + 1) : '',
       );
       seenInspire = seenInspire || isAdvancing;
       _addAward(award);

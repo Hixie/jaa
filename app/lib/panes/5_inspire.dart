@@ -264,14 +264,31 @@ class _InspirePaneState extends State<InspirePane> {
                                         ListenableBuilder(
                                           listenable: award,
                                           builder: (BuildContext context, Widget? child) {
+                                            final Color foregroundColor = textColorForColor(award.color);
                                             return ColoredBox(
                                               color: award.color,
                                               child: Cell(
-                                                Text(
-                                                  award.name,
-                                                  style: bold.copyWith(
-                                                    color: textColorForColor(award.color),
-                                                  ),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      award.name,
+                                                      style: bold.copyWith(
+                                                        color: textColorForColor(award.color),
+                                                      ),
+                                                    ),
+                                                    if (award.comment != '')
+                                                      Padding(
+                                                        padding: const EdgeInsetsDirectional.only(start: spacing),
+                                                        child: Tooltip(
+                                                          message: award.comment,
+                                                          child: Icon(
+                                                            Symbols.lightbulb,
+                                                            size: DefaultTextStyle.of(context).style.fontSize,
+                                                            color: foregroundColor,
+                                                          ),
+                                                        ),
+                                                      )
+                                                  ],
                                                 ),
                                                 prototype: const Text('0000 XX'),
                                               ),

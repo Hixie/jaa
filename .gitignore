@@ -1,2 +1,2 @@
 .DS_Store
-app/test_data/denied.zip
+app/test_data/*.zip

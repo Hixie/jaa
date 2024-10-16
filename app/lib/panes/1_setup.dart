@@ -289,22 +289,36 @@ class _SetupPaneState extends State<SetupPane> {
                     ),
                     columnWidths: const <int, TableColumnWidth>{0: IntrinsicColumnWidth()},
                     defaultColumnWidth: const IntrinsicCellWidth(),
+                    defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      const TableRow(
+                      TableRow(
                         children: [
                           Cell(Text('Award Name', style: bold)),
                           Cell(
-                            Text('Award Type', style: bold),
+                            Text('Type', style: bold),
                             prototype: EventSpecificCell(competition: null, award: null),
                             padPrototype: false,
                           ),
-                          Cell(Text('Award Rank', style: bold), prototype: Text('000')),
-                          Cell(Text('Award Count', style: bold), prototype: Text('000')),
-                          Cell(Text('Inspire Category', style: bold), prototype: Text('Documentation')),
+                          Cell(Text('Rank', style: bold), prototype: Text('000')),
+                          Cell(Text('Winners', style: bold), prototype: Text('000')),
+                          Cell(Text('Category', style: bold), prototype: Text('Documentation')),
                           Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
-                          Cell(Text('Autonomination rule', style: bold), prototype: Text('Enabled')),
+                          Cell(Text('Autonomination', style: bold), prototype: Text('Enabled')),
                           Cell(Text('Placement', style: bold), prototype: Text('Yes')),
                           Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
+                          Cell(
+                              Row(
+                                children: [
+                                  Icon(
+                                    Symbols.lightbulb,
+                                    size: DefaultTextStyle.of(context).style.fontSize,
+                                  ),
+                                  SizedBox(width: spacing),
+                                  Text('Comment ✎_', style: bold),
+                                ],
+                              ),
+                              prototype: Text('Hello World')),
                         ],
                       ),
                       for (final Award award in widget.competition.awardsView)
@@ -395,6 +409,14 @@ class _SetupPaneState extends State<SetupPane> {
                               PitVisit.no => 'No',
                               PitVisit.maybe => 'Maybe',
                             })),
+                            Material(
+                              type: MaterialType.transparency,
+                              child: TextEntryCell(
+                                padding: EdgeInsets.fromLTRB(spacing, spacing, spacing, 0.0),
+                                value: award.comment,
+                                onChanged: award.updateComment,
+                              ),
+                            ),
                           ],
                         ),
                     ],

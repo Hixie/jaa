@@ -77,17 +77,33 @@ class AwardCard extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(spacing),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    if (award.spreadTheWealth != SpreadTheWealth.no) TextSpan(text: '#${award.rank}: '),
-                    TextSpan(text: award.name, style: bold),
-                    if (award.category.isNotEmpty)
-                      TextSpan(
-                        text: ' (${award.category})',
+              child: Row(
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        if (award.spreadTheWealth != SpreadTheWealth.no) TextSpan(text: '#${award.rank}: '),
+                        TextSpan(text: award.name, style: bold),
+                        if (award.category.isNotEmpty)
+                          TextSpan(
+                            text: ' (${award.category})',
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (award.comment != '')
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: spacing),
+                      child: Tooltip(
+                        message: award.comment,
+                        child: Icon(
+                          Symbols.lightbulb,
+                          size: DefaultTextStyle.of(context).style.fontSize,
+                          color: foregroundColor,
+                        ),
                       ),
-                  ],
-                ),
+                    )
+                ],
               ),
             ),
             child!,
