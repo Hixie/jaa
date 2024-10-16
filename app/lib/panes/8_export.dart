@@ -191,7 +191,7 @@ class ExportPane extends StatelessWidget {
         page.writeln('<ul>');
         for (final Team team in pitVisits[judgePanel]!) {
           page.writeln('<li>${team.number} <i>${escapeHtml(team.name)}</i>'
-              '${team.visited ? " (visited)" : ""}');
+              '${team.visited == competition.expectedPitVisits ? " (visited)" : team.visited == 0 ? "" : " (visited ${team.visited}/${competition.expectedPitVisits})"}');
         }
         page.writeln('</ul>');
       }

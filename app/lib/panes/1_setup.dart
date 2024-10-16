@@ -48,7 +48,9 @@ class SetupPane extends StatefulWidget {
         page.writeln('<td>${team.number}');
         page.writeln('<td>${escapeHtml(team.name)}');
         page.writeln('<td>${escapeHtml(team.location)}');
-        page.writeln('<td>${team.visited ? "Visited." : ""} ${escapeHtml(team.visitingJudgesNotes)}');
+        page.writeln(
+          '<td>${team.visited == competition.expectedPitVisits ? "Visited." : team.visited == 0 ? "" : "${team.visited}/${competition.expectedPitVisits}"} ${escapeHtml(team.visitingJudgesNotes)}',
+        );
       }
       page.writeln('</table>');
     }
@@ -402,7 +404,7 @@ class _SetupPaneState extends State<SetupPane> {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(indent, spacing + indent, indent, indent),
+          padding: const EdgeInsets.fromLTRB(indent, spacing + indent, indent, spacing),
           child: Material(
             type: MaterialType.transparency,
             child: TextField(
@@ -412,6 +414,22 @@ class _SetupPaneState extends State<SetupPane> {
                 labelText: 'Event Name (optional)',
               ),
             ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+          child: Row(
+            children: [
+              Text('Expected number of pit visits per team:'),
+              SizedBox(width: spacing),
+              VisitInput(
+                value: widget.competition.expectedPitVisits,
+                min: 1,
+                onChanged: (int value) {
+                  widget.competition.expectedPitVisits = value;
+                },
+              ),
+            ],
           ),
         ),
         if (!kReleaseMode)
@@ -459,7 +477,6 @@ class EventSpecificCell extends StatelessWidget {
               iconSize: DefaultTextStyle.of(context).style.fontSize,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
-              splashRadius: 100.0,
               tooltip: competition != null && award != null && competition!.canDelete(award!)
                   ? 'Delete this event-specific award.'
                   : 'Cannot delete awards that have nominees.',

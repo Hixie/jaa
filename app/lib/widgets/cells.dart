@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../model/competition.dart';
 import '../utils/constants.dart';
+import 'widgets.dart';
 
 class Cell extends StatelessWidget {
   const Cell(
@@ -139,10 +140,12 @@ class _VisitedCellState extends State<VisitedCell> {
         if (widget.label != null) widget.label!,
         Material(
           type: MaterialType.transparency,
-          child: Checkbox(
+          child: VisitInput(
+            min: 0,
+            highlightThreshold: widget.competition.expectedPitVisits,
             value: widget.team.visited,
-            onChanged: (bool? value) {
-              widget.competition.updateTeamVisited(widget.team, visited: value!);
+            onChanged: (int value) {
+              widget.competition.updateTeamVisited(widget.team, visited: value);
               widget.onVisitedChanged?.call(widget.team);
             },
           ),

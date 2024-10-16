@@ -42,8 +42,10 @@ class PitVisitsPane extends StatefulWidget {
           page.writeln('<td>${team.shortlistsView.keys.contains(award) ? "Yes" : ""}');
         }
         List<String> notes = [];
-        if (team.visited) {
+        if (team.visited == competition.expectedPitVisits) {
           notes.add('Visited. ');
+        } else if (team.visited > 0) {
+          notes.add('Visited ${team.visited}/${competition.expectedPitVisits} times. ');
         }
         if (team.visitingJudgesNotes.isNotEmpty) {
           notes.add(team.visitingJudgesNotes);
@@ -76,20 +78,24 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
     int unvisitedAssignedCount = 0;
     int unvisitedRemainingCount = 0;
     for (Team team in widget.competition.teamsView) {
-      final bool hasPitVisit = team.shortlistsView.keys.any(
+      final bool hasSufficientAutomaticPitVisits = team.shortlistsView.keys
+              .where(
         (Award award) => award.pitVisits == PitVisit.yes,
-      );
+              )
+              .length >=
+          widget.competition.expectedPitVisits;
       totalCount += 1;
-      if (team.visited) {
+      if (team.visited == widget.competition.expectedPitVisits) {
         visitedCount += 1;
-      } else if (hasPitVisit) {
+      } else if (hasSufficientAutomaticPitVisits) {
         unvisitedNominatedCount += 1;
       } else if (team.visitingJudgesNotes.isNotEmpty) {
         unvisitedAssignedCount += 1;
       } else {
         unvisitedRemainingCount += 1;
       }
-      if ((!hideVisited || !team.visited || _legacyTeams.contains(team)) && (!filterTeams || !hasPitVisit)) {
+      if ((!hideVisited || team.visited < widget.competition.expectedPitVisits || _legacyTeams.contains(team)) &&
+          (!filterTeams || !hasSufficientAutomaticPitVisits)) {
         teams.add(team);
       }
     }
@@ -172,8 +178,8 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                 padding: const EdgeInsets.fromLTRB(0.0, 0.0, spacing, 0.0),
                                 child: Text('$visitedCount', textAlign: TextAlign.right),
                               ),
-                              const Text(
-                                'Visited teams',
+                              Text(
+                                widget.competition.expectedPitVisits == 1 ? 'Visited teams' : 'Sufficiently visited teams',
                                 softWrap: true,
                                 overflow: TextOverflow.clip,
                               ),
@@ -186,8 +192,8 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                 padding: const EdgeInsets.fromLTRB(0.0, 0.0, spacing, 0.0),
                                 child: Text('$unvisitedNominatedCount', textAlign: TextAlign.right),
                               ),
-                              const Text(
-                                'Teams with nominations that involve pit visits that are not marked visited',
+                              Text(
+                                'Teams with ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}nominations that involve pit visits that are not yet ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}marked as visited',
                                 softWrap: true,
                                 overflow: TextOverflow.clip,
                               ),
@@ -200,8 +206,10 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                 padding: const EdgeInsets.fromLTRB(0.0, 0.0, spacing, 0.0),
                                 child: Text('$unvisitedAssignedCount', textAlign: TextAlign.right),
                               ),
-                              const Text(
-                                'Teams without such nominations but with judges assigned for a visit',
+                              Text(
+                                widget.competition.expectedPitVisits == 1
+                                    ? 'Teams without such nominations but with judges assigned for a visit'
+                                    : 'Teams without sufficient nominations that involve pit visits but with one or more judges assigned',
                                 softWrap: true,
                                 overflow: TextOverflow.clip,
                               ),
@@ -264,7 +272,9 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   });
                 },
                 tristate: false,
-                label: 'Include teams that are nominated for an award that always involves a pit visit from the judges.',
+                label: widget.competition.expectedPitVisits == 1
+                    ? 'Include teams that are nominated for an award that always involves a pit visit from the judges.'
+                    : 'Include teams that are nominated for sufficient awards that involve pit visits from the judges to reach the expected pit visit count.',
               ),
             if (totalCount > 0)
               CheckboxRow(
@@ -280,7 +290,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   });
                 },
                 tristate: widget.competition.pitVisitsHideVisitedTeams && _legacyTeams.isNotEmpty,
-                label: 'Include teams that are already marked as visited.',
+                label: 'Include teams that are already marked as ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited.',
               ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
               Padding(
@@ -288,10 +298,12 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                 child: Text(
                   widget.competition.pitVisitsExcludeAutovisitedTeams
                       ? widget.competition.pitVisitsHideVisitedTeams
-                          ? 'All of the teams that have not been shortlisted for awards that always involve pit visits have been visited.'
-                          : 'All of the teams have been shortlisted for awards that always involve pit visits.'
+                          ? 'All of the teams that have not been shortlisted for awards that always involve pit visits have been${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited.'
+                          : widget.competition.expectedPitVisits == 1
+                              ? 'All of the teams have been shortlisted for awards that always involve pit visits.'
+                              : 'All of the teams have been shortlisted for sufficient awards that always involve pit visits.'
                       : widget.competition.pitVisitsHideVisitedTeams
-                          ? 'All of the teams have been visited.'
+                          ? 'All of the teams have been ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited.'
                           : () {
                               assert(false, 'internal error with teams filtering');
                               return '';
@@ -306,10 +318,14 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                 child: Text(
                   widget.competition.pitVisitsExcludeAutovisitedTeams
                       ? widget.competition.pitVisitsHideVisitedTeams
-                          ? 'The following teams have not been shortlisted for any awards that always involve pit visits, and have not yet been visited:'
-                          : 'The following teams have not been shortlisted for any awards that always involve pit visits:'
+                          ? widget.competition.expectedPitVisits == 1
+                              ? 'The following teams have not been shortlisted for any awards that always involve pit visits, and have not yet been visited:'
+                              : 'The following teams have not been shortlisted for sufficient awards that always involve pit visits, and have not yet been sufficiently visited:'
+                          : widget.competition.expectedPitVisits == 1
+                              ? 'The following teams have not been shortlisted for any awards that always involve pit visits:'
+                              : 'The following teams have not been shortlisted for sufficient awards that always involve pit visits:'
                       : widget.competition.pitVisitsHideVisitedTeams
-                          ? 'The following teams have not yet been visited:'
+                          ? 'The following teams have not yet been ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited:'
                           : 'All teams:',
                   softWrap: true,
                   overflow: TextOverflow.clip,
@@ -361,7 +377,9 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                           ),
                           for (final Team team in teams)
                             TableRow(
-                              decoration: widget.competition.pitVisitsHideVisitedTeams && team.visited && _legacyTeams.contains(team)
+                              decoration: widget.competition.pitVisitsHideVisitedTeams &&
+                                      team.visited >= widget.competition.expectedPitVisits &&
+                                      _legacyTeams.contains(team)
                                   ? BoxDecoration(color: Colors.grey.shade100)
                                   : null,
                               children: [

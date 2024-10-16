@@ -198,7 +198,7 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     required String name,
     required String location,
     required InspireStatus inspireStatus,
-    bool visited = false,
+    int visited = 0,
   })  : _name = name,
         _location = location,
         _visited = visited,
@@ -235,8 +235,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   InspireStatus get inspireStatus => _inspireStatus;
   InspireStatus _inspireStatus;
 
-  bool get visited => _visited;
-  bool _visited;
+  int get visited => _visited;
+  int _visited;
 
   String _visitingJudgesNotes = '';
   String get visitingJudgesNotes => _visitingJudgesNotes;
@@ -514,6 +514,16 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  int get expectedPitVisits => _expectedPitVisits;
+  int _expectedPitVisits = 1;
+  set expectedPitVisits(int value) {
+    assert(value > 0);
+    if (value != _expectedPitVisits) {
+      _expectedPitVisits = value;
+      notifyListeners();
+    }
+  }
+
   int get minimumInspireCategories {
     List<String> cachedCategories = categories;
     if (cachedCategories.isEmpty) {
@@ -556,7 +566,7 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  void updateTeamVisited(Team team, {required bool visited}) {
+  void updateTeamVisited(Team team, {required int visited}) {
     team._visited = visited;
     notifyListeners();
   }
@@ -1153,10 +1163,15 @@ class Competition extends ChangeNotifier {
         throw FormatException('Parse error in pit visits notes file: team "${row[0]}" not recognised.');
       }
       Team team = teamMap[row[0] as int]!;
-      if (row[1] != 'y' && row[1] != 'n') {
-        throw FormatException('Parse error in pit visits notes file: "${row[1]}" is not either "y" or "n".');
+      int value = row[1] is int
+          ? row[1]
+          : row[1] == 'y'
+              ? 1
+              : int.tryParse('{row[1]}', radix: 10) ?? 0;
+      if (value < 0) {
+        throw FormatException('Parse error in pit visits notes file: "${row[1]}" is not a valid number of pit visits.');
       }
-      team._visited = row[1] == 'y';
+      team._visited = value;
       team.visitingJudgesNotes = row[2];
     }
     notifyListeners();
@@ -1166,14 +1181,18 @@ class Competition extends ChangeNotifier {
     final List<List<Object?>> data = [];
     data.add([
       'Team number', // numeric
-      'Visited?', // 'y' or 'n'
+      'Visited?', // numeric, or 'y' or 'n'
       'Assigned judging team', // string
       'Pit visit nominations', // comma-separated string (ambiguous if any awards have commas in their name)
     ]);
     for (final Team team in _teams) {
       data.add([
         team.number,
-        team.visited ? 'y' : 'n',
+        team.visited == 1
+            ? 'y'
+            : team.visited == 0
+                ? 'n'
+                : team.visited,
         team.visitingJudgesNotes,
         team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '),
       ]);
@@ -1521,6 +1540,12 @@ class Competition extends ChangeNotifier {
       switch (row[0]) {
         case 'event name':
           _eventName = row[1];
+        case 'expected pit visits':
+          int? value = row[1] is int ? row[1] : int.tryParse('${row[1]}', radix: 10);
+          if (value == null || value < 1) {
+            throw const FormatException('Invalid "expected pit visits" configuration value; must be integer greater than or equal to 1.');
+          }
+          _expectedPitVisits = value;
         case 'award order':
           _awardOrder = switch (row[1]) {
             'categories' => AwardOrder.categories,
@@ -1552,6 +1577,7 @@ class Competition extends ChangeNotifier {
 
   void _resetConfiguration() {
     _eventName = '';
+    _expectedPitVisits = 1;
     _awardOrder = AwardOrder.categories;
     _showNominationComments = Show.none;
     _showNominators = Show.none;
@@ -1570,6 +1596,7 @@ class Competition extends ChangeNotifier {
       'Value', // varies
     ]);
     data.add(['event name', _eventName]);
+    data.add(['expected pit visits', _expectedPitVisits]);
     data.add([
       'award order',
       switch (_awardOrder) {
@@ -1815,6 +1842,7 @@ class Competition extends ChangeNotifier {
     if (random.nextInt(5) > 2) {
       _eventName = randomizer.generatePhrase();
     }
+    _expectedPitVisits = random.nextInt(3) + 1;
     if (random.nextBool()) {
       _awardOrder = AwardOrder.rank;
     }
@@ -1864,7 +1892,7 @@ class Competition extends ChangeNotifier {
       if (inspireStatus == InspireStatus.ineligible || inspireStatus == InspireStatus.exhibition) {
         _inspireIneligibleTeams.add(team);
       }
-      team._visited = random.nextBool();
+      team._visited = random.nextInt(_expectedPitVisits);
       if (random.nextInt(5) > 0) {
         team.visitingJudgesNotes = randomizer.generatePhrase(random.nextInt(30) + 2);
       }

@@ -618,3 +618,112 @@ class _TriggerAnimationState extends State<TriggerAnimation> with SingleTickerPr
     );
   }
 }
+
+class VisitInput extends StatelessWidget {
+  const VisitInput({
+    super.key,
+    this.min = 0,
+    this.max = 99,
+    this.highlightThreshold,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final int min;
+  final int max;
+  final int? highlightThreshold;
+  final int value;
+  final ValueSetter<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (min == 0 && highlightThreshold == 1) {
+      return Material(
+        type: MaterialType.transparency,
+        child: Checkbox(
+          value: value >= 1,
+          onChanged: (bool? value) {
+            onChanged(value! ? 1 : 0);
+          },
+        ),
+      );
+    }
+    final double size = DefaultTextStyle.of(context).style.fontSize!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: spacing / 2.0),
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            width: size * 1.5,
+            height: size * 1.5,
+            child: IconButton(
+              iconSize: DefaultTextStyle.of(context).style.fontSize,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              icon: Ink(
+                decoration: const ShapeDecoration(
+                  color: Color(0x10000000),
+                  shape: CircleBorder(),
+                ),
+                child: Icon(Icons.remove),
+              ),
+              onPressed: value <= min
+                  ? null
+                  : () {
+                      onChanged((value - 1).clamp(min, max));
+                    },
+            ),
+          ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (highlightThreshold != null && value >= highlightThreshold!)
+                Positioned(
+                  top: 0,
+                  right: -size / 3.0,
+                  child: IgnoreBaseline(
+                    child: Icon(
+                      size: size / 1.5,
+                      color: Theme.of(context).colorScheme.onPrimaryFixedVariant.withValues(alpha: 0.75),
+                      Icons.check,
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: spacing / 2.0),
+                child: Opacity(
+                  opacity: 0.0,
+                  child: Text('9' * ('${highlightThreshold ?? max}'.length)),
+                ),
+              ),
+              Positioned.fill(
+                child: Text('$value', textAlign: TextAlign.center),
+              ),
+            ],
+          ),
+          SizedBox(
+            width: size * 1.5,
+            height: size * 1.5,
+            child: IconButton(
+              iconSize: size,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              icon: Ink(
+                decoration: const ShapeDecoration(
+                  color: Color(0x10000000),
+                  shape: CircleBorder(),
+                ),
+                child: Icon(Icons.add),
+              ),
+              onPressed: value >= max
+                  ? null
+                  : () {
+                      onChanged((value + 1).clamp(min, max));
+                    },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
