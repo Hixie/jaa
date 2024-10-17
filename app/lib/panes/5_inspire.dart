@@ -282,7 +282,7 @@ class _InspirePaneState extends State<InspirePane> {
                                                         child: Tooltip(
                                                           message: award.comment,
                                                           child: Icon(
-                                                            Symbols.lightbulb,
+                                                            Symbols.emoji_objects,
                                                             size: DefaultTextStyle.of(context).style.fontSize,
                                                             color: foregroundColor,
                                                           ),

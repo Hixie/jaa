@@ -97,7 +97,7 @@ class AwardCard extends StatelessWidget {
                       child: Tooltip(
                         message: award.comment,
                         child: Icon(
-                          Symbols.lightbulb,
+                          Symbols.emoji_objects,
                           size: DefaultTextStyle.of(context).style.fontSize,
                           color: foregroundColor,
                         ),

@@ -311,7 +311,7 @@ class _SetupPaneState extends State<SetupPane> {
                               Row(
                                 children: [
                                   Icon(
-                                    Symbols.lightbulb,
+                                    Symbols.emoji_objects,
                                     size: DefaultTextStyle.of(context).style.fontSize,
                                   ),
                                   SizedBox(width: spacing),
