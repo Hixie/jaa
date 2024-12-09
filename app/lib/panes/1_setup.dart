@@ -537,7 +537,6 @@ class _TeamEditorState extends State<TeamEditor> {
   @override
   void initState() {
     super.initState();
-    _teamController.addListener(_handleTeamTextChange);
     _nameController.addListener(_handleTeamDetailsTextChange);
     _locationController.addListener(_handleTeamDetailsTextChange);
   }
@@ -557,16 +556,6 @@ class _TeamEditorState extends State<TeamEditor> {
       _locationController.text = team?.location ?? '';
       _team = team;
     });
-  }
-
-  void _handleTeamTextChange() {
-    // Workaround for https://github.com/flutter/flutter/issues/143505
-    if (_teamController.text != _currentTeamLabel) {
-      _handleTeamChange(widget.competition.teamsView.cast<Team?>().singleWhere(
-            (Team? team) => "${team!.number} ${team.name}" == _teamController.text,
-            orElse: () => null,
-          ));
-    }
   }
 
   void _handleTeamDetailsTextChange() {

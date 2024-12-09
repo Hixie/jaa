@@ -41,7 +41,6 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   @override
   void initState() {
     super.initState();
-    _teamController.addListener(_handleTeamTextChange);
     widget.competition.addListener(_markNeedsBuild);
   }
 
@@ -98,19 +97,6 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     setState(() {
       _team = team;
     });
-  }
-
-  void _handleTeamTextChange() {
-    // Workaround for https://github.com/flutter/flutter/issues/143505
-    if (_teamController.text != (_team != null ? "${_team!.number} ${_team!.name}" : "")) {
-      Team? team = widget.competition.teamsView.cast<Team?>().singleWhere(
-            (Team? team) => "${team!.number} ${team.name}" == _teamController.text,
-            orElse: () => null,
-          );
-      setState(() {
-        _team = team;
-      });
-    }
   }
 
   void _addTeamToShortlist() {
