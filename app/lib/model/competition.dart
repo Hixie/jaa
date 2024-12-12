@@ -114,6 +114,7 @@ class Award extends ChangeNotifier {
     required this.isPlacement,
     required this.pitVisits,
     required this.isEventSpecific,
+    required this.type,
     required Color color,
     required String comment,
   })  : _color = color,
@@ -131,6 +132,7 @@ class Award extends ChangeNotifier {
   final bool isPlacement;
   final PitVisit pitVisits;
   final bool isEventSpecific;
+  final int type;
 
   Color _color;
   Color get color => _color;
@@ -731,6 +733,7 @@ class Competition extends ChangeNotifier {
       isPlacement: isPlacement,
       pitVisits: pitVisit,
       isEventSpecific: true,
+      type: 0,
       color: const Color(0xFFFFFFFF),
       comment: '',
     );
@@ -807,6 +810,15 @@ class Competition extends ChangeNotifier {
   set expandInspireTable(bool value) {
     if (value != _expandInspireTable) {
       _expandInspireTable = value;
+      notifyListeners();
+    }
+  }
+
+  bool get showWorkings => _showWorkings;
+  bool _showWorkings = true;
+  set showWorkings(bool value) {
+    if (value != _showWorkings) {
+      _showWorkings = value;
       notifyListeners();
     }
   }
@@ -926,6 +938,41 @@ class Competition extends ChangeNotifier {
         return 'if any';
       case Show.none:
         return 'none';
+    }
+  }
+
+  static int _parseType(bool isInspire, String name, int? type) {
+    if (isInspire) {
+      // This is the first advancing award. It must be the inspire award.
+      if (type != null && type != 11) {
+        throw FormatException('First advancing award (named "$name") must be the Inspire award, with type 11.');
+      }
+      return 11;
+    }
+    if (type != null) {
+      if (type == 11) {
+        // If we get here we know isInspire is false, so it can't be the first advancing award.
+        throw FormatException('Only the first advancing award can be type 11; award "$name" must have a different type.');
+      }
+      return type;
+    }
+    switch (name) {
+      case 'Think':
+        return 9;
+      case 'Connect':
+        return 8;
+      case 'Innovate':
+        return 7;
+      case 'Control':
+        return 4;
+      case 'Motivate':
+        return 5;
+      case 'Design':
+        return 6;
+      case 'Judges':
+        return 1;
+      default:
+        return 0; // Unknown award. // The FTC API server doesn't list any awards with this code; hopefully they never add one.
     }
   }
 
@@ -1086,6 +1133,7 @@ class Competition extends ChangeNotifier {
           );
         }
         final String comment = row.length > 10 ? row[10] : '';
+        final int type = _parseType(isInspire, name, row.length > 11 ? row[11] : null);
         final Award award = Award(
           name: name,
           isInspire: isInspire,
@@ -1098,6 +1146,7 @@ class Competition extends ChangeNotifier {
           isPlacement: isPlacement,
           pitVisits: pitVisit,
           isEventSpecific: isEventSpecific,
+          type: type,
           color: color,
           comment: comment,
         );
@@ -1131,6 +1180,7 @@ class Competition extends ChangeNotifier {
       'Event-Specific', // 'y', 'n'
       'Autonomination rule', // empty or 'if last category',
       'Comment', // string
+      'FTC Award ID', // integer, see http://ftc-api.firstinspires.org/v2.0/2024/awards/list
     ]);
     for (final Award award in _awards) {
       data.add([
@@ -1153,6 +1203,7 @@ class Competition extends ChangeNotifier {
         award.isEventSpecific ? 'y' : 'n',
         award.autonominationRule?.toCSV() ?? '',
         award.comment,
+        award.type,
       ]);
     }
     return const ListToCsvConverter().convert(data);
@@ -1573,6 +1624,8 @@ class Competition extends ChangeNotifier {
           _showNominators = _parseShow(row[1]);
         case 'expand inspire table':
           _expandInspireTable = _parseBool(row[1]);
+        case 'show workings':
+          _showWorkings = _parseBool(row[1]);
         case 'hide hidden teams':
           _hideInspireHiddenTeams = _parseBool(row[1]);
         case 'inspire sort order':
@@ -1597,6 +1650,7 @@ class Competition extends ChangeNotifier {
     _showNominationComments = Show.none;
     _showNominators = Show.none;
     _expandInspireTable = false;
+    _showWorkings = true;
     _hideInspireHiddenTeams = false;
     _inspireSortOrder = Team.teamNumberComparator;
     _pitVisitsExcludeAutovisitedTeams = true;
@@ -1622,6 +1676,7 @@ class Competition extends ChangeNotifier {
     data.add(['show nomination comments', _serializeShow(_showNominationComments)]);
     data.add(['show nominators', _serializeShow(_showNominators)]);
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
+    data.add(['show workings', _showWorkings ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
     data.add([
       'inspire sort order',
@@ -1736,36 +1791,70 @@ class Competition extends ChangeNotifier {
   }
 
   // must contain no sensitive data
-  String scoresToJson() {
-    final Map<String, Object?> results = <String, Object?>{};
-    final Map<String, Object?> root = <String, Object>{
-      'generator': 'FIRST Tech Challenge Judge Advisor Assistant app',
-      'timestamp': DateTime.now().toIso8601String(),
-      if (_eventName.isNotEmpty) 'eventName': _eventName,
-      'awards': results,
-    };
+  // output must match this schema:
+  //
+  // {
+  //   "type": "array",
+  //   "items": {
+  //     "type": "object",
+  //     "properties": {
+  //       "type": {
+  //         "type": "integer",
+  //         "description": "Relevant types:\nInspire: 11\nThink: 9\nConnect: 8\nInnovate: 7\nControl: 4\nMotivate: 5\nDesign: 6\nJudges': 1\n\nA complete list can be found in our API at https://ftc-api.firstinspires.org/v2.0/2024/awards/list (requires API credentials). Note that importing Dean's List recipients is not currently supported."
+  //       },
+  //       "subType": {
+  //         "type": "integer",
+  //         "description": "Always 0 for relevant awards",
+  //         "default": "0"
+  //       },
+  //       "place": {
+  //         "type": "integer",
+  //         "description": "Between 1 and 3 for most awards",
+  //         "minimum": 1
+  //       },
+  //       "team": {
+  //         "type": "integer"
+  //       },
+  //       "name": {
+  //         "type": "string",
+  //         "description": "Only applicable for Compass/Dean's List"
+  //       },
+  //       "comment": {
+  //         "type": "string",
+  //         "description": "Judges' script. Only applicable when place=1"
+  //       }
+  //     },
+  //     "required": [
+  //       "type",
+  //       "subType",
+  //       "place"
+  //     ]
+  //   }
+  // }
+  String winnersToJson() {
+    final List<Object?> results = <Object?>[];
+    // final Map<String, Object?> root = <String, Object>{
+    //   'generator': 'FIRST Tech Challenge Judge Advisor Assistant app',
+    //   'timestamp': DateTime.now().toIso8601String(),
+    //   if (_eventName.isNotEmpty) 'eventName': _eventName,
+    //   'awards': results,
+    // };
     for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
-      final List<Object?> awardResults = <Object?>[];
       // ignore: unused_local_variable
       for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
         if (team != null && otherAward == null) {
-          awardResults.add(<String, Object?>{
+          results.add(<String, Object?>{
+            'type': award.type,
+            'subtype': 0,
+            if (award.isPlacement) 'place': rank,
             'team': team.number,
-            if (award.isPlacement) 'rank': rank,
-            if (team._blurbs.containsKey(award)) 'blurb': team._blurbs[award],
-            if (team._awardSubnames.containsKey(award)) 'awardName': team._awardSubnames[award],
+            // if (team._awardSubnames.containsKey(award)) 'name': team._awardSubnames[award],
+            if (team._blurbs.containsKey(award)) 'comment': team._blurbs[award],
           });
         }
       }
-      if (awardResults.isNotEmpty) {
-        results[award.name] = <String, Object?>{
-          if (award.category.isNotEmpty) 'category': award.category,
-          if (award.isEventSpecific) 'eventSpecific': true,
-          'results': awardResults,
-        };
-      }
     }
-    return const JsonEncoder.withIndent('  ').convert(root);
+    return const JsonEncoder.withIndent('  ').convert(results);
   }
 
   bool _dirty = false;
@@ -1864,6 +1953,7 @@ class Competition extends ChangeNotifier {
     _showNominationComments = randomizer.randomItem(Show.values);
     _showNominators = randomizer.randomItem(Show.values);
     _expandInspireTable = random.nextBool();
+    _showWorkings = random.nextBool();
     _pitVisitsExcludeAutovisitedTeams = random.nextBool();
     _pitVisitsHideVisitedTeams = random.nextBool();
     final List<String> categories = List<String>.generate(4, (int index) => randomizer.generatePhrase(random.nextInt(2) + 1));
@@ -1872,9 +1962,10 @@ class Competition extends ChangeNotifier {
     final int seed = random.nextInt(1 << 16);
     for (int index = 0; index < awardCount; index += 1) {
       bool isAdvancing = !seenInspire || random.nextInt(6) > 0;
+      String name = randomizer.generatePhrase(random.nextInt(2) + 1);
       String category = isAdvancing && seenInspire ? randomizer.randomItem(categories) : '';
       final Award award = Award(
-        name: randomizer.generatePhrase(random.nextInt(2) + 1),
+        name: name,
         isInspire: isAdvancing && !seenInspire,
         isAdvancing: isAdvancing,
         rank: index + 1,
@@ -1885,6 +1976,7 @@ class Competition extends ChangeNotifier {
         isPlacement: random.nextInt(7) > 0,
         pitVisits: randomizer.randomItem(PitVisit.values),
         isEventSpecific: !isAdvancing && random.nextInt(5) == 0,
+        type: _parseType(isAdvancing && !seenInspire, name, null),
         color: Color(math.Random(seed ^ category.hashCode).nextInt(0x1000000) + 0xFF000000 |
             (random.nextInt(0x22) + random.nextInt(0x22) << 8 + random.nextInt(0x22) << 16)),
         comment: random.nextInt(7) > 0 ? randomizer.generatePhrase(random.nextInt(5) + 1) : '',

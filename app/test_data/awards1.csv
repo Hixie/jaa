@@ -1,10 +1,10 @@
-award name,award type,award count,inspire category,spread the wealth,placement,pit visits,color,event-specific,autonomination
-Inspire,Advancing,3,,winner only,y,n,#2D88D9,0,
-Think,Advancing,3,Documentation,all places,y,n,#6559F5,0,if last category
-Connect,Advancing,3,Team,all places,y,y,#18AE9F,0,
-Innovate,Advancing,3,Machine,all places,y,y,#F7C325,0,
-Control,Advancing,3,Machine,all places,y,maybe,#F7C325,0,
-Motivate,Advancing,3,Team,all places,y,y,#18AE9F,0,
-Design,Advancing,3,Machine,all places,y,y,#F7C325,0,
-Judges,Non-Advancing,3,,all places,n,n,#333333,0,
-Local Scholarship,Non-Advancing,3,,no,n,n,#FFFFFF,0,
+award name,award type,award count,inspire category,spread the wealth,placement,pit visits,color,event-specific,autonomination,comment,award id
+Inspire,Advancing,3,,winner only,y,n,#2D88D9,0,,,11
+Think,Advancing,3,Documentation,all places,y,n,#6559F5,0,if last category,,9
+Connect,Advancing,3,Team,all places,y,y,#18AE9F,0,,,8
+Innovate,Advancing,3,Machine,all places,y,y,#F7C325,0,,,7
+Control,Advancing,3,Machine,all places,y,maybe,#F7C325,0,,,4
+Motivate,Advancing,3,Team,all places,y,y,#18AE9F,0,,,5
+Design,Advancing,3,Machine,all places,y,y,#F7C325,0,,,6
+Judges,Non-Advancing,3,,all places,n,n,#333333,0,,,1
+Local Scholarship,Non-Advancing,3,,no,n,n,#FFFFFF,0,,,0

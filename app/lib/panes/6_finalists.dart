@@ -112,7 +112,17 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Set<Award> tiedAwards = {};
         final Set<Award> overriddenAwards = {};
         final Set<Award> incompleteAwards = {};
-        final canShowOverrides = widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty;
+        final bool canShowOverrides = widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty;
+        if (!widget.competition.showWorkings) {
+          // ignore: unused_local_variable
+          for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
+            results.removeWhere((AwardFinalistEntry entry) {
+              // ignore: unused_local_variable
+              final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) = entry;
+              return (otherAward != null || (award.isInspire && rank > 1));
+            });
+          }
+        }
         for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
           bool hasAny = false;
           // ignore: unused_local_variable
@@ -217,6 +227,20 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
+              ),
+            if (finalists.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Finalists:', style: bold),
+              ),
+            if (finalists.isNotEmpty)
+              CheckboxRow(
+                checked: widget.competition.showWorkings,
+                onChanged: (bool? value) {
+                  widget.competition.showWorkings = value!;
+                },
+                tristate: false,
+                label: 'Show finalists that did not win (e.g. by virtue of winning a higher-tier award).',
               ),
             if (finalists.isNotEmpty)
               Padding(

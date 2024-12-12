@@ -381,12 +381,15 @@ class _SetupPaneState extends State<SetupPane> {
                             award.isEventSpecific
                                 ? EventSpecificCell(competition: widget.competition, award: award)
                                 : Cell(
-                                    Text(
-                                      award.isInspire
-                                          ? 'Inspire'
-                                          : award.isAdvancing
-                                              ? 'Advancing'
-                                              : 'Non-Advancing',
+                                    Tooltip(
+                                      message: award.type != 0 ? 'FTC Award ID ${award.type}' : 'No FTC Award ID',
+                                      child: Text(
+                                        award.isInspire
+                                            ? 'Inspire'
+                                            : award.isAdvancing
+                                                ? 'Advancing'
+                                                : 'Non-Advancing',
+                                      ),
                                     ),
                                   ),
                             Cell(Text(award.spreadTheWealth != SpreadTheWealth.no ? '${award.rank}' : '')),
