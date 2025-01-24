@@ -22,7 +22,7 @@ void main() {
     await tester.tap(find.text('Show team editor'));
     await tester.pump();
     expect(find.text('Edit team:'), findsOneWidget);
-    // TODO: add a test for actually editing the team once https://github.com/flutter/flutter/issues/147077 is fixed
+    // TODO: add a test for actually editing the team
 
     // shortlists
     await tester.tap(find.text('2. Shortlists'));

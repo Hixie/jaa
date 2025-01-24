@@ -1840,17 +1840,19 @@ class Competition extends ChangeNotifier {
     //   'awards': results,
     // };
     for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
-      // ignore: unused_local_variable
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
-        if (team != null && otherAward == null) {
-          results.add(<String, Object?>{
-            'type': award.type,
-            'subtype': 0,
-            if (award.isPlacement) 'place': rank,
-            'team': team.number,
-            // if (team._awardSubnames.containsKey(award)) 'name': team._awardSubnames[award],
-            if (team._blurbs.containsKey(award)) 'comment': team._blurbs[award],
-          });
+      if (award.type != 0) {
+        // ignore: unused_local_variable
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
+          if (team != null && otherAward == null) {
+            results.add(<String, Object?>{
+              'type': award.type,
+              'subtype': 0,
+              if (award.isPlacement) 'place': rank,
+              'team': team.number,
+              // if (team._awardSubnames.containsKey(award)) 'name': team._awardSubnames[award],
+              if (team._blurbs.containsKey(award)) 'comment': team._blurbs[award],
+            });
+          }
         }
       }
     }
