@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "jaa" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "jaa" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2024 ch.hixie.software. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 ch.hixie.software. All rights reserved." "\0"
             VALUE "OriginalFilename", "jaa.exe" "\0"
             VALUE "ProductName", "jaa" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

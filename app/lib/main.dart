@@ -403,7 +403,7 @@ class AboutPane extends StatelessWidget {
                 context: context,
                 applicationName: appInfo.appName,
                 applicationVersion: appInfo.version,
-                applicationLegalese: 'Created for Playing at Learning\n© copyright 2024 Ian Hickson',
+                applicationLegalese: 'Created for Playing at Learning\n© copyright 2025 Ian Hickson',
               );
             },
           ),
