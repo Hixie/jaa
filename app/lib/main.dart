@@ -360,55 +360,73 @@ class AboutPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Heading(title: 'About'),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-          child: Text(currentHelp),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-          child: ListenableBuilder(
-            listenable: competition,
-            builder: (BuildContext context, Widget? child) => ListBody(
-              children: [
-                Text(
-                  competition.lastAutosaveMessage,
-                  softWrap: true,
-                  overflow: TextOverflow.clip,
-                ),
-                if (competition.lastAutosave != null && competition.dirty)
-                  Wrap(
-                    children: [
-                      const Text('Time since last autosave: '),
-                      ElapsedTimeDisplay(startTime: competition.lastAutosave!),
-                    ],
+    return ListenableBuilder(
+      listenable: competition,
+      builder: (BuildContext context, Widget? child) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Heading(title: 'About'),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+            child: Text(currentHelp),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: spacing * 5.0),
+              child: ListBody(
+                children: [
+                  Text(
+                    competition.lastAutosaveMessage,
+                    softWrap: true,
+                    overflow: TextOverflow.clip,
                   ),
-              ],
+                  if (competition.lastAutosave != null && competition.dirty)
+                    Wrap(
+                      children: [
+                        const Text('Time since last autosave: '),
+                        ElapsedTimeDisplay(startTime: competition.lastAutosave!),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-          child: FilledButton(
-            child: const Text(
-              'Show Licenses',
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
+          const Padding(
+            padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+            child: Text(
+              'Settings:',
+              softWrap: true,
+              overflow: TextOverflow.clip,
+              style: bold,
             ),
-            onPressed: () {
-              showLicensePage(
-                context: context,
-                applicationName: appInfo.appName,
-                applicationVersion: appInfo.version,
-                applicationLegalese: 'Created for Playing at Learning\n© copyright 2025 Ian Hickson',
-              );
-            },
           ),
-        ),
-      ],
+          CheckboxRow(
+            checked: competition.applyFinalistsByAwardRanking,
+            onChanged: (bool? value) => competition.applyFinalistsByAwardRanking = value!,
+            tristate: false,
+            label: 'Use old-style award ranking for assigning finalists (should be off for 2025-2026 season and later).',
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(indent, spacing * 4.0, indent, spacing),
+            child: FilledButton(
+              child: const Text(
+                'Show Licenses',
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onPressed: () {
+                showLicensePage(
+                  context: context,
+                  applicationName: appInfo.appName,
+                  applicationVersion: appInfo.version,
+                  applicationLegalese: 'Created for Playing at Learning\n© copyright 2025 Ian Hickson',
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

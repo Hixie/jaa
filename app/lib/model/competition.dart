@@ -15,7 +15,21 @@ import '../widgets/widgets.dart';
 import '../utils/colors.dart';
 import '../utils/randomizer.dart';
 
-typedef AwardFinalistEntry = (Team?, Award?, int, {bool tied, bool overridden});
+enum FinalistKind { automatic, manual, override }
+
+typedef AwardFinalistEntry = (
+  /// The team with this entry.
+  Team?,
+  /// If the team was not assigned this award, this tells you the award that they _did_ get that is the reason why they didn't get this one.
+  Award?,
+  /// Rank that the team got for this award (or the other one if they didn't get this one).
+  int, {
+    /// Whether there are other teams who also have this rank for this award. (the $2 will always be null if this is true).
+    bool tied,
+    /// True if this was assigned by a human.
+    FinalistKind kind,
+  }
+);
 
 enum PitVisit { yes, no, maybe }
 
@@ -371,6 +385,9 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   static int teamNumberComparator(Team a, Team b) {
     return a.number - b.number;
   }
+
+  @override
+  String toString() => '[$number $name]';
 }
 
 class ShortlistEntry extends ChangeNotifier {
@@ -515,7 +532,7 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
   late final UnmodifiableListView<String> categories = UnmodifiableListView(_categories);
 
-  final Map<Award, Map<int, Set<Team>>> _overrides = {};
+  final Map<Award, Map<int, Map<Team, FinalistKind>>> _overrides = {};
 
   String get eventName => _eventName;
   String _eventName = '';
@@ -645,13 +662,13 @@ class Competition extends ChangeNotifier {
           for (final Award award in awards) {
             if (rank <= award.count) {
               bool placedTeam = false;
-              Set<Team>? overrides = _overrides[award]?[rank];
+              Map<Team, FinalistKind>? overrides = _overrides[award]?[rank];
               if (overrides != null && overrides.isNotEmpty) {
                 placedTeam = true;
-                for (Team team in overrides) {
-                  finalists[award]!.add((team, null, rank, tied: overrides.length > 1, overridden: true));
+                for (Team team in overrides.keys) {
+                  finalists[award]!.add((team, null, rank, tied: overrides.length > 1, kind: overrides[team]!));
                 }
-              } else {
+              } else if (applyFinalistsByAwardRanking || award.isInspire) {
                 final List<Set<Team>> candidatesList = awardCandidates[award]!;
                 while (candidatesList.isNotEmpty && !placedTeam) {
                   final Set<Team> candidates = candidatesList.removeAt(0);
@@ -661,13 +678,13 @@ class Competition extends ChangeNotifier {
                   if (ineligible.isNotEmpty) {
                     for (Team team in ineligible) {
                       final (Award oldAward, int oldRank) = placedTeams[team]!;
-                      finalists[award]!.add((team, oldAward, oldRank, tied: false, overridden: false));
+                      finalists[award]!.add((team, oldAward, oldRank, tied: false, kind: FinalistKind.automatic));
                     }
                   }
                   if (winners.isNotEmpty) {
                     placedTeam = true;
                     for (Team team in winners) {
-                      finalists[award]!.add((team, null, rank, tied: winners.length > 1, overridden: false));
+                      finalists[award]!.add((team, null, rank, tied: winners.length > 1, kind: FinalistKind.automatic));
                       if (award.spreadTheWealth == SpreadTheWealth.allPlaces || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
                         placedTeams[team] = (award, rank);
                       }
@@ -676,7 +693,7 @@ class Competition extends ChangeNotifier {
                 }
               }
               if (!placedTeam) {
-                finalists[award]!.add((null, null, rank, tied: false, overridden: false));
+                finalists[award]!.add((null, null, rank, tied: false, kind: FinalistKind.automatic));
               }
               if (rank < award.count) {
                 stillPlacing = true;
@@ -757,8 +774,8 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addOverride(Award award, Team team, int rank) {
-    _overrides.putIfAbsent(award, () => <int, Set<Team>>{}).putIfAbsent(rank, () => <Team>{}).add(team);
+  void addOverride(Award award, Team team, int rank, FinalistKind kind) {
+    _overrides.putIfAbsent(award, () => <int, Map<Team, FinalistKind>>{}).putIfAbsent(rank, () => <Team, FinalistKind>{})[team] = kind;
     notifyListeners();
   }
 
@@ -846,6 +863,15 @@ class Competition extends ChangeNotifier {
   set hideInspireHiddenTeams(bool value) {
     if (value != _hideInspireHiddenTeams) {
       _hideInspireHiddenTeams = value;
+      notifyListeners();
+    }
+  }
+
+  bool get applyFinalistsByAwardRanking => _applyFinalistsByAwardRanking;
+  bool _applyFinalistsByAwardRanking = false;
+  set applyFinalistsByAwardRanking(bool value) {
+    if (value != _applyFinalistsByAwardRanking) {
+      _applyFinalistsByAwardRanking = value;
       notifyListeners();
     }
   }
@@ -973,6 +999,29 @@ class Competition extends ChangeNotifier {
         return 1;
       default:
         return 0; // Unknown award. // The FTC API server doesn't list any awards with this code; hopefully they never add one.
+    }
+  }
+
+  static FinalistKind _parseFinalistKind(Object? cell) {
+    switch (cell) {
+      case 'automatic':
+        return FinalistKind.automatic;
+      case 'override':
+        return FinalistKind.override;
+      case 'manual':
+        return FinalistKind.manual;
+    }
+    throw FormatException('Unknown value for finalist kind: "$cell". Must be one of "automatic", "override", or "manual".');
+  }
+
+  static String _serializeFinalistKind(FinalistKind value) {
+    switch (value) {
+      case FinalistKind.automatic:
+        return 'automatic';
+      case FinalistKind.override:
+        return 'override';
+      case FinalistKind.manual:
+        return 'manual';
     }
   }
 
@@ -1397,7 +1446,8 @@ class Competition extends ChangeNotifier {
         throw FormatException('Parse error in finalist overrides file: "${row[2]}" is not a valid rank.');
       }
       final int rank = row[2] as int;
-      addOverride(award, team, rank);
+      final FinalistKind kind = (row.length > 3) ? _parseFinalistKind(row[3]) : FinalistKind.override;
+      addOverride(award, team, rank, kind);
     }
     notifyListeners();
   }
@@ -1408,14 +1458,16 @@ class Competition extends ChangeNotifier {
       'Award name', // string
       'Team number', // numeric
       'Rank', // numeric
+      'Kind', // 'automatic', 'override', or 'manual'
     ]);
     for (final Award award in _overrides.keys) {
       for (final int rank in _overrides[award]!.keys) {
-        for (final Team team in _overrides[award]![rank]!) {
+        for (final Team team in _overrides[award]![rank]!.keys) {
           data.add([
             award.name,
             team.number,
             rank,
+            _serializeFinalistKind(_overrides[award]![rank]![team]!)
           ]);
         }
       }
@@ -1539,7 +1591,7 @@ class Competition extends ChangeNotifier {
     //  - a string consisting of an award name, a space, and a rank (giving the award that the team won that disqualified them from winning this one)
     for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
       // ignore: unused_local_variable
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in finalists) {
         data.add([
           award.name,
           team?.number ?? '',
@@ -1562,7 +1614,7 @@ class Competition extends ChangeNotifier {
       final List<Set<Team>?> placedTeams = [];
       placedAwards[award] = placedTeams;
       // ignore: unused_local_variable
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in finalists) {
         if (otherAward != null) {
           continue;
         }
@@ -1628,6 +1680,8 @@ class Competition extends ChangeNotifier {
           _showWorkings = _parseBool(row[1]);
         case 'hide hidden teams':
           _hideInspireHiddenTeams = _parseBool(row[1]);
+        case 'apply finalists by award ranking':
+          _applyFinalistsByAwardRanking = _parseBool(row[1]);
         case 'inspire sort order':
           _inspireSortOrder = switch (row[1]) {
             'rank score' => Team.inspireCandidateComparator,
@@ -1643,6 +1697,8 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
+  // this is the default configuration before parsing settings from import
+  // it is NOT the default configuration on startup
   void _resetConfiguration() {
     _eventName = '';
     _expectedPitVisits = 1;
@@ -1652,6 +1708,7 @@ class Competition extends ChangeNotifier {
     _expandInspireTable = false;
     _showWorkings = true;
     _hideInspireHiddenTeams = false;
+    _applyFinalistsByAwardRanking = true; // default to true for imported events, but false on fresh startup
     _inspireSortOrder = Team.teamNumberComparator;
     _pitVisitsExcludeAutovisitedTeams = true;
     _pitVisitsHideVisitedTeams = false;
@@ -1678,6 +1735,7 @@ class Competition extends ChangeNotifier {
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
     data.add(['show workings', _showWorkings ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
+    data.add(['apply finalists by award ranking', _applyFinalistsByAwardRanking ? 'y' : 'n']);
     data.add([
       'inspire sort order',
       switch (_inspireSortOrder) {
@@ -1741,6 +1799,7 @@ class Competition extends ChangeNotifier {
       } catch (e) {
         _clearTeams();
         _clearAwards();
+        _applyFinalistsByAwardRanking = false; // _resetConfiguration sets this to true for legacy reasons
         _lastAutosaveMessage = 'Failed to import event state.';
         rethrow;
       }
@@ -1842,7 +1901,7 @@ class Competition extends ChangeNotifier {
     for (final (Award award, List<AwardFinalistEntry> finalists) in computeFinalists()) {
       if (award.type != 0) {
         // ignore: unused_local_variable
-        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalists) {
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in finalists) {
           if (team != null && otherAward == null) {
             results.add(<String, Object?>{
               'type': award.type,
@@ -2023,7 +2082,7 @@ class Competition extends ChangeNotifier {
           );
         }
         if (random.nextInt(teamCount) == 0) {
-          addOverride(award, team, random.nextInt(10));
+          addOverride(award, team, random.nextInt(10), FinalistKind.override);
         }
         if (random.nextInt(5) == 0) {
           team._blurbs[award] = randomizer.generatePhrase(128);

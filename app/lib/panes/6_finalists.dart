@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -37,7 +39,7 @@ class AwardFinalistsPane extends StatefulWidget {
         page.writeln('<th>Result');
         page.writeln('<tbody>');
         // ignore: unused_local_variable
-        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in entry) {
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in entry) {
           final bool winner = otherAward == null && rank <= (award.isInspire ? 1 : award.count);
           page.writeln('<tr>');
           if (team != null) {
@@ -69,7 +71,8 @@ class AwardFinalistsPane extends StatefulWidget {
       for (final (Award award, List<AwardFinalistEntry> entry) in finalists.reversed) {
         bool includedHeader = false;
         bool multipleWinners = !award.isPlacement && entry.length > 1;
-        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool _) in entry.reversed) {
+        // ignore: unused_local_variable
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in entry.reversed) {
           final bool winner = team != null && otherAward == null && rank <= award.count;
           if (winner) {
             if (!includedHeader) {
@@ -113,12 +116,80 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Set<Award> overriddenAwards = {};
         final Set<Award> incompleteAwards = {};
         final bool canShowOverrides = widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty;
+        final int highestRank = widget.competition.awardsView.map((Award award) => award.count).fold<int>(0, math.max);
+        final Map<int, Map<Team, List<Award>>> awardCandidates = {};
+        final Map<Award, Set<Team>> awardWinners = {};
+        if (!widget.competition.applyFinalistsByAwardRanking) {
+          // prepare the result map
+          for (int rank = 1; rank <= highestRank; rank += 1) {
+            awardCandidates[rank] = <Team, List<Award>>{};
+          }
+          // keep track of teams who are no longer eligible
+          final Set<Team> winners = {};
+          // prepare a map where, for each award, we record the ranks that already have an assigned winner
+          final Map<Award, Set<int>> claimedAwards = {};
+          for (final Award award in widget.competition.awardsView) {
+            claimedAwards[award] = <int>{};
+          }
+          // record the teams who have already been assigned an award (either automatically, manually, or via override)
+          for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists) {
+            // ignore: unused_local_variable
+            for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in awardFinalists) {
+              if (team != null && otherAward == null) {
+                claimedAwards[award]!.add(rank);
+                if ((award.spreadTheWealth == SpreadTheWealth.allPlaces)
+                    || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
+                  winners.add(team);
+                }
+              }
+            }
+          }
+          // get the waitlists ready (which teams are next eligible for each award)
+          final Map<Award, List<Set<Team>>> shortlists = {};
+          for (final Award award in widget.competition.awardsView) {
+            shortlists[award] = widget.competition.shortlistsView[award]?.asRankedList() ?? <Set<Team>>[];
+          }
+          // remove empty groups
+          for (final Award award in shortlists.keys) {
+            for (int index = 0; index < shortlists[award]!.length; index += 1) {
+              if (award.spreadTheWealth != SpreadTheWealth.no) {
+                shortlists[award]![index].removeAll(winners);
+              } else {
+                shortlists[award]![index].removeAll(awardWinners[award]!);
+              }
+            }
+          }
+
+          // compute which teams are eligible for which awards at which ranks (excluding teams who have already won an award)
+          // this is teams listed at the nth non-empty group for this award, when you remove the winners
+          for (int rank = 1; rank <= highestRank; rank += 1) {
+            for (final Award award in widget.competition.awardsView) {
+              if ((award.count < rank) || // award doesn't have this many ranks
+                  claimedAwards[award]!.contains(rank) || // award already has a winner at this rank
+                  (shortlists[award]!.length < rank)) { // award doesn't have this many shortlisted teams
+                continue;
+              }
+              int count = 0;
+              int index = 0;
+              while (count < rank && index < shortlists[award]!.length) {
+                final Set<Team> candidates = shortlists[award]![index];
+                if (candidates.isNotEmpty) {
+                  count += 1;
+                  for (Team team in candidates) {
+                    awardCandidates[rank]!.putIfAbsent(team, () => <Award>[]).add(award);
+                  }
+                }
+                index += 1;
+              }
+            }
+          }
+        }
         if (!widget.competition.showWorkings) {
           // ignore: unused_local_variable
           for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
             results.removeWhere((AwardFinalistEntry entry) {
               // ignore: unused_local_variable
-              final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) = entry;
+              final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) = entry;
               return (otherAward != null || (award.isInspire && rank > 1));
             });
           }
@@ -126,14 +197,15 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
           bool hasAny = false;
           // ignore: unused_local_variable
-          for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in results) {
+          for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in results) {
             if (team != null && otherAward == null) {
               hasAny = true;
+              awardWinners.putIfAbsent(award, () => <Team>{}).add(team);
             }
             if (tied) {
               tiedAwards.add(award);
             }
-            if (overridden) {
+            if (kind != FinalistKind.automatic) {
               overriddenAwards.add(award);
             }
             if (team == null) {
@@ -219,7 +291,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                 ),
               ),
             if (canShowOverrides && _showOverride) OverrideEditor(competition: widget.competition),
-            if (overriddenAwards.isNotEmpty)
+            if (widget.competition.applyFinalistsByAwardRanking && overriddenAwards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
@@ -287,7 +359,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                         ),
                                     ],
                                   ),
-                                  for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in awardFinalists)
+                                  for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in awardFinalists)
                                     TableRow(
                                       children: [
                                         if (team != null)
@@ -316,12 +388,13 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                             ),
                                           ),
                                         if (overriddenAwards.contains(award))
-                                          overridden
+                                          kind != FinalistKind.automatic
                                               ? RemoveOverrideCell(
                                                   competition: widget.competition,
                                                   award: award,
                                                   team: team!,
                                                   rank: rank,
+                                                  kind: kind,
                                                   foregroundColor: foregroundColor,
                                                 )
                                               : const SizedBox.shrink(),
@@ -334,6 +407,35 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                         ),
                     ],
                   ),
+                ),
+              ),
+            if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+                child: Text('Assign winners:', style: bold),
+              ),
+            if (!widget.competition.applyFinalistsByAwardRanking)
+              ScrollableRegion(
+                child: ListBody(
+                  children: [
+                    for (int rank = 1; rank <= highestRank; rank += 1)
+                      if (awardCandidates[rank]!.isNotEmpty)
+                        ListBody(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                              child: Text('Rank $rank candidates', style: italic),
+                            ),
+                            for (Team team in awardCandidates[rank]!.keys.toList()..sort(Team.teamNumberComparator))
+                              TeamAwardAssignmentRow(
+                                competition: widget.competition,
+                                rank: rank,
+                                team: team,
+                                awards: awardCandidates[rank]![team]!.toList()..sort(Award.rankBasedComparator),
+                              ),
+                          ],
+                        ),
+                    ],
                 ),
               ),
             const SizedBox(height: indent)
@@ -472,6 +574,7 @@ class _OverrideEditorState extends State<OverrideEditor> {
       _award!,
       _team!,
       _rank!,
+      FinalistKind.override,
     );
     _teamController.clear();
     _rankController.clear();
@@ -603,6 +706,7 @@ class RemoveOverrideCell extends StatelessWidget {
     required this.award,
     required this.team,
     required this.rank,
+    required this.kind,
     required this.foregroundColor,
   });
 
@@ -610,6 +714,7 @@ class RemoveOverrideCell extends StatelessWidget {
   final Award award;
   final Team team;
   final int rank;
+  final FinalistKind kind;
   final Color foregroundColor;
 
   @override
@@ -617,7 +722,11 @@ class RemoveOverrideCell extends StatelessWidget {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: IconButton(
-        tooltip: 'Remove override',
+        tooltip: switch (kind) {
+          FinalistKind.automatic => throw StateError('Cannot remove automatic finalist'),
+          FinalistKind.manual => 'Unassign team',
+          FinalistKind.override => 'Remove override',
+        },
         onPressed: () {
           competition.removeOverride(award, team, rank);
         },
@@ -625,9 +734,60 @@ class RemoveOverrideCell extends StatelessWidget {
         iconSize: DefaultTextStyle.of(context).style.fontSize,
         visualDensity: VisualDensity.compact,
         color: foregroundColor,
-        icon: const Icon(
-          Symbols.playlist_remove,
+        icon: Icon(
+          switch (kind) {
+            FinalistKind.automatic => throw StateError('Cannot remove automatic finalist'),
+            FinalistKind.manual => Symbols.playlist_remove,
+            FinalistKind.override => Symbols.playlist_remove,
+          },          
         ),
+      ),
+    );
+  }
+}
+
+class TeamAwardAssignmentRow extends StatelessWidget {
+  const TeamAwardAssignmentRow({
+    super.key,
+    required this.competition,
+    required this.rank,
+    required this.team,
+    required this.awards,
+  });
+
+  final Competition competition;
+  final int rank;
+  final Team team;
+  final List<Award> awards;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(indent * 2.0, 0.0, indent, spacing),
+      child: Row(
+        children: [
+          Text('${team.number} ${team.name}'),
+          const SizedBox(width: spacing),
+          for (final Award award in awards)
+            Padding(
+              padding: const EdgeInsets.only(left: spacing),
+              child: ElevatedButton(
+                onPressed: () {
+                  competition.addOverride(
+                    award,
+                    team,
+                    rank,
+                    FinalistKind.manual,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: award.color,
+                  foregroundColor: textColorForColor(award.color),
+                ),
+                child: Text(award.name),
+              ),
+            ),
+        ],
       ),
     );
   }

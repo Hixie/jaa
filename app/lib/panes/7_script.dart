@@ -26,7 +26,7 @@ class ScriptPane extends StatelessWidget {
             return entries.any(
               (AwardFinalistEntry entry) {
                 // ignore: unused_local_variable
-                final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) = entry;
+                final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) = entry;
                 return team != null && otherAward == null && rank == 1;
               },
             );
@@ -75,7 +75,7 @@ class AwardScriptEditor extends StatelessWidget {
     List<Team> runnersUp = [];
     bool ties = false;
     // ignore: unused_local_variable
-    for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in entries) {
+    for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in entries) {
       if (team != null && otherAward == null) {
         if (rank == 1 || !award.isPlacement) {
           ties = ties || tied;

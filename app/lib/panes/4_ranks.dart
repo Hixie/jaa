@@ -196,7 +196,7 @@ class RankTables extends StatelessWidget {
       disqualifiedTeams[award] = {};
       winningTeams[award] = {};
       // ignore: unused_local_variable
-      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, overridden: bool overridden) in finalistEntries) {
+      for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in finalistEntries) {
         if (otherAward != null) {
           disqualifiedTeams[award]!.add(team!);
         } else if (team != null) {
