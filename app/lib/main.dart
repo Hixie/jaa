@@ -201,7 +201,10 @@ class _MainAppState extends State<MainApp> {
                     ),
                   ),
                   builder: (BuildContext content, Widget? child) => LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) => Row(
+                    builder: (BuildContext context, BoxConstraints constraints) {
+                      final int advancingAwardsCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.inspire, AwardKind.advancingInspire, AwardKind.advancingIndependent});
+                      final int nonAdvancingAwardCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.nonAdvancing});
+                      return Row(
                       children: [
                         child!,
                         ConstrainedBox(
@@ -215,13 +218,17 @@ class _MainAppState extends State<MainApp> {
                               children: [
                                 if (widget.competition.teamsView.isNotEmpty)
                                   Text(
-                                    '${widget.competition.eventName.isEmpty ? "" : "${widget.competition.eventName}. "}${widget.competition.teamsView.length} Teams.',
+                                    '${widget.competition.eventName.isEmpty ? "" : "${widget.competition.eventName}. "}${count(widget.competition.teamsView.length, "Team")}.',
                                     style: bold,
                                   ),
                                 if (widget.competition.awardsView.isNotEmpty)
                                   Text(
-                                    '${widget.competition.advancingAwardsView.length} Advancing Awards; '
-                                    '${widget.competition.nonAdvancingAwardsView.length} Non-Advancing Awards.',
+                                    (advancingAwardsCount > 0 && nonAdvancingAwardCount > 0)
+                                      ? '${count(advancingAwardsCount, "Advancing Award")}; '
+                                        '${count(nonAdvancingAwardCount, "Non-Advancing Award")}.'
+                                      : (advancingAwardsCount > 0)
+                                      ? '${count(advancingAwardsCount, "Advancing Award")}.'
+                                      : '${count(nonAdvancingAwardCount, "Non-Advancing Award")}.',
                                     style: bold,
                                   ),
                                 if (widget.competition.teamsView.isNotEmpty)
@@ -240,7 +247,8 @@ class _MainAppState extends State<MainApp> {
                           ),
                         ),
                       ],
-                    ),
+                    );
+                    },
                   ),
                 ),
                 ColoredBox(

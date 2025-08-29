@@ -297,8 +297,10 @@ class _SetupPaneState extends State<SetupPane> {
                           Cell(Text('Award Name', style: bold)),
                           Cell(
                             Text('Type', style: bold),
-                            prototype: EventSpecificCell(competition: null, award: null),
-                            padPrototype: false,
+                            prototype: Text('Advancing (Independent)'),
+                            // if the longest cell is the event-specific one, use this:
+                            // prototype: EventSpecificCell(competition: null, award: null),
+                            // padPrototype: false,
                           ),
                           Cell(Text('Rank', style: bold), prototype: Text('000')),
                           Cell(Text('Winners', style: bold), prototype: Text('000')),
@@ -384,11 +386,12 @@ class _SetupPaneState extends State<SetupPane> {
                                     Tooltip(
                                       message: award.type != 0 ? 'FTC Award ID ${award.type}' : 'No FTC Award ID',
                                       child: Text(
-                                        award.isInspire
-                                            ? 'Inspire'
-                                            : award.isAdvancing
-                                                ? 'Advancing'
-                                                : 'Non-Advancing',
+                                        switch (award.kind) {
+                                          AwardKind.inspire => 'Inspire',
+                                          AwardKind.advancingInspire => 'Inspire Contributor',
+                                          AwardKind.advancingIndependent => 'Advancing (Independent)',
+                                          AwardKind.nonAdvancing => 'Non-Advancing',
+                                        },
                                       ),
                                     ),
                                   ),

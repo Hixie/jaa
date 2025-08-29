@@ -9,6 +9,7 @@ import '../utils/io.dart';
 import '../model/competition.dart';
 import '../widgets/awards.dart';
 import '../widgets/cells.dart';
+import '../widgets/selectors.dart';
 import '../widgets/widgets.dart';
 
 class InspirePane extends StatefulWidget {
@@ -168,35 +169,7 @@ class _InspirePaneState extends State<InspirePane> {
             if (canShowAnything)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: Row(
-                  children: [
-                    Text('Sort order:'),
-                    SizedBox(width: indent),
-                    SegmentedButton<TeamComparatorCallback>(
-                      showSelectedIcon: false,
-                      segments: const <ButtonSegment<TeamComparatorCallback>>[
-                        ButtonSegment<TeamComparatorCallback>(
-                          value: Team.teamNumberComparator,
-                          label: Text('Team Number'),
-                        ),
-                        ButtonSegment<TeamComparatorCallback>(
-                          value: Team.inspireCandidateComparator,
-                          label: Text('Rank Score'),
-                        ),
-                        ButtonSegment<TeamComparatorCallback>(
-                          value: Team.rankedCountComparator,
-                          label: Text('Ranked Count'),
-                        ),
-                      ],
-                      selected: <TeamComparatorCallback>{widget.competition.inspireSortOrder},
-                      onSelectionChanged: (Set<TeamComparatorCallback> newSelection) {
-                        setState(() {
-                          widget.competition.inspireSortOrder = newSelection.single;
-                        });
-                      },
-                    ),
-                  ],
-                ),
+                child: TeamOrderSelector(competition: widget.competition),
               ),
             if (widget.competition.inspireAward != null) const SizedBox(height: indent),
             if (widget.competition.inspireAward != null)

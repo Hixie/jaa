@@ -114,12 +114,13 @@ class AutonominateIfRemainingCategory extends AutonominationRule {
   String toCSV() => 'if last category';
 }
 
+enum AwardKind { inspire, advancingInspire, advancingIndependent, nonAdvancing }
+
 // change notifications are specifically for the color changing
 class Award extends ChangeNotifier {
   Award({
     required this.name,
-    required this.isInspire,
-    required this.isAdvancing,
+    required this.kind,
     required this.rank,
     required this.count,
     required this.category,
@@ -136,8 +137,7 @@ class Award extends ChangeNotifier {
         assert(count > 0);
 
   final String name;
-  final bool isInspire;
-  final bool isAdvancing;
+  final AwardKind kind;
   final int rank;
   final int count;
   final String category;
@@ -163,6 +163,9 @@ class Award extends ChangeNotifier {
     _comment = comment;
     notifyListeners();
   }
+
+  bool get isInspire => kind == AwardKind.inspire;
+  bool get isAdvancing => kind != AwardKind.nonAdvancing;
 
   String get description {
     StringBuffer buffer = StringBuffer();
@@ -519,18 +522,24 @@ class Competition extends ChangeNotifier {
   final List<Team> _teams = <Team>[];
   final List<Team> _inspireIneligibleTeams = <Team>[];
   final List<Award> _awards = <Award>[];
-  final List<Award> _advancingAwards = <Award>[];
-  final List<Award> _nonAdvancingAwards = <Award>[];
   final List<String> _categories = <String>[];
   final Map<Award, Shortlist> _shortlists = <Award, Shortlist>{};
 
   late final UnmodifiableListView<Team> teamsView = UnmodifiableListView<Team>(_teams);
   late final UnmodifiableListView<Team> inspireIneligibleTeamsView = UnmodifiableListView<Team>(_inspireIneligibleTeams);
   late final UnmodifiableListView<Award> awardsView = UnmodifiableListView<Award>(_awards);
-  late final UnmodifiableListView<Award> advancingAwardsView = UnmodifiableListView<Award>(_advancingAwards);
-  late final UnmodifiableListView<Award> nonAdvancingAwardsView = UnmodifiableListView<Award>(_nonAdvancingAwards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
   late final UnmodifiableListView<String> categories = UnmodifiableListView(_categories);
+
+  int awardsWithKind(Set<AwardKind> kinds) {
+    int count = 0;
+    for (final Award award in _awards) {
+      if (kinds.contains(award.kind)) {
+        count += 1;
+      }
+    }
+    return count;
+  }
 
   final Map<Award, Map<int, Map<Team, FinalistKind>>> _overrides = {};
 
@@ -719,14 +728,8 @@ class Competition extends ChangeNotifier {
     _awards.add(award);
     if (award.isInspire) {
       assert(award.isAdvancing);
-      assert(_advancingAwards.isEmpty);
       assert(_inspireAward == null);
       _inspireAward = award;
-    }
-    if (award.isAdvancing) {
-      _advancingAwards.add(award);
-    } else {
-      _nonAdvancingAwards.add(award);
     }
     _shortlists[award] = Shortlist();
   }
@@ -740,8 +743,7 @@ class Competition extends ChangeNotifier {
   }) {
     final Award award = Award(
       name: name,
-      isInspire: false,
-      isAdvancing: false,
+      kind: AwardKind.nonAdvancing,
       rank: _awards.isEmpty ? 1 : _awards.last.rank + 1,
       count: count,
       category: '',
@@ -885,6 +887,15 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  TeamComparatorCallback get finalistsSortOrder => _finalistsSortOrder;
+  TeamComparatorCallback _finalistsSortOrder = Team.teamNumberComparator;
+  set finalistsSortOrder(TeamComparatorCallback value) {
+    if (value != _finalistsSortOrder) {
+      _finalistsSortOrder = value;
+      notifyListeners();
+    }
+  }
+
   // IMPORT/EXPORT
 
   static bool _parseBool(Object? cell) {
@@ -909,6 +920,26 @@ class Competition extends ChangeNotifier {
       return null;
     }
     return _parseBool(cell);
+  }
+
+  static AwardKind _parseAwardKind(String cell) {
+    switch (cell) {
+      case 'Inspire': return AwardKind.inspire;
+      case 'Advancing': return AwardKind.advancingInspire;
+      case 'Non-Advancing': return AwardKind.nonAdvancing;
+      case 'Independent Advancing': return AwardKind.advancingIndependent;
+      default:
+        throw FormatException('Unknown value for "Advancing" column: "$cell". Must be one of "Inspire", "Advancing" (which means Inspire Contributor), "Non-Advancing", or "Independent Advancing".');
+    }
+  }
+
+  static String _serializeAwardKind(AwardKind value) {
+    switch (value) {
+      case AwardKind.inspire: return 'Inspire';
+      case AwardKind.advancingInspire: return 'Advancing';
+      case AwardKind.nonAdvancing: return 'Non-Advancing';
+      case AwardKind.advancingIndependent: return 'Independent Advancing';
+    }
   }
 
   static InspireStatus _parseInspireStatus(Object? cell) {
@@ -1025,6 +1056,25 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  static TeamComparatorCallback _parseSortOrder(String cell) {
+     switch (cell) {
+       case 'rank score': return Team.inspireCandidateComparator;
+       case 'rank count': return Team.rankedCountComparator;
+       case 'team number': return Team.teamNumberComparator;
+     }
+     throw FormatException('Unknown sort order name: "$cell". Must be one of "rank score", "rank count", or "team number".');
+  }
+
+  static String _serializeSortOrder(TeamComparatorCallback value) {
+    switch (value) {
+      case Team.inspireCandidateComparator: return 'rank score';
+      case Team.rankedCountComparator: return 'rank count';
+      case Team.teamNumberComparator: return 'team number';
+    }
+    throw StateError('Unexpected sort order comparator function.');
+  }
+
+
   // Data model
 
   void _clearTeams() {
@@ -1094,8 +1144,6 @@ class Competition extends ChangeNotifier {
 
   void _clearAwards() {
     _awards.clear();
-    _advancingAwards.clear();
-    _nonAdvancingAwards.clear();
     _inspireAward = null;
     _shortlists.clear();
     _categories.clear();
@@ -1130,19 +1178,22 @@ class Competition extends ChangeNotifier {
           throw FormatException('Parse error in awards file row $rank column 1: There is already an award named "$name".');
         }
         names.add(name);
-        if (row[1] != 'Advancing' && row[1] != 'Non-Advancing') {
-          throw FormatException('Parse error in awards file row $rank column 2: Unknown value for "Advancing" column: "${row[1]}".');
+        AwardKind kind = _parseAwardKind('${row[1]}');
+        if (!seenInspire && kind == AwardKind.advancingInspire) {
+          kind = AwardKind.inspire;
         }
-        final bool isAdvancing = row[1] == 'Advancing';
-        final bool isInspire = !seenInspire && isAdvancing;
+        final bool isInspire = kind == AwardKind.inspire;
+        if (isInspire && seenInspire) {
+          throw FormatException('Parse error in awards file row $rank column 2: There is an advancing award before the Inspire award.');
+        }
         seenInspire = seenInspire || isInspire;
         if (row[2] is! int || (row[2] < 0)) {
           throw FormatException('Parse error in awards file row $rank column 3: "${row[2]}" is not a valid award count.');
         }
         final int count = row[2] as int;
         final String category = '${row[3]}';
-        if (isAdvancing && !isInspire && category.isEmpty) {
-          throw FormatException('Parse error in awards file row $rank column 4: "${row[0]}" is an Advancing award but has no specified category.');
+        if (kind == AwardKind.advancingInspire && category.isEmpty) {
+          throw FormatException('Parse error in awards file row $rank column 4: "${row[0]}" is an Inspire Advancing award but has no specified category.');
         }
         final SpreadTheWealth spreadTheWealth = switch (row[4]) {
           'all places' => SpreadTheWealth.allPlaces,
@@ -1185,8 +1236,7 @@ class Competition extends ChangeNotifier {
         final int type = _parseType(isInspire, name, row.length > 11 ? row[11] : null);
         final Award award = Award(
           name: name,
-          isInspire: isInspire,
-          isAdvancing: isAdvancing,
+          kind: kind,
           rank: rank,
           count: count,
           category: category,
@@ -1219,7 +1269,7 @@ class Competition extends ChangeNotifier {
     final List<List<Object?>> data = [];
     data.add([
       'Award name', // string
-      'Award type', // 'Advancing' or 'Non-Advancing'
+      'Award type', // 'Inspire', 'Advancing', 'Non-Advancing', 'Independent Advancing'
       'Award count', // numeric
       'Award category', // string
       'Spread the wealth', // 'y' or 'n'
@@ -1234,7 +1284,7 @@ class Competition extends ChangeNotifier {
     for (final Award award in _awards) {
       data.add([
         award.name,
-        award.isAdvancing ? 'Advancing' : 'Non-Advancing',
+        _serializeAwardKind(award.kind),
         award.count,
         award.category,
         switch (award.spreadTheWealth) {
@@ -1683,11 +1733,9 @@ class Competition extends ChangeNotifier {
         case 'apply finalists by award ranking':
           _applyFinalistsByAwardRanking = _parseBool(row[1]);
         case 'inspire sort order':
-          _inspireSortOrder = switch (row[1]) {
-            'rank score' => Team.inspireCandidateComparator,
-            'rank count' => Team.rankedCountComparator,
-            _ => Team.teamNumberComparator,
-          };
+          _inspireSortOrder = _parseSortOrder('${row[1]}');
+        case 'finalists sort order': 
+          _finalistsSortOrder = _parseSortOrder('${row[1]}');
         case 'pit visits - exclude autovisited teams':
           _pitVisitsExcludeAutovisitedTeams = _parseBool(row[1]);
         case 'pit visits - hide visited teams':
@@ -1710,6 +1758,7 @@ class Competition extends ChangeNotifier {
     _hideInspireHiddenTeams = false;
     _applyFinalistsByAwardRanking = true; // default to true for imported events, but false on fresh startup
     _inspireSortOrder = Team.teamNumberComparator;
+    _finalistsSortOrder = Team.rankedCountComparator;
     _pitVisitsExcludeAutovisitedTeams = true;
     _pitVisitsHideVisitedTeams = false;
     notifyListeners();
@@ -1736,14 +1785,8 @@ class Competition extends ChangeNotifier {
     data.add(['show workings', _showWorkings ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
     data.add(['apply finalists by award ranking', _applyFinalistsByAwardRanking ? 'y' : 'n']);
-    data.add([
-      'inspire sort order',
-      switch (_inspireSortOrder) {
-        Team.inspireCandidateComparator => 'rank score',
-        Team.rankedCountComparator => 'rank count',
-        _ => 'team number', // Team.teamNumberComparator
-      }
-    ]);
+    data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder)]);
+    data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder)]);
     data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
     data.add(['pit visits - hide visited teams', _pitVisitsHideVisitedTeams ? 'y' : 'n']);
     return const ListToCsvConverter().convert(data);
@@ -2025,10 +2068,12 @@ class Competition extends ChangeNotifier {
       bool isAdvancing = !seenInspire || random.nextInt(6) > 0;
       String name = randomizer.generatePhrase(random.nextInt(2) + 1);
       String category = isAdvancing && seenInspire ? randomizer.randomItem(categories) : '';
+      AwardKind kind = isAdvancing
+          ? (seenInspire ? AwardKind.inspire : AwardKind.advancingInspire)
+          : AwardKind.nonAdvancing;
       final Award award = Award(
         name: name,
-        isInspire: isAdvancing && !seenInspire,
-        isAdvancing: isAdvancing,
+        kind: kind,
         rank: index + 1,
         count: random.nextInt(5) + 1,
         category: category,

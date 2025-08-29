@@ -23,6 +23,14 @@ String placementDescriptor(int rank) {
   return '${rank}th';
 }
 
+String count(int value, String singular, [String? plural]) {
+  plural ??= '${singular}s';
+  if (value == 1) {
+    return '1 $singular';
+  }
+  return '$value $plural';
+}
+
 @immutable
 class TripleIdentity<T, A, B, C> {
   const TripleIdentity(

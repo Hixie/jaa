@@ -10,6 +10,7 @@ import '../model/competition.dart';
 import '../widgets/awards.dart';
 import '../widgets/cells.dart';
 import '../widgets/widgets.dart';
+import '../widgets/selectors.dart';
 
 class AwardFinalistsPane extends StatefulWidget {
   const AwardFinalistsPane({super.key, required this.competition});
@@ -119,7 +120,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final int highestRank = widget.competition.awardsView.map((Award award) => award.count).fold<int>(0, math.max);
         final Map<int, Map<Team, List<Award>>> awardCandidates = {};
         final Map<Award, Set<Team>> awardWinners = {};
+        bool haveAssignableWinners = false;
+        final Map<Award, List<Team?>> finalistsAsMap = {};
+        final Map<Award, List<Set<Team>>> shortlists = {};
         if (!widget.competition.applyFinalistsByAwardRanking) {
+          finalists.sort(((Award, List<AwardFinalistEntry>) a, (Award, List<AwardFinalistEntry>) b) => widget.competition.awardSorter(a.$1, b.$1));
+
           // prepare the result map
           for (int rank = 1; rank <= highestRank; rank += 1) {
             awardCandidates[rank] = <Team, List<Award>>{};
@@ -133,19 +139,22 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           }
           // record the teams who have already been assigned an award (either automatically, manually, or via override)
           for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists) {
+            finalistsAsMap[award] = <Team?>[];
             // ignore: unused_local_variable
             for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in awardFinalists) {
               if (team != null && otherAward == null) {
                 claimedAwards[award]!.add(rank);
+                finalistsAsMap[award]!.add(team);
                 if ((award.spreadTheWealth == SpreadTheWealth.allPlaces)
                     || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
                   winners.add(team);
                 }
+              } else {
+                finalistsAsMap[award]!.add(null);
               }
             }
           }
           // get the waitlists ready (which teams are next eligible for each award)
-          final Map<Award, List<Set<Team>>> shortlists = {};
           for (final Award award in widget.competition.awardsView) {
             shortlists[award] = widget.competition.shortlistsView[award]?.asRankedList() ?? <Set<Team>>[];
           }
@@ -169,7 +178,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   (shortlists[award]!.length < rank)) { // award doesn't have this many shortlisted teams
                 continue;
               }
-              int count = 0;
+              int count = claimedAwards[award]!.where((int candidate) => candidate < rank).length;
               int index = 0;
               while (count < rank && index < shortlists[award]!.length) {
                 final Set<Team> candidates = shortlists[award]![index];
@@ -177,6 +186,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   count += 1;
                   for (Team team in candidates) {
                     awardCandidates[rank]!.putIfAbsent(team, () => <Award>[]).add(award);
+                    haveAssignableWinners = true;
                   }
                 }
                 index += 1;
@@ -212,7 +222,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               incompleteAwards.add(award);
             }
           }
-          if (!hasAny) {
+          if (!hasAny && (widget.competition.applyFinalistsByAwardRanking || shortlists[award]!.every((Set<Team> group) => group.isEmpty))) {
             emptyAwards.add(award);
           }
         }
@@ -414,7 +424,17 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                 padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
                 child: Text('Assign winners:', style: bold),
               ),
-            if (!widget.competition.applyFinalistsByAwardRanking)
+            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent * 2.0, spacing, indent, spacing),
+                child: TeamOrderSelector(competition: widget.competition),
+              ),
+            if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty && !haveAssignableWinners)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent * 2.0, spacing, indent, spacing),
+                child: Text('Use the Ranks pane to assign ranks for teams in award shortlists.', style: italic),
+              ),
+            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
               ScrollableRegion(
                 child: ListBody(
                   children: [
@@ -426,17 +446,22 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                               padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                               child: Text('Rank $rank candidates', style: italic),
                             ),
-                            for (Team team in awardCandidates[rank]!.keys.toList()..sort(Team.teamNumberComparator))
+                            for (Team team in awardCandidates[rank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
                               TeamAwardAssignmentRow(
                                 competition: widget.competition,
                                 rank: rank,
                                 team: team,
-                                awards: awardCandidates[rank]![team]!.toList()..sort(Award.rankBasedComparator),
+                                awards: awardCandidates[rank]![team]!.toList()..sort(widget.competition.awardSorter),
+                                finalists: finalistsAsMap,
                               ),
                           ],
                         ),
                     ],
                 ),
+              ),
+            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
+              AwardOrderSwitch(
+                competition: widget.competition,
               ),
             const SizedBox(height: indent)
           ],
@@ -753,15 +778,27 @@ class TeamAwardAssignmentRow extends StatelessWidget {
     required this.rank,
     required this.team,
     required this.awards,
+    required this.finalists,
   });
 
   final Competition competition;
   final int rank;
   final Team team;
   final List<Award> awards;
+  final Map<Award, List<Team?>> finalists;
 
   @override
   Widget build(BuildContext context) {
+    final Map<Award, String> annotations = {};
+    for (Award award in awards) {
+      for (int index = rank; index < finalists[award]!.length; index += 1) {
+        if (finalists[award]![index] != null && finalists[award]![index]!.shortlistsView[award]!.rank! < team.shortlistsView[award]!.rank!) {
+          final Team other = finalists[award]![index]!;
+          annotations[award] = 'Team #${other.number} ${team.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
+          break;
+        }
+      }
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(indent * 2.0, 0.0, indent, spacing),
       child: Row(
@@ -771,20 +808,23 @@ class TeamAwardAssignmentRow extends StatelessWidget {
           for (final Award award in awards)
             Padding(
               padding: const EdgeInsets.only(left: spacing),
-              child: ElevatedButton(
-                onPressed: () {
-                  competition.addOverride(
-                    award,
-                    team,
-                    rank,
-                    FinalistKind.manual,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: award.color,
-                  foregroundColor: textColorForColor(award.color),
+              child: Tooltip(
+                message: annotations[award] ?? '',
+                child: ElevatedButton(
+                  onPressed: () {
+                    competition.addOverride(
+                      award,
+                      team,
+                      rank,
+                      FinalistKind.manual,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: award.color,
+                    foregroundColor: textColorForColor(award.color),
+                  ),
+                  child: Text('${award.name} #${team.shortlistsView[award]!.rank}${ annotations[award] != null ? " ⚠" : ""}'),
                 ),
-                child: Text(award.name),
               ),
             ),
         ],
