@@ -1,6 +1,7 @@
 import 'package:elapsed_time_display/elapsed_time_display.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -53,14 +54,41 @@ enum Pane {
 }
 
 class _MainAppState extends State<MainApp> {
+  double _zoom = 1.0;
   Pane _pane = Pane.setup;
 
   @override
   void initState() {
     super.initState();
+    ServicesBinding.instance.keyboard.addHandler(_handleKey);
     if (widget.competition.hasAutosave) {
       _pane = Pane.autosaveAvailable;
     }
+  }
+
+  bool _handleKey(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.equal
+        && (ServicesBinding.instance.keyboard.isMetaPressed || ServicesBinding.instance.keyboard.isControlPressed)) {
+      setState(() {
+        _zoom *= 1.2;
+      });
+      return true;
+    }
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.minus
+        && (ServicesBinding.instance.keyboard.isMetaPressed || ServicesBinding.instance.keyboard.isControlPressed)) {
+      setState(() {
+        _zoom /= 1.2;
+      });
+      return true;
+    }
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit0
+        && (ServicesBinding.instance.keyboard.isMetaPressed || ServicesBinding.instance.keyboard.isControlPressed)) {
+      setState(() {
+        _zoom = 1.0;
+      });
+      return true;
+    }
+    return false;
   }
 
   void _selectPane(Pane pane) {
@@ -70,293 +98,308 @@ class _MainAppState extends State<MainApp> {
   }
 
   @override
+  void dispose() {
+    ServicesBinding.instance.keyboard.removeHandler(_handleKey);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData.from(
-        colorScheme: ColorScheme.fromSeed(seedColor: primary),
-      ),
-      home: FilledButtonTheme(
-        data: const FilledButtonThemeData(
-          style: ButtonStyle(
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(spacing / 2.0)),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return FittedBox(
+          child: SizedBox.fromSize(
+            size: constraints.biggest / _zoom,
+            child: MaterialApp(
+              theme: ThemeData.from(
+                colorScheme: ColorScheme.fromSeed(seedColor: primary),
               ),
-            ),
-          ),
-        ),
-        child: ColoredBox(
-          color: background,
-          child: DefaultTextStyle(
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: 'Roboto',
-              color: primaryText,
-              fontSize: 14.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ColoredBox(
-                  color: accent,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => Row(
-                      children: [
-                        const SizedBox(width: indent),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 2.0),
-                          child: FilledButton(
-                            onPressed: () => _selectPane(Pane.about),
-                            child: const Text(
-                              'About',
-                              softWrap: false,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: spacing),
-                        if (constraints.maxWidth >= minimumReasonableWidth)
-                          ListenableBuilder(
-                            listenable: widget.competition,
-                            builder: (BuildContext context, Widget? child) {
-                              if (widget.competition.autosaveScheduled) {
-                                return Tooltip(
-                                  message: 'Changes will be autosaved shortly.',
-                                  child: Text(
-                                    'Changed',
-                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
-                                  ),
-                                );
-                              }
-                              if (widget.competition.loading) {
-                                return Text(
-                                  'Loading...',
-                                  style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
-                                );
-                              }
-                              if (widget.competition.dirty) {
-                                return Tooltip(
-                                  message: widget.competition.lastAutosaveMessage,
-                                  child: ContinuousAnimationBuilder(
-                                    period: const Duration(seconds: 2),
-                                    reverse: true,
-                                    builder: (BuildContext context, double value, Widget? child) => Text(
-                                      'Autosave failed.',
-                                      style: TextStyle(
-                                        color: Colors.red.withValues(alpha: 0.25 + value * 0.75),
-                                        fontVariations: [FontVariation.weight(1 + value * 999.0)],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                              if (widget.competition.lastAutosave != null) {
-                                return Tooltip(
-                                  message: widget.competition.lastAutosaveMessage,
-                                  child: Text(
-                                    'Saved',
-                                    style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        if (constraints.maxWidth >= minimumReasonableWidth) const SizedBox(width: indent),
-                        const Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
-                            child: Text(currentHelp, textAlign: TextAlign.right),
-                          ),
-                        ),
-                      ],
+              home: FilledButtonTheme(
+                data: const FilledButtonThemeData(
+                  style: ButtonStyle(
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(spacing / 2.0)),
+                      ),
                     ),
                   ),
                 ),
-                ListenableBuilder(
-                  listenable: widget.competition,
-                  child: Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        indent,
-                        headingStyle.fontSize!,
-                        indent,
-                        headingStyle.fontSize!,
-                      ),
-                      child: const Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'FIRST',
-                              style: TextStyle(fontStyle: FontStyle.italic),
-                            ),
-                            TextSpan(
-                              text: ' Tech Challenge Judge Advisor Assistant',
-                            ),
-                          ],
-                          style: headingStyle,
-                        ),
-                      ),
+                child: ColoredBox(
+                  color: background,
+                  child: DefaultTextStyle(
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Roboto',
+                      color: primaryText,
+                      fontSize: 14.0,
                     ),
-                  ),
-                  builder: (BuildContext content, Widget? child) => LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) {
-                      final int advancingAwardsCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.inspire, AwardKind.advancingInspire, AwardKind.advancingIndependent});
-                      final int nonAdvancingAwardCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.nonAdvancing});
-                      return Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        child!,
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(indent, spacing, indent * 2.0, spacing),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ColoredBox(
+                          color: accent,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => Row(
                               children: [
-                                if (widget.competition.teamsView.isNotEmpty)
-                                  Text(
-                                    '${widget.competition.eventName.isEmpty ? "" : "${widget.competition.eventName}. "}${count(widget.competition.teamsView.length, "Team")}.',
-                                    style: bold,
-                                  ),
-                                if (widget.competition.awardsView.isNotEmpty)
-                                  Text(
-                                    (advancingAwardsCount > 0 && nonAdvancingAwardCount > 0)
-                                      ? '${count(advancingAwardsCount, "Advancing Award")}; '
-                                        '${count(nonAdvancingAwardCount, "Non-Advancing Award")}.'
-                                      : (advancingAwardsCount > 0)
-                                      ? '${count(advancingAwardsCount, "Advancing Award")}.'
-                                      : '${count(nonAdvancingAwardCount, "Non-Advancing Award")}.',
-                                    style: bold,
-                                  ),
-                                if (widget.competition.teamsView.isNotEmpty)
-                                  if (widget.competition.inspireIneligibleTeamsView.isEmpty)
-                                    const Text(
-                                      'All teams are eligible for the Inspire award.',
-                                      style: bold,
-                                    )
-                                  else
-                                    Text(
-                                      'Inspire-ineligible teams: ${formTeamList(widget.competition.inspireIneligibleTeamsView)}.',
-                                      style: bold,
+                                const SizedBox(width: indent),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 2.0),
+                                  child: FilledButton(
+                                    onPressed: () => _selectPane(Pane.about),
+                                    child: const Text(
+                                      'About',
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
+                                  ),
+                                ),
+                                const SizedBox(width: spacing),
+                                if (constraints.maxWidth >= minimumReasonableWidth)
+                                  ListenableBuilder(
+                                    listenable: widget.competition,
+                                    builder: (BuildContext context, Widget? child) {
+                                      if (widget.competition.autosaveScheduled) {
+                                        return Tooltip(
+                                          message: 'Changes will be autosaved shortly.',
+                                          child: Text(
+                                            'Changed',
+                                            style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
+                                          ),
+                                        );
+                                      }
+                                      if (widget.competition.loading) {
+                                        return Text(
+                                          'Loading...',
+                                          style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
+                                        );
+                                      }
+                                      if (widget.competition.dirty) {
+                                        return Tooltip(
+                                          message: widget.competition.lastAutosaveMessage,
+                                          child: ContinuousAnimationBuilder(
+                                            period: const Duration(seconds: 2),
+                                            reverse: true,
+                                            builder: (BuildContext context, double value, Widget? child) => Text(
+                                              'Autosave failed.',
+                                              style: TextStyle(
+                                                color: Colors.red.withValues(alpha: 0.25 + value * 0.75),
+                                                fontVariations: [FontVariation.weight(1 + value * 999.0)],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      if (widget.competition.lastAutosave != null) {
+                                        return Tooltip(
+                                          message: widget.competition.lastAutosaveMessage,
+                                          child: Text(
+                                            'Saved',
+                                            style: TextStyle(color: DefaultTextStyle.of(context).style.color!.withValues(alpha: 0.25)),
+                                          ),
+                                        );
+                                      }
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
+                                if (constraints.maxWidth >= minimumReasonableWidth) const SizedBox(width: indent),
+                                const Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
+                                    child: Text(currentHelp, textAlign: TextAlign.right),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ),
-                      ],
-                    );
-                    },
-                  ),
-                ),
-                ColoredBox(
-                  color: control,
-                  child: HorizontalScrollbar(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SelectableButton<Pane>(
-                            value: Pane.setup,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('1. Setup'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.shortlists,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('2. Shortlists'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.pitVisits,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('3. Pit Visits'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.ranks,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('4. Ranks'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.inspire,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('5. Inspire'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.awardFinalists,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('6. Award Finalists'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.script,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('7. Script'),
-                          ),
-                          const SizedBox(width: spacing),
-                          SelectableButton<Pane>(
-                            value: Pane.export,
-                            selection: _pane,
-                            onChanged: _selectPane,
-                            child: const Text('8. Export'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: animationDuration,
-                    child: LayoutBuilder(
-                      builder: (BuildContext context, BoxConstraints constraints) => SingleChildScrollView(
-                        key: ValueKey<Pane>(_pane),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: constraints.maxHeight, minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth),
-                          child: switch (_pane) {
-                            Pane.about => AboutPane(competition: widget.competition),
-                            Pane.autosaveAvailable => AutosaveAvailablePane(
-                                competition: widget.competition,
-                                onClosed: () {
-                                  setState(() {
-                                    _pane = Pane.setup;
-                                  });
-                                },
+                        ListenableBuilder(
+                          listenable: widget.competition,
+                          child: Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                indent,
+                                headingStyle.fontSize!,
+                                indent,
+                                headingStyle.fontSize!,
                               ),
-                            Pane.setup => SetupPane(competition: widget.competition),
-                            Pane.shortlists => ShortlistsPane(competition: widget.competition),
-                            Pane.pitVisits => PitVisitsPane(competition: widget.competition),
-                            Pane.ranks => RanksPane(competition: widget.competition),
-                            Pane.inspire => InspirePane(competition: widget.competition),
-                            Pane.awardFinalists => AwardFinalistsPane(competition: widget.competition),
-                            Pane.script => ScriptPane(competition: widget.competition),
-                            Pane.export => ExportPane(competition: widget.competition),
-                          },
+                              child: const Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: 'FIRST',
+                                      style: TextStyle(fontStyle: FontStyle.italic),
+                                    ),
+                                    TextSpan(
+                                      text: ' Tech Challenge Judge Advisor Assistant',
+                                    ),
+                                  ],
+                                  style: headingStyle,
+                                ),
+                              ),
+                            ),
+                          ),
+                          builder: (BuildContext content, Widget? child) => LayoutBuilder(
+                            builder: (BuildContext context, BoxConstraints constraints) {
+                              final int advancingAwardsCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.inspire, AwardKind.advancingInspire, AwardKind.advancingIndependent});
+                              final int nonAdvancingAwardCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.nonAdvancing});
+                              return Row(
+                              children: [
+                                child!,
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(indent, spacing, indent * 2.0, spacing),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (widget.competition.teamsView.isNotEmpty)
+                                          Text(
+                                            '${widget.competition.eventName.isEmpty ? "" : "${widget.competition.eventName}. "}${count(widget.competition.teamsView.length, "Team")}.',
+                                            style: bold,
+                                          ),
+                                        if (widget.competition.awardsView.isNotEmpty)
+                                          Text(
+                                            (advancingAwardsCount > 0 && nonAdvancingAwardCount > 0)
+                                              ? '${count(advancingAwardsCount, "Advancing Award")}; '
+                                                '${count(nonAdvancingAwardCount, "Non-Advancing Award")}.'
+                                              : (advancingAwardsCount > 0)
+                                              ? '${count(advancingAwardsCount, "Advancing Award")}.'
+                                              : '${count(nonAdvancingAwardCount, "Non-Advancing Award")}.',
+                                            style: bold,
+                                          ),
+                                        if (widget.competition.teamsView.isNotEmpty)
+                                          if (widget.competition.inspireIneligibleTeamsView.isEmpty)
+                                            const Text(
+                                              'All teams are eligible for the Inspire award.',
+                                              style: bold,
+                                            )
+                                          else
+                                            Text(
+                                              'Inspire-ineligible teams: ${formTeamList(widget.competition.inspireIneligibleTeamsView)}.',
+                                              style: bold,
+                                            ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                            },
+                          ),
                         ),
-                      ),
+                        ColoredBox(
+                          color: control,
+                          child: HorizontalScrollbar(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SelectableButton<Pane>(
+                                    value: Pane.setup,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('1. Setup'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.shortlists,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('2. Shortlists'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.pitVisits,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('3. Pit Visits'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.ranks,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('4. Ranks'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.inspire,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('5. Inspire'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.awardFinalists,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('6. Award Finalists'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.script,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('7. Script'),
+                                  ),
+                                  const SizedBox(width: spacing),
+                                  SelectableButton<Pane>(
+                                    value: Pane.export,
+                                    selection: _pane,
+                                    onChanged: _selectPane,
+                                    child: const Text('8. Export'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: animationDuration,
+                            child: LayoutBuilder(
+                              builder: (BuildContext context, BoxConstraints constraints) => SingleChildScrollView(
+                                key: ValueKey<Pane>(_pane),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minHeight: constraints.maxHeight, minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth),
+                                  child: switch (_pane) {
+                                    Pane.about => AboutPane(competition: widget.competition),
+                                    Pane.autosaveAvailable => AutosaveAvailablePane(
+                                        competition: widget.competition,
+                                        onClosed: () {
+                                          setState(() {
+                                            _pane = Pane.setup;
+                                          });
+                                        },
+                                      ),
+                                    Pane.setup => SetupPane(competition: widget.competition),
+                                    Pane.shortlists => ShortlistsPane(competition: widget.competition),
+                                    Pane.pitVisits => PitVisitsPane(competition: widget.competition),
+                                    Pane.ranks => RanksPane(competition: widget.competition),
+                                    Pane.inspire => InspirePane(competition: widget.competition),
+                                    Pane.awardFinalists => AwardFinalistsPane(competition: widget.competition),
+                                    Pane.script => ScriptPane(competition: widget.competition),
+                                    Pane.export => ExportPane(competition: widget.competition),
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      }
     );
   }
 }
