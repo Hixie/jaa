@@ -37,6 +37,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
 
   Award? _award;
   Team? _team;
+  bool? _hasPortfolio;
 
   @override
   void initState() {
@@ -85,6 +86,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
         _award = award;
         if (widget.competition.shortlistsView[award]!.entriesView.containsKey(_team)) {
           _team = null;
+          _hasPortfolio = null;
           _teamController.clear();
         }
       });
@@ -96,10 +98,14 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     _nominatorFocusNode.requestFocus();
     setState(() {
       _team = team;
+      _hasPortfolio = _team?.hasPortfolio;
     });
   }
 
   void _addTeamToShortlist() {
+    if (_team?.hasPortfolio != _hasPortfolio) {
+      widget.competition.updatePortfolio(_team!, _hasPortfolio!);
+    }
     widget.competition.addToShortlist(
       _award!,
       _team!,
@@ -116,6 +122,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     _teamFocusNode.requestFocus();
     setState(() {
       _team = null;
+      _hasPortfolio = null;
     });
   }
 
@@ -241,6 +248,23 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                     ),
                                   ),
                                   const SizedBox(width: spacing),
+                                  MergeSemantics(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          value: _hasPortfolio,
+                                          tristate: _hasPortfolio == null,
+                                          onChanged: _hasPortfolio == null ? null : (bool? value) { 
+                                            setState(() {
+                                              _hasPortfolio = value;
+                                            });
+                                          },
+                                        ),
+                                        const Text('Team has portfolio'),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: spacing * 2.0),
                                   IconButton.filledTonal(
                                     onPressed: _team != null ? _addTeamToShortlist : null,
                                     icon: const Icon(
@@ -254,6 +278,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                         setState(() {
                           _award = null;
                           _team = null;
+                          _hasPortfolio = null;
                           _teamController.clear();
                           _nominatorController.clear();
                         });

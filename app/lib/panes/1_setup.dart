@@ -630,6 +630,21 @@ class _TeamEditorState extends State<TeamEditor> {
         ),
       );
       teamNotes.add(const SizedBox(height: spacing * 2.0));
+      teamNotes.add(
+        MergeSemantics(
+          child: Row(
+            children: [
+              Checkbox(
+                value: _team!.hasPortfolio,
+                onChanged: (bool? value) { 
+                  widget.competition.updatePortfolio(_team!, value!);
+                },
+              ),
+              const Text('Team has portfolio.'),
+            ],
+          ),
+        ),
+      );
       switch (_team!.inspireStatus) {
         case InspireStatus.eligible:
         case InspireStatus.exhibition:

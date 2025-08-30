@@ -226,10 +226,12 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     required this.number,
     required String name,
     required String location,
+    required bool hasPortfolio,
     required InspireStatus inspireStatus,
     int visited = 0,
   })  : _name = name,
         _location = location,
+        _hasPortfolio = hasPortfolio,
         _visited = visited,
         _inspireStatus = inspireStatus;
 
@@ -242,6 +244,9 @@ class Team extends ChangeNotifier implements Comparable<Team> {
 
   String get location => _location;
   String _location;
+
+  bool get hasPortfolio => _hasPortfolio;
+  bool _hasPortfolio;
 
   late final UnmodifiableMapView<Award, ShortlistEntry> shortlistsView = UnmodifiableMapView(_shortlists);
   final Map<Award, ShortlistEntry> _shortlists = <Award, ShortlistEntry>{};
@@ -576,6 +581,11 @@ class Competition extends ChangeNotifier {
   void updateTeam(Team team, String name, String location) {
     team._name = name;
     team._location = location;
+    notifyListeners();
+  }
+
+  void updatePortfolio(Team team, bool value) {
+    team._hasPortfolio = value;
     notifyListeners();
   }
 
@@ -1108,10 +1118,12 @@ class Competition extends ChangeNotifier {
           throw FormatException('Parse error in teams file row $rowNumber column 1: "${row[0]}" is not a valid team number.');
         }
         final InspireStatus inspireStatus = _parseInspireStatus(row[3]);
+        final bool hasPortfolio = row.length > 4 ? _parseBool(row[4]) : true;
         final Team team = Team(
           number: row[0] as int,
           name: '${row[1]}',
           location: '${row[2]}',
+          hasPortfolio: hasPortfolio,
           inspireStatus: inspireStatus,
         );
         _teams.add(team);
@@ -1134,10 +1146,11 @@ class Competition extends ChangeNotifier {
       'Team number', // numeric
       'Team name', // string
       'Team location', // string
-      'Eligible for Inspire award', // 'y' or 'n'
+      'Eligible for Inspire award', // 'eligible', 'ineligible', 'hidden', 'exhibition'
+      'Team has portfolio', // 'y' or 'n'
     ]);
     for (final Team team in _teams) {
-      data.add(['${team.number}', team.name, team.location, _serializeInspireStatus(team.inspireStatus)]);
+      data.add(['${team.number}', team.name, team.location, _serializeInspireStatus(team.inspireStatus), team.hasPortfolio ? 'y' : 'n']);
     }
     return const ListToCsvConverter().convert(data);
   }
@@ -2040,6 +2053,7 @@ class Competition extends ChangeNotifier {
   }
 
   void debugGenerateRandomData(math.Random random) {
+    // TODO: test the bits labeled "needs testing"
     if (kReleaseMode) {
       return;
     }
@@ -2078,7 +2092,7 @@ class Competition extends ChangeNotifier {
         count: random.nextInt(5) + 1,
         category: category,
         spreadTheWealth: randomizer.randomItem(SpreadTheWealth.values),
-        autonominationRule: null, // TODO: test autonomination
+        autonominationRule: null, // needs testing
         isPlacement: random.nextInt(7) > 0,
         pitVisits: randomizer.randomItem(PitVisit.values),
         isEventSpecific: !isAdvancing && random.nextInt(5) == 0,
@@ -2100,6 +2114,7 @@ class Competition extends ChangeNotifier {
         number: random.nextInt(100000),
         name: randomizer.generatePhrase(),
         location: randomizer.generatePhrase(),
+        hasPortfolio: true, // needs testing
         inspireStatus: inspireStatus,
       );
       _teams.add(team);
