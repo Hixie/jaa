@@ -307,7 +307,8 @@ class _SetupPaneState extends State<SetupPane> {
                           Cell(Text('Category', style: bold), prototype: Text('Documentation')),
                           Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
                           Cell(Text('Autonomination', style: bold), prototype: Text('Enabled')),
-                          Cell(Text('Placement', style: bold), prototype: Text('Yes')),
+                          Cell(Text('Placement', style: bold), prototype: Text('Required')),
+                          Cell(Text('Portfolio', style: bold), prototype: Text('Yes')),
                           Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
                           Cell(
                               Row(
@@ -370,6 +371,7 @@ class _SetupPaneState extends State<SetupPane> {
                                             },
                                           ).showPickerDialog(context)) {
                                             award.updateColor(selectedColor);
+                                            widget.competition.notifyListeners();
                                           }
                                         },
                                       );
@@ -410,6 +412,7 @@ class _SetupPaneState extends State<SetupPane> {
                               ),
                             ),
                             Cell(Text(award.isPlacement ? 'Yes' : '')),
+                            Cell(Text(award.needsPortfolio ? 'Required' : '')),
                             Cell(Text(switch (award.pitVisits) {
                               PitVisit.yes => 'Yes',
                               PitVisit.no => 'No',
@@ -420,7 +423,10 @@ class _SetupPaneState extends State<SetupPane> {
                               child: TextEntryCell(
                                 padding: EdgeInsets.fromLTRB(spacing, spacing, spacing, 0.0),
                                 value: award.comment,
-                                onChanged: award.updateComment,
+                                onChanged: (String value) {
+                                  award.updateComment(value);
+                                  widget.competition.notifyListeners();
+                                },
                               ),
                             ),
                           ],
@@ -787,6 +793,7 @@ class _AwardEditorState extends State<AwardEditor> {
   int _count = 1;
   SpreadTheWealth _spreadTheWealth = SpreadTheWealth.no;
   bool _placement = false;
+  bool _needsPortfolio = false;
   PitVisit _pitVisit = PitVisit.no;
 
   @override
@@ -927,6 +934,35 @@ class _AwardEditorState extends State<AwardEditor> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Checkbox(
+                    value: _needsPortfolio,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _needsPortfolio = value!;
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _needsPortfolio = !_needsPortfolio;
+                        });
+                      },
+                      child: const Text(
+                        'Teams must have a portfolio to be eligible for this award.',
+                        softWrap: true,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            MergeSemantics(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Checkbox(
                     value: switch (_pitVisit) {
                       PitVisit.yes => true,
                       PitVisit.no => false,
@@ -974,6 +1010,7 @@ class _AwardEditorState extends State<AwardEditor> {
                         count: _count,
                         spreadTheWealth: _spreadTheWealth,
                         isPlacement: _placement,
+                        needsPortfolio: _needsPortfolio,
                         pitVisit: _pitVisit,
                       );
                       widget.onClosed.call();

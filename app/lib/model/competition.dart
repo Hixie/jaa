@@ -127,6 +127,7 @@ class Award extends ChangeNotifier {
     required this.spreadTheWealth,
     required this.autonominationRule,
     required this.isPlacement,
+    required this.needsPortfolio,
     required this.pitVisits,
     required this.isEventSpecific,
     required this.type,
@@ -144,6 +145,7 @@ class Award extends ChangeNotifier {
   final SpreadTheWealth spreadTheWealth;
   final AutonominationRule? autonominationRule;
   final bool isPlacement;
+  final bool needsPortfolio;
   final PitVisit pitVisits;
   final bool isEventSpecific;
   final int type;
@@ -749,6 +751,7 @@ class Competition extends ChangeNotifier {
     required int count,
     required SpreadTheWealth spreadTheWealth,
     required bool isPlacement,
+    required bool needsPortfolio,
     required PitVisit pitVisit,
   }) {
     final Award award = Award(
@@ -760,6 +763,7 @@ class Competition extends ChangeNotifier {
       spreadTheWealth: spreadTheWealth,
       autonominationRule: null,
       isPlacement: isPlacement,
+      needsPortfolio: needsPortfolio,
       pitVisits: pitVisit,
       isEventSpecific: true,
       type: 0,
@@ -1247,6 +1251,7 @@ class Competition extends ChangeNotifier {
         }
         final String comment = row.length > 10 ? row[10] : '';
         final int type = _parseType(isInspire, name, row.length > 11 ? row[11] : null);
+        final bool needsPortfolio = _parseBool(row.length > 12 ? row[12] : null);
         final Award award = Award(
           name: name,
           kind: kind,
@@ -1256,6 +1261,7 @@ class Competition extends ChangeNotifier {
           spreadTheWealth: spreadTheWealth,
           autonominationRule: autonominationRule,
           isPlacement: isPlacement,
+          needsPortfolio: needsPortfolio,
           pitVisits: pitVisit,
           isEventSpecific: isEventSpecific,
           type: type,
@@ -1293,6 +1299,7 @@ class Competition extends ChangeNotifier {
       'Autonomination rule', // empty or 'if last category',
       'Comment', // string
       'FTC Award ID', // integer, see http://ftc-api.firstinspires.org/v2.0/2024/awards/list
+      'Needs portfolio', // 'y' or 'n'
     ]);
     for (final Award award in _awards) {
       data.add([
@@ -1316,6 +1323,7 @@ class Competition extends ChangeNotifier {
         award.autonominationRule?.toCSV() ?? '',
         award.comment,
         award.type,
+        award.needsPortfolio ? 'y' : 'n',
       ]);
     }
     return const ListToCsvConverter().convert(data);
@@ -2094,6 +2102,7 @@ class Competition extends ChangeNotifier {
         spreadTheWealth: randomizer.randomItem(SpreadTheWealth.values),
         autonominationRule: null, // needs testing
         isPlacement: random.nextInt(7) > 0,
+        needsPortfolio: false, // needs testing
         pitVisits: randomizer.randomItem(PitVisit.values),
         isEventSpecific: !isAdvancing && random.nextInt(5) == 0,
         type: _parseType(isAdvancing && !seenInspire, name, null),
