@@ -97,7 +97,19 @@ class AwardCard extends StatelessWidget {
                       child: Tooltip(
                         message: award.comment,
                         child: Icon(
-                          Symbols.emoji_objects,
+                          Symbols.emoji_objects, // lightbulb
+                          size: DefaultTextStyle.of(context).style.fontSize,
+                          color: foregroundColor,
+                        ),
+                      ),
+                    ),
+                  if (award.needsPortfolio)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: spacing),
+                      child: Tooltip(
+                        message: 'Award requires team to have a portfolio',
+                        child: Icon(
+                          Symbols.content_paste, // clipboard
                           size: DefaultTextStyle.of(context).style.fontSize,
                           color: foregroundColor,
                         ),

@@ -164,7 +164,7 @@ class _InspirePaneState extends State<InspirePane> {
                   });
                 },
                 tristate: widget.competition.hideInspireHiddenTeams && _legacyTeams.isNotEmpty,
-                label: 'Include ineligible teams and teams marked as hidden.',
+                label: 'Include ineligible teams${ widget.competition.inspireAward!.needsPortfolio ? ", teams without portfolio," : ""} and teams marked as hidden.',
               ),
             if (canShowAnything)
               Padding(
@@ -193,7 +193,7 @@ class _InspirePaneState extends State<InspirePane> {
                             Builder(builder: (context) {
                               final List<Team> teams = candidates[categoryCount]!.keys.toList()..sort(widget.competition.inspireSortOrder);
                               if (widget.competition.hideInspireHiddenTeams) {
-                                teams.removeWhere((Team team) => !_legacyTeams.contains(team) && team.inspireStatus != InspireStatus.eligible);
+                                teams.removeWhere((Team team) => !_legacyTeams.contains(team) && (team.inspireStatus != InspireStatus.eligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)));
                               }
                               if (teams.isEmpty) {
                                 return const Text('All eligible teams are hidden.');
@@ -288,6 +288,20 @@ class _InspirePaneState extends State<InspirePane> {
                                           if (!team.inspireEligible)
                                             const Cell(Text('Not eligible'))
                                           else
+                                          if (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)
+                                            Cell(
+                                              Text('No portfolio'),
+                                              icons: [
+                                                Tooltip(
+                                                  message: 'Team is missing a portfolio!',
+                                                  child: Icon(
+                                                    Symbols.content_paste_off, // clipboard crossed out
+                                                    size: DefaultTextStyle.of(context).style.fontSize,
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          else
                                             InspirePlacementCell(
                                               competition: widget.competition,
                                               team: team,
@@ -299,8 +313,10 @@ class _InspirePaneState extends State<InspirePane> {
                                             type: MaterialType.transparency,
                                             child: Checkbox(
                                               key: ValueKey<Team>(team),
-                                              value: !team.inspireEligible || (team.inspireStatus == InspireStatus.hidden),
-                                              onChanged: !team.inspireEligible
+                                              value: !team.inspireEligible ||
+                                                     (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio) ||
+                                                     (team.inspireStatus == InspireStatus.hidden),
+                                              onChanged: (!team.inspireEligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio))
                                                   ? null
                                                   : (bool? value) {
                                                       value!;

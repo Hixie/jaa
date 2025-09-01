@@ -88,6 +88,9 @@ class AutonominateIfRemainingCategory extends AutonominationRule {
     if (candidateAward.category == '') {
       return false;
     }
+    if (candidateAward.needsPortfolio && !team.hasPortfolio) {
+      return false;
+    }
     final Set<String> allCategories = <String>{};
     final Set<String> nominatedCategories = <String>{};
     for (Award award in awards) {
@@ -181,6 +184,9 @@ class Award extends ChangeNotifier {
     }
     if (category.isNotEmpty) {
       buffer.write(' in the $category category');
+    }
+    if (needsPortfolio) {
+      buffer.write(' that requires a portfolio');
     }
     return buffer.toString();
   }

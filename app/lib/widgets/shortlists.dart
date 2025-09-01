@@ -106,6 +106,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     if (_team?.hasPortfolio != _hasPortfolio) {
       widget.competition.updatePortfolio(_team!, _hasPortfolio!);
     }
+    assert(!_award!.needsPortfolio || _team!.hasPortfolio);
     widget.competition.addToShortlist(
       _award!,
       _team!,
@@ -213,7 +214,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                             _teamFocusNode.requestFocus();
                                           } else if (_commentController.text.isEmpty) {
                                             _commentFocusNode.requestFocus();
-                                          } else {
+                                          } else if (!_award!.needsPortfolio || (_hasPortfolio == true)) {
                                             _addTeamToShortlist();
                                           }
                                         },
@@ -240,7 +241,9 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                       ),
                                       onSubmitted: (String value) {
                                         if (_team != null) {
-                                          _addTeamToShortlist();
+                                          if (!_award!.needsPortfolio || (_hasPortfolio == true)) {
+                                            _addTeamToShortlist();
+                                          }
                                         } else {
                                           _teamFocusNode.requestFocus();
                                         }
@@ -260,13 +263,13 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                             });
                                           },
                                         ),
-                                        const Text('Team has portfolio'),
+                                        Text('Team has portfolio', style: _team != null && _award!.needsPortfolio && (_hasPortfolio != true) ? red : null),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: spacing * 2.0),
                                   IconButton.filledTonal(
-                                    onPressed: _team != null ? _addTeamToShortlist : null,
+                                    onPressed: _team != null && (!_award!.needsPortfolio || (_hasPortfolio == true)) ? _addTeamToShortlist : null,
                                     icon: const Icon(
                                       Symbols.heart_plus,
                                     ),

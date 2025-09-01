@@ -194,7 +194,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             }
           }
         }
-        if (!widget.competition.showWorkings) {
+        if (!widget.competition.showWorkings && widget.competition.applyFinalistsByAwardRanking) {
           // ignore: unused_local_variable
           for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
             results.removeWhere((AwardFinalistEntry entry) {
@@ -315,7 +315,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                 padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
                 child: Text('Finalists:', style: bold),
               ),
-            if (finalists.isNotEmpty)
+            if (finalists.isNotEmpty && widget.competition.applyFinalistsByAwardRanking)
               CheckboxRow(
                 checked: widget.competition.showWorkings,
                 onChanged: (bool? value) {
@@ -357,7 +357,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                 children: [
                                   TableRow(
                                     children: [
-                                      const Cell(Text('#', style: bold), prototype: Text('000000')),
+                                      Cell(Text('#', style: bold), prototype: Text('000000${award.needsPortfolio ? ' (X)' : ''}')), // leaves space for no-portfolio icon
                                       Cell(Text(award.isPlacement ? 'Ranks' : 'Results', style: bold), prototype: const Text('Unlikely result')),
                                       if (overriddenAwards.contains(award))
                                         TableCell(
@@ -375,10 +375,24 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                         if (team != null)
                                           Tooltip(
                                             message: team.name,
-                                            child: Cell(Text(
-                                              '${team.number}',
-                                              style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
-                                            )),
+                                            child: Cell(
+                                              Text(
+                                                '${team.number}',
+                                                style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
+                                              ),
+                                              icons: award.needsPortfolio && !team.hasPortfolio
+                                                  ? [
+                                                      Tooltip(
+                                                        message: 'Team is missing a portfolio!',
+                                                        child: Icon(
+                                                          Symbols.content_paste_off, // clipboard crossed out
+                                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                                          color: foregroundColor,
+                                                        ),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
                                           )
                                         else
                                           const ErrorCell(message: 'missing'),
@@ -789,12 +803,12 @@ class TeamAwardAssignmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Map<Award, String> annotations = {};
+    final Map<Award, String> tooltips = {};
     for (Award award in awards) {
       for (int index = rank; index < finalists[award]!.length; index += 1) {
         if (finalists[award]![index] != null && finalists[award]![index]!.shortlistsView[award]!.rank! < team.shortlistsView[award]!.rank!) {
           final Team other = finalists[award]![index]!;
-          annotations[award] = 'Team #${other.number} ${team.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
+          tooltips[award] = 'Team #${other.number} ${team.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
           break;
         }
       }
@@ -809,7 +823,7 @@ class TeamAwardAssignmentRow extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: spacing),
               child: Tooltip(
-                message: annotations[award] ?? '',
+                message: tooltips[award] ?? '',
                 child: ElevatedButton(
                   onPressed: () {
                     competition.addOverride(
@@ -823,7 +837,21 @@ class TeamAwardAssignmentRow extends StatelessWidget {
                     backgroundColor: award.color,
                     foregroundColor: textColorForColor(award.color),
                   ),
-                  child: Text('${award.name} #${team.shortlistsView[award]!.rank}${ annotations[award] != null ? " ⚠" : ""}'),
+                  child: (!award.needsPortfolio || team.hasPortfolio) 
+                    ? Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}')
+                    : Row(
+                        children: [
+                          Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}'),
+                          const SizedBox(width: spacing),
+                          Tooltip(
+                            message: 'Team is missing a portfolio!',
+                            child: Icon(
+                              Symbols.content_paste_off, // clipboard crossed out
+                              size: DefaultTextStyle.of(context).style.fontSize,
+                            ),
+                          ),
+                        ],
+                    ),
                 ),
               ),
             ),

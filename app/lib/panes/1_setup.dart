@@ -711,7 +711,8 @@ class _TeamEditorState extends State<TeamEditor> {
                       text: '${award.spreadTheWealth != SpreadTheWealth.no ? '#${award.rank} ' : ''}'
                           '${award.name}'
                           '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
-                          '${entry.rank != null ? ' — rank ${entry.rank}' : ''}',
+                          '${entry.rank != null ? ' — rank ${entry.rank}' : ''}'
+                          '${award.needsPortfolio && !_team!.hasPortfolio ? ' (invalid nomination; award requires portfolio!)' : ''}',
                       children: [
                         if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
                       ],

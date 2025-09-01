@@ -252,7 +252,7 @@ class RankTables extends StatelessWidget {
                         TableRow(
                           children: [
                             const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
-                            const Cell(Text('#', style: bold), prototype: Text('000000')),
+                            Cell(Text('#', style: bold), prototype: Text('000000${award.needsPortfolio ? ' (X)' : ''}')), // leaves space for no-portfolio icon
                             if (includeNominatorColumn) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Autonominated')),
                             if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                             TableCell(
@@ -320,6 +320,18 @@ class RankTables extends StatelessWidget {
                                       );
                                     },
                                   ),
+                                  icons: award.needsPortfolio && !team.hasPortfolio
+                                      ? [
+                                          Tooltip(
+                                            message: 'Team is missing a portfolio!',
+                                            child: Icon(
+                                              Symbols.content_paste_off, // clipboard crossed out
+                                              size: DefaultTextStyle.of(context).style.fontSize,
+                                              color: foregroundColor,
+                                            ),
+                                          ),
+                                        ]
+                                      : null,
                                 ),
                               ),
                               if (includeNominatorColumn)

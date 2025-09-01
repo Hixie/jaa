@@ -14,12 +14,14 @@ class Cell extends StatelessWidget {
     this.prototype,
     this.padPrototype = true,
     this.highlight = false,
-  });
+    this.icons,
+  }) : assert(icons == null || icons.length > 0);
 
   final Widget child;
   final Widget? prototype;
   final bool padPrototype;
   final bool highlight;
+  final List<Widget>? icons;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +51,16 @@ class Cell extends StatelessWidget {
     }
     if (highlight) {
       result = ColoredBox(color: Theme.of(context).colorScheme.secondaryContainer, child: result);
+    }
+    if (icons != null) {
+      result = Row(
+        children: [
+          Expanded(child: result),
+          const SizedBox(width: spacing),
+          ...icons!,
+          const SizedBox(width: spacing),
+        ],
+      );
     }
     return result;
   }
