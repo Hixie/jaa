@@ -164,12 +164,17 @@ class _InspirePaneState extends State<InspirePane> {
                   });
                 },
                 tristate: widget.competition.hideInspireHiddenTeams && _legacyTeams.isNotEmpty,
-                label: 'Include ineligible teams${ widget.competition.inspireAward!.needsPortfolio ? ", teams without portfolio," : ""} and teams marked as hidden.',
+                label: 'Include ineligible teams (exhibition teams and teams without portfolio) and teams marked as hidden.',
               ),
             if (canShowAnything)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: TeamOrderSelector(competition: widget.competition),
+                child: TeamOrderSelector(
+                  value: widget.competition.inspireSortOrder,
+                  onChange: (TeamComparatorCallback newValue) {
+                    widget.competition.inspireSortOrder = newValue;
+                  },
+                ),
               ),
             if (widget.competition.inspireAward != null) const SizedBox(height: indent),
             if (widget.competition.inspireAward != null)
@@ -192,6 +197,7 @@ class _InspirePaneState extends State<InspirePane> {
                             const SizedBox(height: spacing),
                             Builder(builder: (context) {
                               final List<Team> teams = candidates[categoryCount]!.keys.toList()..sort(widget.competition.inspireSortOrder);
+                              //print(teams);
                               if (widget.competition.hideInspireHiddenTeams) {
                                 teams.removeWhere((Team team) => !_legacyTeams.contains(team) && (team.inspireStatus != InspireStatus.eligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)));
                               }
@@ -230,7 +236,7 @@ class _InspirePaneState extends State<InspirePane> {
                                       Cell(Text('Rank Count', style: bold),
                                           prototype: Text('000'), highlight: widget.competition.inspireSortOrder == Team.rankedCountComparator),
                                       if (categoryCount >= widget.competition.minimumInspireCategories)
-                                        const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible')),
+                                        const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible (X)')), // X is the icon
                                       const Cell(Text('Hide?', style: bold), prototype: SizedBox(width: kMinInteractiveDimension)),
                                       if (awards.isNotEmpty) const SizedBox.shrink(),
                                       for (final Award award in awards)
@@ -285,20 +291,26 @@ class _InspirePaneState extends State<InspirePane> {
                                         Cell(Text('${team.rankScore ?? ""}')),
                                         Cell(Text('${team.rankedCount}')),
                                         if (categoryCount >= widget.competition.minimumInspireCategories)
-                                          if (!team.inspireEligible)
-                                            const Cell(Text('Not eligible'))
-                                          else
-                                          if (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)
+                                          if (!team.inspireEligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio))
                                             Cell(
-                                              Text('No portfolio'),
+                                              Text('Not eligible'),
                                               icons: [
-                                                Tooltip(
-                                                  message: 'Team is missing a portfolio!',
-                                                  child: Icon(
-                                                    Symbols.content_paste_off, // clipboard crossed out
-                                                    size: DefaultTextStyle.of(context).style.fontSize,
+                                                if (team.inspireStatus == InspireStatus.exhibition)
+                                                  Tooltip(
+                                                    message: 'Team is an exhibition team and is not eligible for any awards!',
+                                                    child: Icon(
+                                                      Symbols.cruelty_free, // bunny
+                                                      size: DefaultTextStyle.of(context).style.fontSize,
+                                                    ),
                                                   ),
-                                                ),
+                                                if (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)
+                                                  Tooltip(
+                                                    message: 'Team is missing a portfolio!',
+                                                    child: Icon(
+                                                      Symbols.content_paste_off, // clipboard crossed out
+                                                      size: DefaultTextStyle.of(context).style.fontSize,
+                                                    ),
+                                                  ),
                                               ],
                                             )
                                           else
@@ -347,6 +359,16 @@ class _InspirePaneState extends State<InspirePane> {
                     ),
                   ),
                 ),
+            if (canShowAnything)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'Rank Score: Sum of the highest rank in each shortlisted category (if they are all ranked); lower is better.\n'
+                  'Rank Count: Number of categories in which the team is ranked in one or more awards; higher is better.',
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
             if (awards.isNotEmpty)
               AwardOrderSwitch(
                 competition: widget.competition,

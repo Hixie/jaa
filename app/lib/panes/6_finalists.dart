@@ -481,7 +481,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent * 2.0, spacing, indent, spacing),
-                child: TeamOrderSelector(competition: widget.competition),
+                child: TeamOrderSelector(
+                  value: widget.competition.finalistsSortOrder,
+                  onChange: (TeamComparatorCallback newValue) {
+                    widget.competition.finalistsSortOrder = newValue;
+                  },
+                ),
               ),
             if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty && !haveAssignableWinners)
               Padding(

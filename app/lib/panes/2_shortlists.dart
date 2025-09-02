@@ -194,7 +194,7 @@ class ShortlistTables extends StatelessWidget {
                             child: Cell(
                               Text('${team.number}'),
                               icons: (award.needsPortfolio && !team.hasPortfolio) || (team.inspireStatus == InspireStatus.exhibition)
-                                  ? [
+                                  ? <Widget>[
                                       if (team.inspireStatus == InspireStatus.exhibition)
                                         Tooltip(
                                           message: 'Team is an exhibition team and is not eligible for any awards!',
