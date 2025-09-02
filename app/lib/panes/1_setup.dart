@@ -224,6 +224,16 @@ class _SetupPaneState extends State<SetupPane> {
                                         ),
                                       ),
                                     ]
+                                  : team?.inspireStatus == InspireStatus.ineligible
+                                  ? <Widget>[
+                                      Tooltip(
+                                        message: 'Team has already won the Inspire award this season.',
+                                        child: Icon(
+                                          Symbols.social_leaderboard, // medal
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                        ),
+                                      ),
+                                    ]
                                   : null,
                             ),
                           ],
@@ -673,62 +683,81 @@ class _TeamEditorState extends State<TeamEditor> {
           ),
         ),
       );
+      teamNotes.add(
+        CheckboxRow(
+          checked: _team!.inspireStatus == InspireStatus.ineligible,
+          onChanged: _team!.inspireStatus == InspireStatus.exhibition
+              ? null
+              : (bool? value) {
+                  if (value!) {
+                    widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.ineligible);
+                  } else {
+                    widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.eligible);
+                  }
+                },
+          tristate: false,
+          label: 'Team has already won an Inspire award this season, and is ineligible for another, but is competing for other awards.',
+          includePadding: false,
+        ),
+      );
+      teamNotes.add(
+        CheckboxRow(
+          checked: _team!.inspireStatus == InspireStatus.exhibition,
+          onChanged: _team!.inspireStatus == InspireStatus.ineligible
+              ? null
+              : (bool? value) {
+                  if (value!) {
+                    widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.exhibition);
+                  } else {
+                    widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.eligible);
+                  }
+                },
+          tristate: false,
+          label: 'Team is an exhibition team and is not competing for any awards. Remove team from judging lists.',
+          includePadding: false,
+        ),
+      );
+      teamNotes.add(const SizedBox(height: spacing));
       switch (_team!.inspireStatus) {
-        case InspireStatus.eligible:
         case InspireStatus.exhibition:
-          teamNotes.add(
-            CheckboxRow(
-              checked: _team!.inspireStatus == InspireStatus.exhibition,
-              onChanged: _team!.inspireStatus != InspireStatus.eligible && _team!.inspireStatus != InspireStatus.exhibition
-                  ? null
-                  : (bool? value) {
-                      if (value!) {
-                        widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.exhibition);
-                      } else {
-                        widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.eligible);
-                      }
-                    },
-              tristate: false,
-              label: 'Remove team from judging lists (exhibition team).',
-              includePadding: false,
-            ),
-          );
-          if (_team!.inspireStatus == InspireStatus.exhibition) {
-            teamNotes.add(const SizedBox(height: spacing));
-            teamNotes.add(Text.rich(
-              TextSpan(
-                text: 'Team is an exhibition team ',
-                children: <InlineSpan>[
-                  WidgetSpan(
-                    child: Icon(
-                      Symbols.cruelty_free, // bunny
-                      size: DefaultTextStyle.of(context).style.fontSize,
-                    ),
+          teamNotes.add(Text.rich(
+            TextSpan(
+              text: 'Team is an exhibition team ',
+              children: <InlineSpan>[
+                WidgetSpan(
+                  child: Icon(
+                    Symbols.cruelty_free, // bunny
+                    size: DefaultTextStyle.of(context).style.fontSize,
                   ),
-                  const TextSpan(text: ' at this event, they are not eligible for any awards.'),
-                ],
-              ),
-            ));
-          }
+                ),
+                const TextSpan(text: ' at this event, they are not eligible for any awards.'),
+              ],
+            ),
+          ));
+          teamNotes.add(const SizedBox(height: spacing));
         case InspireStatus.ineligible:
-          teamNotes.add(const Text('Team is not eligible for an Inspire award at this event.'));
+          teamNotes.add(Text.rich(
+            TextSpan(
+              text: 'Team has already won the Inspire award this season ',
+              children: <InlineSpan>[
+                WidgetSpan(
+                  child: Icon(
+                    Symbols.social_leaderboard, // medal
+                    size: DefaultTextStyle.of(context).style.fontSize,
+                  ),
+                ),
+                const TextSpan(text: ' and therefore is ineligible to win it again.'),
+              ],
+            ),
+          ));
+          teamNotes.add(const SizedBox(height: spacing));
         case InspireStatus.hidden:
           teamNotes.add(const Text('Team is currently hidden on the Inspire pane.'));
-          teamNotes.add(
-            FilledButton(
-              onPressed: () {
-                widget.competition.updateTeamInspireStatus(_team!, status: InspireStatus.eligible);
-              },
-              child: const Text(
-                'Unhide team',
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          );
+          teamNotes.add(const SizedBox(height: spacing));
+        case InspireStatus.eligible:
+          // nothing to report
       }
-      teamNotes.add(const SizedBox(height: spacing));
-      bool teamCanNotBeNominated = _team!.inspireStatus == InspireStatus.eligible || _team!.inspireStatus == InspireStatus.hidden;
+      bool teamCanNotBeNominated = _team!.inspireStatus != InspireStatus.exhibition;
       if (teamCanNotBeNominated || _team!.shortlistsView.isNotEmpty) {
         if (_team!.shortlistsView.isEmpty) {
           teamNotes.add(const Text('Team is not currently nominated for any awards.'));
@@ -740,7 +769,7 @@ class _TeamEditorState extends State<TeamEditor> {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                const Text('• '),
+                const Text('  • '),
                 Expanded(
                   child: Text.rich(
                     TextSpan(
@@ -748,7 +777,8 @@ class _TeamEditorState extends State<TeamEditor> {
                           '${award.name}'
                           '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
                           '${entry.rank != null ? ' — rank ${entry.rank}' : ''}'
-                          '${award.needsPortfolio && !_team!.hasPortfolio ? ' (invalid nomination; award requires portfolio!)' : ''}',
+                          '${award.needsPortfolio && !_team!.hasPortfolio ? ' (invalid nomination; award requires portfolio!)' : ''}'
+                          '${award.isInspire && _team!.inspireStatus == InspireStatus.ineligible ? ' (invalid nomination; team is not eligible for Inspire!)' : ''}',
                       children: [
                         if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
                       ],

@@ -412,7 +412,10 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                           )
                                         else
                                           const ErrorCell(message: 'missing'),
-                                        if (team != null && (team.inspireStatus == InspireStatus.exhibition || (award.needsPortfolio && !team.hasPortfolio)))
+                                        if (team != null &&
+                                            (team.inspireStatus == InspireStatus.exhibition ||
+                                             (award.isInspire && team.inspireStatus == InspireStatus.ineligible) ||
+                                             (award.needsPortfolio && !team.hasPortfolio)))
                                           ErrorCell(
                                             message: award.isPlacement
                                                   ? 'Invalid ${placementDescriptor(rank)}'
@@ -420,6 +423,13 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                                       ? 'Invalid Win'
                                                       : 'Invalid Runner-Up',
                                             icons: <Widget>[
+                                              if (team.inspireStatus == InspireStatus.ineligible)
+                                                Tooltip(
+                                                  message: 'Team has already won the Inspire award this season!',
+                                                  child: Icon(
+                                                    Symbols.social_leaderboard, // medal
+                                                  ),
+                                                ),
                                               if (team.inspireStatus == InspireStatus.exhibition)
                                                 Tooltip(
                                                   message: 'Team is an exhibition team and is not eligible for any awards!',

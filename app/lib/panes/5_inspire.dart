@@ -164,7 +164,7 @@ class _InspirePaneState extends State<InspirePane> {
                   });
                 },
                 tristate: widget.competition.hideInspireHiddenTeams && _legacyTeams.isNotEmpty,
-                label: 'Include ineligible teams (exhibition teams and teams without portfolio) and teams marked as hidden.',
+                label: 'Include ineligible teams and teams marked as hidden.',
               ),
             if (canShowAnything)
               Padding(
@@ -295,6 +295,14 @@ class _InspirePaneState extends State<InspirePane> {
                                             Cell(
                                               Text('Not eligible'),
                                               icons: [
+                                                if (team.inspireStatus == InspireStatus.ineligible)
+                                                  Tooltip(
+                                                    message: 'Team has already won the Inspire award this season!',
+                                                    child: Icon(
+                                                      Symbols.social_leaderboard, // medal
+                                                      size: DefaultTextStyle.of(context).style.fontSize,
+                                                    ),
+                                                  ),
                                                 if (team.inspireStatus == InspireStatus.exhibition)
                                                   Tooltip(
                                                     message: 'Team is an exhibition team and is not eligible for any awards!',
