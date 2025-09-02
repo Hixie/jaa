@@ -154,7 +154,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                   listenable: widget.competition.shortlistsView[_award]!,
                   builder: (BuildContext context, Widget? child) {
                     final Set<Team> shortlistedTeams = widget.competition.shortlistsView[_award]!.entriesView.keys.toSet();
-                    final List<Team> remainingTeams = widget.competition.teamsView.where((Team team) => !shortlistedTeams.contains(team)).toList();
+                    final List<Team> remainingTeams = widget.competition.teamsView.where((Team team) => !shortlistedTeams.contains(team) && team.inspireStatus != InspireStatus.exhibition).toList();
                     return InlineScrollableCard(
                       children: remainingTeams.isEmpty
                           ? [
@@ -191,7 +191,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                         onSelected: _handleTeamChange,
                                         label: 'Team',
                                         values: Map<Team, String>.fromIterable(
-                                          widget.competition.teamsView.where((Team team) => !team.shortlistsView.containsKey(_award)),
+                                          widget.competition.teamsView.where((Team team) => !team.shortlistsView.containsKey(_award) && team.inspireStatus != InspireStatus.exhibition),
                                           value: (dynamic team) => '${team.number} ${team.name}',
                                         ),
                                       ),

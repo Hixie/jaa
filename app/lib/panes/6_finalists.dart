@@ -116,6 +116,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Set<Award> tiedAwards = {};
         final Set<Award> overriddenAwards = {};
         final Set<Award> incompleteAwards = {};
+        final Set<Award> invalidAwards = {};
         final bool canShowOverrides = widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty;
         final int highestRank = widget.competition.awardsView.map((Award award) => award.count).fold<int>(0, math.max);
         final Map<int, Map<Team, List<Award>>> awardCandidates = {};
@@ -194,6 +195,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             }
           }
         }
+        // Remove non-winning finalists if necessary.
         if (!widget.competition.showWorkings && widget.competition.applyFinalistsByAwardRanking) {
           // ignore: unused_local_variable
           for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
@@ -204,6 +206,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             });
           }
         }
+        // Check the currently assigned awards for issues.
         for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
           bool hasAny = false;
           // ignore: unused_local_variable
@@ -211,6 +214,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             if (team != null && otherAward == null) {
               hasAny = true;
               awardWinners.putIfAbsent(award, () => <Team>{}).add(team);
+              if (award.needsPortfolio && !team.hasPortfolio) {
+                invalidAwards.add(award);
+              }
+              if (team.inspireStatus == InspireStatus.exhibition) {
+                invalidAwards.add(award);
+              }
             }
             if (tied) {
               tiedAwards.add(award);
@@ -290,7 +299,26 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   overflow: TextOverflow.clip,
                 ),
               ),
-            if (finalists.isNotEmpty && (emptyAwards.isNotEmpty || incompleteAwards.isNotEmpty))
+            if (invalidAwards.length == 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'The ${invalidAwards.single.name} award is currently assigned to an ineligible team!',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              )
+            else if (invalidAwards.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                child: Text(
+                  'Some awards are currently assigned to inelgible teams!\n'
+                  'The following awards are affected: ${invalidAwards.map((Award award) => award.name).join(", ")}.',
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
+                ),
+              ),
+            if (finalists.isNotEmpty && (emptyAwards.isNotEmpty || incompleteAwards.isNotEmpty || invalidAwards.isNotEmpty))
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
@@ -380,23 +408,35 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                                 '${team.number}',
                                                 style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
                                               ),
-                                              icons: award.needsPortfolio && !team.hasPortfolio
-                                                  ? [
-                                                      Tooltip(
-                                                        message: 'Team is missing a portfolio!',
-                                                        child: Icon(
-                                                          Symbols.content_paste_off, // clipboard crossed out
-                                                          size: DefaultTextStyle.of(context).style.fontSize,
-                                                          color: foregroundColor,
-                                                        ),
-                                                      ),
-                                                    ]
-                                                  : null,
                                             ),
                                           )
                                         else
                                           const ErrorCell(message: 'missing'),
-                                        if (tied)
+                                        if (team != null && (team.inspireStatus == InspireStatus.exhibition || (award.needsPortfolio && !team.hasPortfolio)))
+                                          ErrorCell(
+                                            message: award.isPlacement
+                                                  ? 'Invalid ${placementDescriptor(rank)}'
+                                                  : rank <= award.count
+                                                      ? 'Invalid Win'
+                                                      : 'Invalid Runner-Up',
+                                            icons: <Widget>[
+                                              if (team.inspireStatus == InspireStatus.exhibition)
+                                                Tooltip(
+                                                  message: 'Team is an exhibition team and is not eligible for any awards!',
+                                                  child: Icon(
+                                                    Symbols.cruelty_free, // bunny
+                                                  ),
+                                                ),
+                                              if (award.needsPortfolio && !team.hasPortfolio)
+                                                Tooltip(
+                                                  message: 'Team is missing a portfolio!',
+                                                  child: Icon(
+                                                    Symbols.content_paste_off, // clipboard crossed out
+                                                  ),
+                                                ),
+                                            ]
+                                          )
+                                        else if (tied)
                                           ErrorCell(message: 'Tied for ${placementDescriptor(rank)}')
                                         else if (otherAward != null)
                                           Cell(Text('${otherAward.name} ${placementDescriptor(rank)}'))
@@ -489,12 +529,35 @@ class ErrorCell extends StatelessWidget {
   const ErrorCell({
     super.key,
     required this.message,
+    this.icons,
   });
 
   final String message;
+  final List<Widget>? icons;
 
   @override
   Widget build(BuildContext context) {
+    Widget body = Text(
+      message,
+      style: const TextStyle(
+        color: Colors.white,
+      ),
+    );
+    if (icons != null) {
+      body = IconTheme(
+        data: IconThemeData(
+          size: DefaultTextStyle.of(context).style.fontSize,
+          color: Colors.white,
+        ),
+        child: Row(
+          children: [
+            body,
+            const SizedBox(width: spacing),
+            ...icons!,
+          ],
+        ),
+      );
+    }
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.fill,
       child: ColoredBox(
@@ -503,12 +566,7 @@ class ErrorCell extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: spacing),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Colors.white,
-              ),
-            ),
+            child: body,
           ),
         ),
       ),
@@ -837,19 +895,28 @@ class TeamAwardAssignmentRow extends StatelessWidget {
                     backgroundColor: award.color,
                     foregroundColor: textColorForColor(award.color),
                   ),
-                  child: (!award.needsPortfolio || team.hasPortfolio) 
+                  child: (!award.needsPortfolio || team.hasPortfolio) && (team.inspireStatus != InspireStatus.exhibition)
                     ? Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}')
                     : Row(
                         children: [
                           Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}'),
                           const SizedBox(width: spacing),
-                          Tooltip(
-                            message: 'Team is missing a portfolio!',
-                            child: Icon(
-                              Symbols.content_paste_off, // clipboard crossed out
-                              size: DefaultTextStyle.of(context).style.fontSize,
+                          if (team.inspireStatus == InspireStatus.exhibition)
+                            Tooltip(
+                              message: 'Team is an exhibition team and is not eligible for any awards!',
+                              child: Icon(
+                                Symbols.cruelty_free, // bunny
+                                size: DefaultTextStyle.of(context).style.fontSize,
+                              ),
                             ),
-                          ),
+                          if (award.needsPortfolio && !team.hasPortfolio)
+                            Tooltip(
+                              message: 'Team is missing a portfolio!',
+                              child: Icon(
+                                Symbols.content_paste_off, // clipboard crossed out
+                                size: DefaultTextStyle.of(context).style.fontSize,
+                              ),
+                            ),
                         ],
                     ),
                 ),

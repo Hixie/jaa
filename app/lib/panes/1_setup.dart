@@ -194,7 +194,7 @@ class _SetupPaneState extends State<SetupPane> {
                           Cell(Text('Team Number', style: bold), prototype: Text('000000')),
                           Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
                           Cell(Text('Team Location', style: bold), prototype: Text('Mooselookmeguntic')),
-                          Cell(Text('Inspire eligible', style: bold), prototype: Text('Yes')),
+                          Cell(Text('Inspire eligible', style: bold), prototype: Text('Not competiting (X)')), // X represents the icon
                         ],
                       ),
                       for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))
@@ -203,16 +203,29 @@ class _SetupPaneState extends State<SetupPane> {
                             Cell(Text('${team?.number ?? '...'}')),
                             Cell(Text(team?.name ?? '...')),
                             Cell(Text(team?.location ?? '...')),
-                            Cell(Text(
-                              team != null
-                                  ? switch (team.inspireStatus) {
-                                      InspireStatus.eligible => 'Yes',
-                                      InspireStatus.ineligible => 'Ineligible',
-                                      InspireStatus.hidden => 'Yes (hidden)',
-                                      InspireStatus.exhibition => 'Not competing',
-                                    }
-                                  : '...',
-                            )),
+                            Cell(
+                              Text(
+                                team != null
+                                    ? switch (team.inspireStatus) {
+                                        InspireStatus.eligible => 'Yes',
+                                        InspireStatus.ineligible => 'Ineligible',
+                                        InspireStatus.hidden => 'Yes (hidden)',
+                                        InspireStatus.exhibition => 'Not competing',
+                                      }
+                                    : '...',
+                              ),
+                              icons: team?.inspireStatus == InspireStatus.exhibition
+                                  ? <Widget>[
+                                      Tooltip(
+                                        message: 'Team is an exhibition team at this event, they are not eligible for any awards.',
+                                        child: Icon(
+                                          Symbols.cruelty_free, // bunny
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                        ),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
                           ],
                         ),
                     ],
@@ -646,7 +659,16 @@ class _TeamEditorState extends State<TeamEditor> {
                   widget.competition.updatePortfolio(_team!, value!);
                 },
               ),
-              const Text('Team has portfolio.'),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      widget.competition.updatePortfolio(_team!, !_team!.hasPortfolio);
+                    });
+                  },
+                  child: const Text('Team has portfolio.'),
+                ),
+              ),
             ],
           ),
         ),
@@ -673,7 +695,20 @@ class _TeamEditorState extends State<TeamEditor> {
           );
           if (_team!.inspireStatus == InspireStatus.exhibition) {
             teamNotes.add(const SizedBox(height: spacing));
-            teamNotes.add(const Text('Team is an exhibition team at this event, they are not eligible for any awards.'));
+            teamNotes.add(Text.rich(
+              TextSpan(
+                text: 'Team is an exhibition team ',
+                children: <InlineSpan>[
+                  WidgetSpan(
+                    child: Icon(
+                      Symbols.cruelty_free, // bunny
+                      size: DefaultTextStyle.of(context).style.fontSize,
+                    ),
+                  ),
+                  const TextSpan(text: ' at this event, they are not eligible for any awards.'),
+                ],
+              ),
+            ));
           }
         case InspireStatus.ineligible:
           teamNotes.add(const Text('Team is not eligible for an Inspire award at this event.'));
@@ -693,11 +728,12 @@ class _TeamEditorState extends State<TeamEditor> {
           );
       }
       teamNotes.add(const SizedBox(height: spacing));
-      if (_team!.inspireStatus == InspireStatus.eligible || _team!.inspireStatus == InspireStatus.hidden) {
+      bool teamCanNotBeNominated = _team!.inspireStatus == InspireStatus.eligible || _team!.inspireStatus == InspireStatus.hidden;
+      if (teamCanNotBeNominated || _team!.shortlistsView.isNotEmpty) {
         if (_team!.shortlistsView.isEmpty) {
           teamNotes.add(const Text('Team is not currently nominated for any awards.'));
         } else {
-          teamNotes.add(const Text('Team is nominated for:'));
+          teamNotes.add(Text('Team is${teamCanNotBeNominated ? "" : " nonetheless"} nominated for:'));
           for (final Award award in _team!.shortlistsView.keys) {
             ShortlistEntry entry = _team!.shortlistsView[award]!;
             teamNotes.add(Row(

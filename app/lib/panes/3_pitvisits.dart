@@ -1,3 +1,5 @@
+import 'dart:math' show min;
+
 import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
@@ -70,21 +72,23 @@ class PitVisitsPane extends StatefulWidget {
 class _PitVisitsPaneState extends State<PitVisitsPane> {
   final Set<Team> _legacyTeams = <Team>{};
 
-  (List<Team>, int, int, int, int, int) computeAffectedTeams({required bool filterTeams, required bool hideVisited}) {
+  (List<Team>, int, int, int, int, int, int) computeAffectedTeams({required bool filterTeams, required int minVisits, required int maxVisits}) {
     final List<Team> teams = [];
     int totalCount = 0;
     int visitedCount = 0;
     int unvisitedNominatedCount = 0;
     int unvisitedAssignedCount = 0;
     int unvisitedRemainingCount = 0;
+    int exhibitionTeams = 0;
     for (Team team in widget.competition.teamsView) {
-      final bool hasSufficientAutomaticPitVisits = team.shortlistsView.keys
-              .where(
-        (Award award) => award.pitVisits == PitVisit.yes,
-              )
-              .length >=
-          widget.competition.expectedPitVisits;
       totalCount += 1;
+      if (team.inspireStatus == InspireStatus.exhibition) {
+        exhibitionTeams += 1;
+        continue;
+      }
+      final bool hasSufficientAutomaticPitVisits = team.shortlistsView.keys
+        .where((Award award) => award.pitVisits == PitVisit.yes)
+        .length >= widget.competition.expectedPitVisits;
       if (team.visited == widget.competition.expectedPitVisits) {
         visitedCount += 1;
       } else if (hasSufficientAutomaticPitVisits) {
@@ -94,7 +98,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
       } else {
         unvisitedRemainingCount += 1;
       }
-      if ((!hideVisited || team.visited < widget.competition.expectedPitVisits || _legacyTeams.contains(team)) &&
+      if (((team.visited >= minVisits && min(team.visited, widget.competition.expectedPitVisits) <= maxVisits) || _legacyTeams.contains(team)) &&
           (!filterTeams || !hasSufficientAutomaticPitVisits)) {
         teams.add(team);
       }
@@ -106,6 +110,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
       unvisitedNominatedCount,
       unvisitedAssignedCount,
       unvisitedRemainingCount,
+      exhibitionTeams,
     );
   }
 
@@ -125,11 +130,13 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
           int unvisitedNominatedCount,
           int unvisitedAssignedCount,
           int unvisitedRemainingCount,
+          int exhibitionTeams,
         ) = computeAffectedTeams(
           filterTeams: widget.competition.pitVisitsExcludeAutovisitedTeams,
-          hideVisited: widget.competition.pitVisitsHideVisitedTeams,
+          minVisits: widget.competition.pitVisitsViewMinVisits,
+          maxVisits: widget.competition.pitVisitsViewMaxVisits,
         );
-        assert(totalCount == visitedCount + unvisitedNominatedCount + unvisitedAssignedCount + unvisitedRemainingCount);
+        assert(totalCount == visitedCount + unvisitedNominatedCount + unvisitedAssignedCount + unvisitedRemainingCount + exhibitionTeams);
         final List<Award> relevantAwards = PitVisitsPane.computeAffectedAwards(widget.competition);
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -215,6 +222,21 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                               ),
                             ],
                           ),
+                          if (exhibitionTeams > 0)
+                            TableRow(
+                              children: [
+                                const SizedBox.shrink(),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
+                                  child: Text('$exhibitionTeams', textAlign: TextAlign.right),
+                                ),
+                                const Text(
+                                  'Exhibition teams',
+                                  softWrap: true,
+                                  overflow: TextOverflow.clip,
+                                ),
+                              ],
+                            ),
                           TableRow(
                             children: [
                               const Text('+'),
@@ -277,37 +299,93 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                     : 'Include teams that are nominated for sufficient awards that involve pit visits from the judges to reach the expected pit visit count.',
               ),
             if (totalCount > 0)
-              CheckboxRow(
-                checked: widget.competition.pitVisitsHideVisitedTeams
-                    ? _legacyTeams.isEmpty
-                        ? false
-                        : null
-                    : true,
-                onChanged: (bool? value) {
-                  widget.competition.pitVisitsHideVisitedTeams = !value!;
-                  setState(() {
-                    _legacyTeams.clear();
-                  });
-                },
-                tristate: widget.competition.pitVisitsHideVisitedTeams && _legacyTeams.isNotEmpty,
-                label: 'Include teams that are already marked as ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited.',
-              ),
+              if (widget.competition.expectedPitVisits > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(indent, 0, indent, spacing),
+                  child: Row(
+                    children: [
+                      Material(
+                        type: MaterialType.transparency,
+                        child: Checkbox(
+                          value: widget.competition.pitVisitsViewMinVisits != 0 || widget.competition.pitVisitsViewMaxVisits != widget.competition.expectedPitVisits,
+                          onChanged: (bool? value) {
+                            widget.competition.pitVisitsViewMinVisits = 0;
+                            if (value!) {
+                              widget.competition.pitVisitsViewMaxVisits = widget.competition.expectedPitVisits - 1;
+                            } else {
+                              widget.competition.pitVisitsViewMaxVisits = widget.competition.expectedPitVisits;
+                            }
+                            setState(() {
+                              _legacyTeams.clear();
+                            });
+                          },
+                        ),
+                      ),
+                      Text('Filter view to only show teams that have been visited between '),
+                      VisitInput(
+                        min: 0,
+                        max: widget.competition.expectedPitVisits,
+                        highlightThreshold: widget.competition.expectedPitVisits,
+                        value: widget.competition.pitVisitsViewMinVisits,
+                        onChanged: (int value) {
+                          widget.competition.pitVisitsViewMinVisits = value;
+                          if (widget.competition.pitVisitsViewMinVisits > widget.competition.pitVisitsViewMaxVisits) {
+                            widget.competition.pitVisitsViewMaxVisits = widget.competition.pitVisitsViewMinVisits;
+                          }
+                          setState(() {
+                            _legacyTeams.clear();
+                          });
+                        },
+                      ),
+                      Text(' and '),
+                      VisitInput(
+                        min: 0,
+                        max: widget.competition.expectedPitVisits,
+                        highlightThreshold: widget.competition.expectedPitVisits,
+                        value: widget.competition.pitVisitsViewMaxVisits,
+                        onChanged: (int value) {
+                          widget.competition.pitVisitsViewMaxVisits = value;
+                          if (widget.competition.pitVisitsViewMaxVisits < widget.competition.pitVisitsViewMinVisits) {
+                            widget.competition.pitVisitsViewMinVisits = widget.competition.pitVisitsViewMaxVisits;
+                          }
+                          setState(() {
+                            _legacyTeams.clear();
+                          });
+                        },
+                      ),
+                      Text(' times.'),
+                    ],
+                  ),
+                )
+              else
+                CheckboxRow(
+                  checked: widget.competition.pitVisitsViewMinVisits != 0
+                      ? null
+                      : widget.competition.pitVisitsViewMaxVisits == 0
+                        ? _legacyTeams.isEmpty
+                            ? false
+                            : null
+                        : true,
+                  onChanged: (bool? value) {
+                    if (value!) {
+                      widget.competition.pitVisitsViewMinVisits = 0;
+                      widget.competition.pitVisitsViewMaxVisits = 0;
+                    } else {
+                      widget.competition.pitVisitsViewMinVisits = 0;
+                      widget.competition.pitVisitsViewMaxVisits = widget.competition.expectedPitVisits;
+                    }
+                    setState(() {
+                      _legacyTeams.clear();
+                    });
+                  },
+                  tristate: widget.competition.pitVisitsViewMinVisits != 0 || (widget.competition.pitVisitsViewMaxVisits == 0 && _legacyTeams.isNotEmpty),
+                  label: 'Include teams that are already marked as visited.',
+                ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  widget.competition.pitVisitsExcludeAutovisitedTeams
-                      ? widget.competition.pitVisitsHideVisitedTeams
-                          ? 'All of the teams that have not been shortlisted for awards that always involve pit visits have been${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited.'
-                          : widget.competition.expectedPitVisits == 1
-                              ? 'All of the teams have been shortlisted for awards that always involve pit visits.'
-                              : 'All of the teams have been shortlisted for sufficient awards that always involve pit visits.'
-                      : widget.competition.pitVisitsHideVisitedTeams
-                          ? 'All of the teams have been ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited.'
-                          : () {
-                              assert(false, 'internal error with teams filtering');
-                              return '';
-                            }(),
+                  'No teams match the current filter.',
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
@@ -316,17 +394,23 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  widget.competition.pitVisitsExcludeAutovisitedTeams
-                      ? widget.competition.pitVisitsHideVisitedTeams
-                          ? widget.competition.expectedPitVisits == 1
-                              ? 'The following teams have not been shortlisted for any awards that always involve pit visits, and have not yet been visited:'
-                              : 'The following teams have not been shortlisted for sufficient awards that always involve pit visits, and have not yet been sufficiently visited:'
-                          : widget.competition.expectedPitVisits == 1
-                              ? 'The following teams have not been shortlisted for any awards that always involve pit visits:'
-                              : 'The following teams have not been shortlisted for sufficient awards that always involve pit visits:'
-                      : widget.competition.pitVisitsHideVisitedTeams
-                          ? 'The following teams have not yet been ${widget.competition.expectedPitVisits == 1 ? '' : 'sufficiently '}visited:'
-                          : 'All teams:',
+                  widget.competition.expectedPitVisits == 1
+                   ? widget.competition.pitVisitsExcludeAutovisitedTeams
+                      ? widget.competition.pitVisitsViewMinVisits == 0 && widget.competition.pitVisitsViewMaxVisits == 0
+                         ? 'The following teams have not been shortlisted for any awards that always involve pit visits, and have not yet been visited:'
+                         : 'The following teams have not been shortlisted for any awards that always involve pit visits:'
+                      : widget.competition.pitVisitsViewMinVisits == 0 && widget.competition.pitVisitsViewMaxVisits == 0
+                         ? 'The following teams have not yet been visited:'
+                         : exhibitionTeams > 0
+                           ? 'All teams eligible for awards:'
+                           : 'All teams:'
+                   : widget.competition.pitVisitsExcludeAutovisitedTeams ||
+                     widget.competition.pitVisitsViewMinVisits != 0 ||
+                     widget.competition.pitVisitsViewMaxVisits != widget.competition.expectedPitVisits
+                       ? 'Filtered teams:'
+                       : exhibitionTeams > 0
+                         ? 'All teams eligible for awards:'
+                         : 'All teams:',
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),
@@ -377,8 +461,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                           ),
                           for (final Team team in teams)
                             TableRow(
-                              decoration: widget.competition.pitVisitsHideVisitedTeams &&
-                                      team.visited >= widget.competition.expectedPitVisits &&
+                              decoration: (team.visited < widget.competition.pitVisitsViewMinVisits || (team.visited > widget.competition.pitVisitsViewMaxVisits && widget.competition.pitVisitsViewMaxVisits < widget.competition.expectedPitVisits)) &&
                                       _legacyTeams.contains(team)
                                   ? BoxDecoration(color: Colors.grey.shade100)
                                   : null,

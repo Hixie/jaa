@@ -871,11 +871,24 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  bool get pitVisitsHideVisitedTeams => _pitVisitsHideVisitedTeams;
-  bool _pitVisitsHideVisitedTeams = false;
-  set pitVisitsHideVisitedTeams(bool value) {
-    if (value != _pitVisitsHideVisitedTeams) {
-      _pitVisitsHideVisitedTeams = value;
+  int get pitVisitsViewMinVisits => _pitVisitsViewMinVisits;
+  int _pitVisitsViewMinVisits = 0;
+  set pitVisitsViewMinVisits(int value) {
+    if (value != _pitVisitsViewMinVisits) {
+      _pitVisitsViewMinVisits = value;
+      notifyListeners();
+    }
+  }
+
+  int get pitVisitsViewMaxVisits => _pitVisitsViewMaxVisits ?? expectedPitVisits;
+  int? _pitVisitsViewMaxVisits;
+  set pitVisitsViewMaxVisits(int value) {
+    if (value != pitVisitsViewMaxVisits) { // comparing to getter, not raw value
+      if (value == expectedPitVisits) {
+        _pitVisitsViewMaxVisits = null;
+      } else {
+        _pitVisitsViewMaxVisits = value;
+      }
       notifyListeners();
     }
   }
@@ -1766,8 +1779,36 @@ class Competition extends ChangeNotifier {
         case 'pit visits - exclude autovisited teams':
           _pitVisitsExcludeAutovisitedTeams = _parseBool(row[1]);
         case 'pit visits - hide visited teams':
-          _pitVisitsHideVisitedTeams = _parseBool(row[1]);
+          if (_parseBool(row[1])) {
+            _pitVisitsViewMinVisits = 0;
+            _pitVisitsViewMaxVisits = 0;
+          } else {
+            _pitVisitsViewMinVisits = 0;
+            _pitVisitsViewMaxVisits = null;
+          }
+        case 'pit visits - min':
+          int? value = row[1] is int ? row[1] : int.tryParse('${row[1]}', radix: 10);
+          if (value == null || value < 0) {
+            throw const FormatException('Invalid "pit visits - min" configuration value; must be a non-negative integer.');
+          }
+          _pitVisitsViewMinVisits = value;
+        case 'pit visits - max':
+          if (row[1] == 'null') {
+            _pitVisitsViewMaxVisits = null;
+          } else {
+            int? value = row[1] is int ? row[1] : int.tryParse('${row[1]}', radix: 10);
+            if (value == null || value < 0) {
+              throw const FormatException('Invalid "pit visits - max" configuration value; must be a non-negative integer or the string "null".');
+            }
+            _pitVisitsViewMaxVisits = value;
+          }
       }
+    }
+    if (_pitVisitsViewMinVisits > _expectedPitVisits) {
+      _pitVisitsViewMinVisits = 0;
+    }
+    if (_pitVisitsViewMaxVisits != null && (_pitVisitsViewMaxVisits! < _pitVisitsViewMinVisits || _pitVisitsViewMaxVisits! >= _expectedPitVisits)) {
+      _pitVisitsViewMaxVisits = null;
     }
     notifyListeners();
   }
@@ -1787,7 +1828,8 @@ class Competition extends ChangeNotifier {
     _inspireSortOrder = Team.teamNumberComparator;
     _finalistsSortOrder = Team.rankedCountComparator;
     _pitVisitsExcludeAutovisitedTeams = true;
-    _pitVisitsHideVisitedTeams = false;
+    _pitVisitsViewMinVisits = 0;
+    _pitVisitsViewMaxVisits = null;
     notifyListeners();
   }
 
@@ -1815,7 +1857,8 @@ class Competition extends ChangeNotifier {
     data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder)]);
     data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder)]);
     data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
-    data.add(['pit visits - hide visited teams', _pitVisitsHideVisitedTeams ? 'y' : 'n']);
+    data.add(['pit visits - min', '$_pitVisitsViewMinVisits']); // numeric
+    data.add(['pit visits - max', '$_pitVisitsViewMaxVisits']); // numeric or "null"
     return const ListToCsvConverter().convert(data);
   }
 
@@ -2087,7 +2130,8 @@ class Competition extends ChangeNotifier {
     _expandInspireTable = random.nextBool();
     _showWorkings = random.nextBool();
     _pitVisitsExcludeAutovisitedTeams = random.nextBool();
-    _pitVisitsHideVisitedTeams = random.nextBool();
+    _pitVisitsViewMinVisits = 0; // needs testing
+    _pitVisitsViewMaxVisits = random.nextBool() ? null : 0; // needs testing more deeply
     final List<String> categories = List<String>.generate(4, (int index) => randomizer.generatePhrase(random.nextInt(2) + 1));
     final int awardCount = random.nextInt(10) + 2;
     bool seenInspire = false;

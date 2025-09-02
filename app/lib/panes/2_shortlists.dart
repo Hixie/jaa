@@ -193,16 +193,26 @@ class ShortlistTables extends StatelessWidget {
                             message: team.name,
                             child: Cell(
                               Text('${team.number}'),
-                              icons: award.needsPortfolio && !team.hasPortfolio
+                              icons: (award.needsPortfolio && !team.hasPortfolio) || (team.inspireStatus == InspireStatus.exhibition)
                                   ? [
-                                      Tooltip(
-                                        message: 'Team is missing a portfolio!',
-                                        child: Icon(
-                                          Symbols.content_paste_off, // clipboard crossed out
-                                          size: DefaultTextStyle.of(context).style.fontSize,
-                                          color: foregroundColor,
+                                      if (team.inspireStatus == InspireStatus.exhibition)
+                                        Tooltip(
+                                          message: 'Team is an exhibition team and is not eligible for any awards!',
+                                          child: Icon(
+                                            Symbols.cruelty_free, // bunny
+                                            size: DefaultTextStyle.of(context).style.fontSize,
+                                            color: foregroundColor,
+                                          ),
                                         ),
-                                      ),
+                                      if (award.needsPortfolio && !team.hasPortfolio)
+                                        Tooltip(
+                                          message: 'Team is missing a portfolio!',
+                                          child: Icon(
+                                            Symbols.content_paste_off, // clipboard crossed out
+                                            size: DefaultTextStyle.of(context).style.fontSize,
+                                            color: foregroundColor,
+                                          ),
+                                        ),
                                     ]
                                   : null,
                             ),
