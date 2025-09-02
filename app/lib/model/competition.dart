@@ -691,6 +691,7 @@ class Competition extends ChangeNotifier {
                 final List<Set<Team>> candidatesList = awardCandidates[award]!;
                 while (candidatesList.isNotEmpty && !placedTeam) {
                   final Set<Team> candidates = candidatesList.removeAt(0);
+                  candidates.removeWhere((Team team) => (award.isInspire && team.inspireStatus == InspireStatus.ineligible) || team.inspireStatus == InspireStatus.exhibition);
                   final Set<Team> alreadyPlaced = award.spreadTheWealth != SpreadTheWealth.no ? placedTeams.keys.toSet() : {};
                   final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
                   final Set<Team> winners = candidates.difference(ineligible);
