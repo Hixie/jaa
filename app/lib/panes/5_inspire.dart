@@ -224,8 +224,11 @@ class _InspirePaneState extends State<InspirePane> {
                                 children: [
                                   TableRow(
                                     children: [
-                                      Cell(Text('#', style: bold),
-                                          prototype: Text('000000'), highlight: widget.competition.inspireSortOrder == Team.teamNumberComparator),
+                                      Cell(
+                                        Text('#', style: bold),
+                                        prototype: Text('${widget.competition.teamsView.last.number} WW'), // longest team number plus icon(s)
+                                        highlight: widget.competition.inspireSortOrder == Team.teamNumberComparator,
+                                      ),
                                       for (final String category in categories)
                                         Cell(
                                           Text(category, style: bold),
@@ -236,7 +239,7 @@ class _InspirePaneState extends State<InspirePane> {
                                       Cell(Text('Rank Count', style: bold),
                                           prototype: Text('000'), highlight: widget.competition.inspireSortOrder == Team.rankedCountComparator),
                                       if (categoryCount >= widget.competition.minimumInspireCategories)
-                                        const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible (X)')), // X is the icon
+                                        const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible WW')), // WW represents the icon(s)
                                       const Cell(Text('Hide?', style: bold), prototype: SizedBox(width: kMinInteractiveDimension)),
                                       if (awards.isNotEmpty) const SizedBox.shrink(),
                                       for (final Award award in awards)
@@ -291,7 +294,9 @@ class _InspirePaneState extends State<InspirePane> {
                                         Cell(Text('${team.rankScore ?? ""}')),
                                         Cell(Text('${team.rankedCount}')),
                                         if (categoryCount >= widget.competition.minimumInspireCategories)
-                                          if (!team.inspireEligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio))
+                                          if ((team.inspireStatus == InspireStatus.ineligible) ||
+                                              (team.inspireStatus == InspireStatus.exhibition) ||
+                                              (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio))
                                             Cell(
                                               Text('Not eligible'),
                                               icons: [
@@ -333,10 +338,11 @@ class _InspirePaneState extends State<InspirePane> {
                                             type: MaterialType.transparency,
                                             child: Checkbox(
                                               key: ValueKey<Team>(team),
-                                              value: !team.inspireEligible ||
-                                                     (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio) ||
-                                                     (team.inspireStatus == InspireStatus.hidden),
-                                              onChanged: (!team.inspireEligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio))
+                                              value: (team.inspireStatus != InspireStatus.eligible) ||
+                                                    (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio),
+                                              onChanged: (team.inspireStatus == InspireStatus.ineligible) ||
+                                                         (team.inspireStatus == InspireStatus.exhibition) ||
+                                                         (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)
                                                   ? null
                                                   : (bool? value) {
                                                       value!;

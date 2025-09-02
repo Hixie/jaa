@@ -373,7 +373,9 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
     }
     final int nomineeTarget = widget.competition.inspireAward!.count;
     final int totalNomineeCount = candidates[targetCategories]!.length;
-    final int qualifyingNomineeCount = candidates[targetCategories]!.keys.where((Team team) => team.inspireEligible).length;
+    final int qualifyingNomineeCount = candidates[targetCategories]!.keys.where(
+      (Team team) => team.inspireStatus == InspireStatus.eligible || team.inspireStatus == InspireStatus.hidden,
+    ).length;
     final int ineligibleCount = totalNomineeCount - qualifyingNomineeCount;
     final String nonqualifying = switch (ineligibleCount) {
       0 => '',

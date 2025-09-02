@@ -130,6 +130,8 @@ class AwardCard extends StatelessWidget {
           shape: teamListCardShape,
           child: FocusTraversalGroup(
             child: DefaultTextStyle.merge(
+              softWrap: false, // Card resets this
+              overflow: TextOverflow.ellipsis, // Card resets this
               style: TextStyle(color: foregroundColor),
               child: inner,
             ),

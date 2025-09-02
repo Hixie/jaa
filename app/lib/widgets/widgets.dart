@@ -402,38 +402,42 @@ class InlineScrollableCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: HorizontalScrollbar(
-        child: Stack(
-          children: [
-            LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: math.max(minimumReasonableWidth, constraints.maxWidth)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(spacing * 2.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: children,
+      child: DefaultTextStyle.merge(
+        softWrap: false, // Card resets this
+        overflow: TextOverflow.ellipsis, // Card resets this
+        child: HorizontalScrollbar(
+          child: Stack(
+            children: [
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: math.max(minimumReasonableWidth, constraints.maxWidth)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(spacing * 2.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: children,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconButton(
-                onPressed: onClosed,
-                iconSize: DefaultTextStyle.of(context).style.fontSize,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.close),
+                  );
+                },
               ),
-            ),
-          ],
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  onPressed: onClosed,
+                  iconSize: DefaultTextStyle.of(context).style.fontSize,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

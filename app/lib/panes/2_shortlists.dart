@@ -174,7 +174,7 @@ class ShortlistTables extends StatelessWidget {
                   children: [
                     TableRow(
                       children: [
-                        Cell(Text('#', style: bold), prototype: Text('000000${award.needsPortfolio ? ' (X)' : ''}')), // leaves space for no-portfolio icon
+                        Cell(Text('#', style: bold), prototype: Text('${competition.teamsView.last.number} WW')), // longest team number plus icon(s)
                         const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Autonominated')),
                         if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                         TableCell(

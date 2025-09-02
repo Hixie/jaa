@@ -56,7 +56,6 @@ class Cell extends StatelessWidget {
       result = Row(
         children: [
           Expanded(child: result),
-          const SizedBox(width: spacing),
           ...icons!,
           const SizedBox(width: spacing),
         ],

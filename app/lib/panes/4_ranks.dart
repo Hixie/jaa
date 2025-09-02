@@ -252,7 +252,7 @@ class RankTables extends StatelessWidget {
                         TableRow(
                           children: [
                             const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
-                            Cell(Text('#', style: bold), prototype: Text('000000${award.needsPortfolio ? ' (X)' : ''}')), // leaves space for no-portfolio icon
+                            Cell(Text('#', style: bold), prototype: Text('${competition.teamsView.last.number} WW')), // longest team number plus icon(s)
                             if (includeNominatorColumn) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Autonominated')),
                             if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                             TableCell(

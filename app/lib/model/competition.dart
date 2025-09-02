@@ -247,8 +247,6 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   int get number => _number;
   int _number;
 
-  bool get inspireEligible => inspireStatus == InspireStatus.eligible || inspireStatus == InspireStatus.hidden;
-
   String get name => _name;
   String _name;
 
@@ -535,13 +533,11 @@ class Competition extends ChangeNotifier {
   Future<Directory> get exportDirectory => _exportDirectory ?? exportDirectoryBuilder();
 
   final List<Team> _teams = <Team>[];
-  final List<Team> _inspireIneligibleTeams = <Team>[];
   final List<Award> _awards = <Award>[];
   final List<String> _categories = <String>[];
   final Map<Award, Shortlist> _shortlists = <Award, Shortlist>{};
 
   late final UnmodifiableListView<Team> teamsView = UnmodifiableListView<Team>(_teams);
-  late final UnmodifiableListView<Team> inspireIneligibleTeamsView = UnmodifiableListView<Team>(_inspireIneligibleTeams);
   late final UnmodifiableListView<Award> awardsView = UnmodifiableListView<Award>(_awards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
   late final UnmodifiableListView<String> categories = UnmodifiableListView(_categories);
@@ -631,12 +627,6 @@ class Competition extends ChangeNotifier {
 
   void updateTeamInspireStatus(Team team, {required InspireStatus status}) {
     team._inspireStatus = status;
-    if (status == InspireStatus.ineligible || status == InspireStatus.exhibition) {
-      _inspireIneligibleTeams.add(team);
-    } else {
-      _inspireIneligibleTeams.remove(team);
-    }
-    _inspireIneligibleTeams.sort();
     notifyListeners();
   }
 
@@ -1114,7 +1104,6 @@ class Competition extends ChangeNotifier {
 
   void _clearTeams() {
     _teams.clear();
-    _inspireIneligibleTeams.clear();
     for (final Shortlist shortlist in _shortlists.values) {
       shortlist._clear();
     }
@@ -1152,16 +1141,13 @@ class Competition extends ChangeNotifier {
           inspireStatus: inspireStatus,
         );
         _teams.add(team);
-        if (inspireStatus == InspireStatus.ineligible || inspireStatus == InspireStatus.exhibition) {
-          _inspireIneligibleTeams.add(team);
-        }
         rowNumber += 1;
       }
+      _teams.sort();
     } catch (e) {
       _clearTeams();
       rethrow;
     }
-    _inspireIneligibleTeams.sort();
     notifyListeners();
   }
 
@@ -2179,9 +2165,6 @@ class Competition extends ChangeNotifier {
         inspireStatus: inspireStatus,
       );
       _teams.add(team);
-      if (inspireStatus == InspireStatus.ineligible || inspireStatus == InspireStatus.exhibition) {
-        _inspireIneligibleTeams.add(team);
-      }
       team._visited = random.nextInt(_expectedPitVisits);
       if (random.nextInt(5) > 0) {
         team.visitingJudgesNotes = randomizer.generatePhrase(random.nextInt(30) + 2);
@@ -2213,12 +2196,12 @@ class Competition extends ChangeNotifier {
         }
       }
     }
-    _inspireIneligibleTeams.sort();
     notifyListeners();
   }
 
   void updateTeamNumber(Team team, int newNumber) {
     team._number = newNumber;
+    _teams.sort();
     notifyListeners();
   }
 }

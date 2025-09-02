@@ -190,12 +190,12 @@ class _SetupPaneState extends State<SetupPane> {
                     ),
                     defaultColumnWidth: const IntrinsicCellWidth(),
                     children: [
-                      const TableRow(
+                      TableRow(
                         children: [
-                          Cell(Text('Team Number', style: bold), prototype: Text('000000')),
+                          Cell(Text('Team Number', style: bold), prototype: Text('${widget.competition.teamsView.last.number}')),
                           Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
                           Cell(Text('Team Location', style: bold), prototype: Text('Mooselookmeguntic')),
-                          Cell(Text('Inspire eligible', style: bold), prototype: Text('Not competiting (X)')), // X represents the icon
+                          Cell(Text('Inspire eligible', style: bold), prototype: Text('Not competiting WW')), // WW represents the icon(s)
                         ],
                       ),
                       for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))

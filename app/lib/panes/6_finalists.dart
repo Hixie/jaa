@@ -385,7 +385,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                 children: [
                                   TableRow(
                                     children: [
-                                      Cell(Text('#', style: bold), prototype: Text('000000${award.needsPortfolio ? ' (X)' : ''}')), // leaves space for no-portfolio icon
+                                      Cell(Text('#', style: bold), prototype: Text('${widget.competition.teamsView.last.number} WW')), // longest team number plus icon(s)
                                       Cell(Text(award.isPlacement ? 'Ranks' : 'Results', style: bold), prototype: const Text('Unlikely result')),
                                       if (overriddenAwards.contains(award))
                                         TableCell(
