@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../utils/constants.dart';
@@ -564,9 +565,11 @@ class _TeamEditorState extends State<TeamEditor> {
   final TextEditingController _teamController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _newTeamNumberController = TextEditingController();
 
   Team? _team;
-
+  bool _editTeamNumber = false;
+  
   String get _currentTeamLabel => _team != null ? "${_team!.number} ${_team!.name}" : "";
 
   @override
@@ -587,6 +590,7 @@ class _TeamEditorState extends State<TeamEditor> {
   void _handleTeamChange(Team? team) {
     setState(() {
       _team = null;
+      _editTeamNumber = false;
       _nameController.text = team?.name ?? '';
       _locationController.text = team?.location ?? '';
       _team = team;
@@ -650,6 +654,7 @@ class _TeamEditorState extends State<TeamEditor> {
                     : () {
                         setState(() {
                           _team = null;
+                          _editTeamNumber = false;
                           _teamController.text = '';
                         });
                       },
@@ -805,6 +810,106 @@ class _TeamEditorState extends State<TeamEditor> {
             team: _team!,
           ),
         );
+        teamNotes.add(SizedBox(height: indent));
+        if (_editTeamNumber) {
+          teamNotes.add(
+            IntrinsicWidth(
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4.0),
+                  side: BorderSide(color: Colors.red.shade700, width: 2.0),
+                ),
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(indent),
+                  child: ListenableBuilder(
+                    listenable: _newTeamNumberController,
+                    builder: (BuildContext context, Widget? child) {
+                      final int? newNumber = int.tryParse(_newTeamNumberController.text);
+                      Team? other;
+                      if (newNumber != null) {
+                        List<Team> others = widget.competition.teamsView.where((Team other) => other != _team && other.number == newNumber).toList();
+                        if (others.isNotEmpty) {
+                          assert(others.length == 1);
+                          other = others.single;
+                        }
+                      } else {
+                        other = null;
+                      }
+                      return ListBody(
+                        children: <Widget>[
+                          Text.rich(
+                            TextSpan(
+                              text: 'Team: "',
+                              children: <InlineSpan>[
+                                TextSpan(text: _team!.name, style: bold),
+                                const TextSpan(text: '"'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: spacing),
+                          Text('Current team number: ${_team!.number}'),
+                          const SizedBox(height: indent),
+                          TextField(
+                            controller: _newTeamNumberController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                            enableIMEPersonalizedLearning: false,
+                            enableSuggestions: false,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText: 'New Team Number',
+                              hintText: '${_team!.number}',
+                              errorText: _newTeamNumberController.text.isNotEmpty && newNumber == null
+                                ? 'Not a valid number.'
+                                : other != null
+                                  ? 'Team $newNumber is "${other.name}".'
+                                  : null,
+                              helperText: 'New team number: ${newNumber ?? "—"}',
+                            ),
+                          ),
+                          const SizedBox(height: indent),
+                          Row(
+                            children: [
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(color: Colors.red.shade900),
+                                ),
+                                onPressed: newNumber == null || other != null ? null : () {
+                                  widget.competition.updateTeamNumber(_team!, newNumber);
+                                  setState(() { _editTeamNumber = false; });
+                                },
+                                child: Text('Actually Change Team Number'),
+                              ),
+                              SizedBox(width: spacing),
+                              OutlinedButton(
+                                child: Text('Cancel'),
+                                onPressed: () {
+                                  setState(() { _editTeamNumber = false; });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                  ),
+                ),
+              ),
+            )
+          );
+        } else {
+          teamNotes.add(
+            OutlinedButton(
+              child: Text('Change Team Number'),
+              onPressed: () {
+                setState(() { _editTeamNumber = true; });
+              },
+            ),
+          );
+        }
       }
     }
     return ListenableBuilder(

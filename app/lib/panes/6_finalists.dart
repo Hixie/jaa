@@ -897,7 +897,12 @@ class TeamAwardAssignmentRow extends StatelessWidget {
               padding: const EdgeInsets.only(left: spacing),
               child: Tooltip(
                 message: tooltips[award] ?? '',
-                child: ElevatedButton(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: award.color,
+                    foregroundColor: textColorForColor(award.color),
+                    side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+                  ),
                   onPressed: () {
                     competition.addOverride(
                       award,
@@ -906,10 +911,6 @@ class TeamAwardAssignmentRow extends StatelessWidget {
                       FinalistKind.manual,
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: award.color,
-                    foregroundColor: textColorForColor(award.color),
-                  ),
                   child: (!award.needsPortfolio || team.hasPortfolio) && (team.inspireStatus != InspireStatus.exhibition)
                     ? Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}')
                     : Row(

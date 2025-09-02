@@ -231,19 +231,21 @@ typedef TeamComparatorCallback = int Function(Team a, Team b);
 
 class Team extends ChangeNotifier implements Comparable<Team> {
   Team({
-    required this.number,
+    required int number,
     required String name,
     required String location,
     required bool hasPortfolio,
     required InspireStatus inspireStatus,
     int visited = 0,
-  })  : _name = name,
+  })  : _number = number,
+        _name = name,
         _location = location,
         _hasPortfolio = hasPortfolio,
         _visited = visited,
         _inspireStatus = inspireStatus;
 
-  final int number;
+  int get number => _number;
+  int _number;
 
   bool get inspireEligible => inspireStatus == InspireStatus.eligible || inspireStatus == InspireStatus.hidden;
 
@@ -2212,6 +2214,11 @@ class Competition extends ChangeNotifier {
       }
     }
     _inspireIneligibleTeams.sort();
+    notifyListeners();
+  }
+
+  void updateTeamNumber(Team team, int newNumber) {
+    team._number = newNumber;
     notifyListeners();
   }
 }
