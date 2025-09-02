@@ -197,7 +197,6 @@ class _InspirePaneState extends State<InspirePane> {
                             const SizedBox(height: spacing),
                             Builder(builder: (context) {
                               final List<Team> teams = candidates[categoryCount]!.keys.toList()..sort(widget.competition.inspireSortOrder);
-                              //print(teams);
                               if (widget.competition.hideInspireHiddenTeams) {
                                 teams.removeWhere((Team team) => !_legacyTeams.contains(team) && (team.inspireStatus != InspireStatus.eligible || (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)));
                               }
