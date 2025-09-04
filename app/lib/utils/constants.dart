@@ -59,5 +59,6 @@ blockquote { margin: 2em 0 0.5em 0; }
 h2 + blockquote, h3 + blockquote { margin-top: 0; }
 ''';
 
-const String currentHelp = 'Event On-Call Support # 603-206-2412';
+const String eventHelp = 'Event On-Call Support # 603-206-2412';
+const String appHelp = 'App support is available on the "FTC JA Assistant" Slack, or by emailing ftc.jaa@gmail.com.';
 const String bullet = '•';

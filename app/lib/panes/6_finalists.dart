@@ -323,7 +323,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
                   'For advice with handling difficult cases, consider calling FIRST: '
-                  '${currentHelp.replaceAll(' ', '\u00A0')}',
+                  '${eventHelp.replaceAll(' ', '\u00A0')}',
                   softWrap: true,
                   overflow: TextOverflow.clip,
                 ),

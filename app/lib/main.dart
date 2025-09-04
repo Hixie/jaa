@@ -206,7 +206,7 @@ class _MainAppState extends State<MainApp> {
                                 const Expanded(
                                   child: Padding(
                                     padding: EdgeInsets.fromLTRB(0.0, spacing, indent, spacing),
-                                    child: Text(currentHelp, textAlign: TextAlign.right),
+                                    child: Text(eventHelp, textAlign: TextAlign.right),
                                   ),
                                 ),
                               ],
@@ -420,9 +420,26 @@ class AboutPane extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Heading(title: 'About'),
+          Padding(
+            padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+            child: Text('${appInfo.appName} $bullet Version ${appInfo.version}'),
+          ),
           const Padding(
             padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-            child: Text(currentHelp),
+            child: Text(eventHelp),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+            child: Text(appHelp),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+            child: Text(
+              'Save state:',
+              softWrap: true,
+              overflow: TextOverflow.clip,
+              style: bold,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
