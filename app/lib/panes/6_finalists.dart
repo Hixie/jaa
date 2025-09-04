@@ -320,7 +320,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
-                  'Some awards are currently assigned to inelgible teams!\n'
+                  'Some awards are currently assigned to ineligible teams!\n'
                   'The following awards are affected: ${invalidAwards.map((Award award) => award.name).join(", ")}.',
                   softWrap: true,
                   overflow: TextOverflow.clip,
@@ -394,7 +394,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                   TableRow(
                                     children: [
                                       Cell(Text('#', style: bold), prototype: Text('${widget.competition.teamsView.last.number} WW')), // longest team number plus icon(s)
-                                      Cell(Text(award.isPlacement ? 'Ranks' : 'Results', style: bold), prototype: const Text('Unlikely result')),
+                                      Cell(Text('Award', style: bold), prototype: const Text('Invalid 2nd WW')),
                                       if (overriddenAwards.contains(award))
                                         TableCell(
                                           verticalAlignment: TableCellVerticalAlignment.middle,
@@ -515,22 +515,14 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               ScrollableRegion(
                 child: ListBody(
                   children: [
-                    ListBody(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                          child: Text('Rank $assignRank candidates', style: italic),
-                        ),
-                        for (Team team in awardCandidates[assignRank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
-                          TeamAwardAssignmentRow(
-                            competition: widget.competition,
-                            rank: assignRank!,
-                            team: team,
-                            awards: awardCandidates[assignRank]![team]!.toList()..sort(widget.competition.awardSorter),
-                            finalists: finalistsAsMap,
-                          ),
-                      ],
-                    ),
+                    for (Team team in awardCandidates[assignRank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
+                      TeamAwardAssignmentRow(
+                        competition: widget.competition,
+                        rank: assignRank!,
+                        team: team,
+                        awards: awardCandidates[assignRank]![team]!.toList()..sort(widget.competition.awardSorter),
+                        finalists: finalistsAsMap,
+                      ),
                   ],
                 ),
               ),
@@ -572,7 +564,7 @@ class ErrorCell extends StatelessWidget {
         ),
         child: Row(
           children: [
-            body,
+            Expanded(child: body),
             const SizedBox(width: spacing),
             ...icons!,
           ],
@@ -761,7 +753,7 @@ class _OverrideEditorState extends State<OverrideEditor> {
                                 controller: _rankController,
                                 focusNode: _rankFocusNode,
                                 decoration: InputDecoration(
-                                  labelText: 'Rank',
+                                  labelText: 'Award',
                                   hintText: '1..${_award!.count}',
                                   border: const OutlineInputBorder(),
                                 ),
@@ -896,7 +888,7 @@ class TeamAwardAssignmentRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(indent * 2.0, 0.0, indent, spacing),
       child: Row(
         children: [
-          Text('${team.number} ${team.name}'),
+          Text('${team.number}'),
           const SizedBox(width: spacing),
           for (final Award award in awards)
             Padding(
