@@ -122,6 +122,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Map<int, Map<Team, List<Award>>> awardCandidates = {};
         final Map<Award, Set<Team>> awardWinners = {};
         bool haveAssignableWinners = false;
+        int? assignRank;
         final Map<Award, List<Team?>> finalistsAsMap = {};
         final Map<Award, List<Set<Team>>> shortlists = {};
         if (!widget.competition.applyFinalistsByAwardRanking) {
@@ -194,6 +195,13 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               }
             }
           }
+          for (int rank = 1; rank <= highestRank; rank += 1) {
+            if (awardCandidates[rank]!.isNotEmpty) {
+              assignRank = rank;
+              break;
+            }
+          }
+          assert(haveAssignableWinners == (assignRank != null));
         }
         // Remove non-winning finalists if necessary.
         if (!widget.competition.showWorkings && widget.competition.applyFinalistsByAwardRanking) {
@@ -507,25 +515,23 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               ScrollableRegion(
                 child: ListBody(
                   children: [
-                    for (int rank = 1; rank <= highestRank; rank += 1)
-                      if (awardCandidates[rank]!.isNotEmpty)
-                        ListBody(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                              child: Text('Rank $rank candidates', style: italic),
-                            ),
-                            for (Team team in awardCandidates[rank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
-                              TeamAwardAssignmentRow(
-                                competition: widget.competition,
-                                rank: rank,
-                                team: team,
-                                awards: awardCandidates[rank]![team]!.toList()..sort(widget.competition.awardSorter),
-                                finalists: finalistsAsMap,
-                              ),
-                          ],
+                    ListBody(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                          child: Text('Rank $assignRank candidates', style: italic),
                         ),
-                    ],
+                        for (Team team in awardCandidates[assignRank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
+                          TeamAwardAssignmentRow(
+                            competition: widget.competition,
+                            rank: assignRank!,
+                            team: team,
+                            awards: awardCandidates[assignRank]![team]!.toList()..sort(widget.competition.awardSorter),
+                            finalists: finalistsAsMap,
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
