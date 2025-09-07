@@ -210,7 +210,7 @@ class Award extends ChangeNotifier {
 
   // predicate for List.where clauses
   static bool isInspireQualifyingPredicate(Award award) {
-    return !award.isInspire && award.isAdvancing;
+    return !award.isInspire && award.kind == AwardKind.advancingInspire;
   }
 
   static int categoryBasedComparator(Award a, Award b) {
@@ -269,8 +269,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   late final UnmodifiableMapView<Award, ShortlistEntry> shortlistsView = UnmodifiableMapView(_shortlists);
   final Map<Award, ShortlistEntry> _shortlists = <Award, ShortlistEntry>{};
 
-  late final Set<String> shortlistedAdvancingCategories = UnmodifiableSetView(_shortlistedAdvancingCategories);
-  final Set<String> _shortlistedAdvancingCategories = <String>{};
+  late final Set<String> shortlistedAdvancingCategories = UnmodifiableSetView(_shortlistedInspireContributingCategories);
+  final Set<String> _shortlistedInspireContributingCategories = <String>{};
 
   late final UnmodifiableMapView<Award, String> blurbsView = UnmodifiableMapView(_blurbs);
   final Map<Award, String> _blurbs = <Award, String>{};
@@ -308,24 +308,24 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   void _addToShortlist(Award award, ShortlistEntry entry) {
     assert(!_shortlists.containsKey(award));
     _shortlists[award] = entry;
-    entry.addListener(_recomputeShortlistedAdvancingCategories);
-    _recomputeShortlistedAdvancingCategories();
+    entry.addListener(_recomputeShortlistedInspireContributingCategories);
+    _recomputeShortlistedInspireContributingCategories();
     notifyListeners();
   }
 
   void _removeFromShortlist(Award award) {
-    _shortlists[award]!.removeListener(_recomputeShortlistedAdvancingCategories);
+    _shortlists[award]!.removeListener(_recomputeShortlistedInspireContributingCategories);
     _shortlists.remove(award);
-    _recomputeShortlistedAdvancingCategories();
+    _recomputeShortlistedInspireContributingCategories();
     notifyListeners();
   }
 
   void _clearShortlists() {
     for (final ShortlistEntry entry in _shortlists.values) {
-      entry.removeListener(_recomputeShortlistedAdvancingCategories);
+      entry.removeListener(_recomputeShortlistedInspireContributingCategories);
     }
     _shortlists.clear();
-    _shortlistedAdvancingCategories.clear();
+    _shortlistedInspireContributingCategories.clear();
     notifyListeners();
   }
 
@@ -335,16 +335,16 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     notifyListeners();
   }
 
-  void _recomputeShortlistedAdvancingCategories() {
-    _shortlistedAdvancingCategories.clear();
+  void _recomputeShortlistedInspireContributingCategories() {
+    _shortlistedInspireContributingCategories.clear();
     _rankScore = 0;
     for (final Award award in _shortlists.keys) {
-      if (award.isAdvancing && !award.isInspire) {
-        _shortlistedAdvancingCategories.add(award.category);
+      if (award.kind == AwardKind.advancingInspire && !award.isInspire) {
+        _shortlistedInspireContributingCategories.add(award.category);
       }
     }
-    for (String category in _shortlistedAdvancingCategories) {
-      int? lowest = _bestRankFor(category);
+    for (String category in _shortlistedInspireContributingCategories) {
+      int? lowest = _bestInspireContributingRankFor(category);
       if (lowest == null) {
         _rankScore = null;
         return;
@@ -353,27 +353,27 @@ class Team extends ChangeNotifier implements Comparable<Team> {
     }
   }
 
-  int _countHyptheticalShortlistedAdvancingCategories({required Award without}) {
+  int _countHyptheticalShortlistedInspireContributingCategories({required Award without}) {
     Set<String> categories = {};
     for (final Award award in _shortlists.keys) {
-      if (award != without && award.isAdvancing && !award.isInspire) {
+      if (award != without && award.kind == AwardKind.advancingInspire && !award.isInspire) {
         categories.add(award.category);
       }
     }
     return categories.length;
   }
 
-  String bestRankFor(String category, String unrankedLabel, String unnominatedLabel) {
-    if (!_shortlistedAdvancingCategories.contains(category)) {
+  String bestInspireContributingRankFor(String category, String unrankedLabel, String unnominatedLabel) {
+    if (!_shortlistedInspireContributingCategories.contains(category)) {
       return unnominatedLabel;
     }
-    return '${_bestRankFor(category) ?? unrankedLabel}';
+    return '${_bestInspireContributingRankFor(category) ?? unrankedLabel}';
   }
 
-  int? _bestRankFor(String category) {
+  int? _bestInspireContributingRankFor(String category) {
     int? result;
     for (final Award award in _shortlists.keys) {
-      if (award.isAdvancing && !award.isInspire && award.category == category) {
+      if (award.kind == AwardKind.advancingInspire && !award.isInspire && award.category == category) {
         final int? candidate = _shortlists[award]!.rank;
         if (result == null || (candidate != null && candidate < result)) {
           result = candidate;
@@ -780,7 +780,7 @@ class Competition extends ChangeNotifier {
       comment: '',
       competition: this,
     );
-    // event awards cannot affect Inspire logic:
+    // event awards cannot affect Inspire logic, have categories, or be advancing:
     assert(award.category == '');
     assert(!award.isAdvancing);
     _addAward(award);
@@ -1445,7 +1445,7 @@ class Competition extends ChangeNotifier {
     assert(_shortlists[award]!.entriesView.containsKey(team));
     return inspireAward != null &&
         _shortlists[inspireAward]!.entriesView.containsKey(team) &&
-        team._countHyptheticalShortlistedAdvancingCategories(without: award) < minimumInspireCategories;
+        team._countHyptheticalShortlistedInspireContributingCategories(without: award) < minimumInspireCategories;
   }
 
   void removeFromShortlist(Award award, Team team) {
@@ -1454,7 +1454,7 @@ class Competition extends ChangeNotifier {
     team._removeFromShortlist(award);
     if (inspireAward != null &&
         _shortlists[inspireAward]!.entriesView.containsKey(team) &&
-        team._shortlistedAdvancingCategories.length < minimumInspireCategories) {
+        team._shortlistedInspireContributingCategories.length < minimumInspireCategories) {
       _shortlists[inspireAward]!._remove(team);
       team._removeFromShortlist(inspireAward!);
     }

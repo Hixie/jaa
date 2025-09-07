@@ -46,7 +46,7 @@ class InspirePane extends StatefulWidget {
           page.writeln('<tr>');
           page.writeln('<td>${team.number} <i>${escapeHtml(team.name)}</i>');
           for (final String category in categories) {
-            page.writeln('<td>${escapeHtml(team.bestRankFor(category, 'unranked', ''))}');
+            page.writeln('<td>${escapeHtml(team.bestInspireContributingRankFor(category, 'unranked', ''))}');
           }
           page.writeln('<td>${team.rankScore ?? ""}');
           page.writeln('<td>${team.rankedCount}');
@@ -289,7 +289,7 @@ class _InspirePaneState extends State<InspirePane> {
                                           message: team.name,
                                           child: Cell(Text('${team.number}')),
                                         ),
-                                        for (final String category in categories) Cell(Text(team.bestRankFor(category, 'unranked', ''))),
+                                        for (final String category in categories) Cell(Text(team.bestInspireContributingRankFor(category, 'unranked', ''))),
                                         Cell(Text('${team.rankScore ?? ""}')),
                                         Cell(Text('${team.rankedCount}')),
                                         if (categoryCount >= widget.competition.minimumInspireCategories)
