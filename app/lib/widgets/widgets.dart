@@ -394,10 +394,12 @@ class InlineScrollableCard extends StatelessWidget {
     super.key,
     required this.children,
     required this.onClosed,
+    this.toolbar,
   });
 
   final List<Widget> children;
   final VoidCallback onClosed;
+  final Widget? toolbar;
 
   @override
   Widget build(BuildContext context) {
@@ -429,11 +431,16 @@ class InlineScrollableCard extends StatelessWidget {
               Positioned(
                 top: 0,
                 right: 0,
-                child: IconButton(
-                  onPressed: onClosed,
-                  iconSize: DefaultTextStyle.of(context).style.fontSize,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.close),
+                child: Row(
+                  children: [
+                    ?toolbar,
+                    IconButton(
+                      onPressed: onClosed,
+                      iconSize: DefaultTextStyle.of(context).style.fontSize,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
               ),
             ],

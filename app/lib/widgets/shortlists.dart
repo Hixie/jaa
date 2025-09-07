@@ -39,10 +39,15 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
   Team? _team;
   bool? _hasPortfolio;
 
+  bool _bulk = false;
+  List<(Team?, String)>? _parsedBulk;
+  bool _bulkValid = false;
+
   @override
   void initState() {
     super.initState();
     widget.competition.addListener(_markNeedsBuild);
+    _teamController.addListener(_handleTeamTextChange);
   }
 
   @override
@@ -88,6 +93,8 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
           _team = null;
           _hasPortfolio = null;
           _teamController.clear();
+          _parsedBulk = null;
+          _bulkValid = false;
         }
       });
       _teamFocusNode.requestFocus();
@@ -102,7 +109,22 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     });
   }
 
+  void _handleTeamTextChange() {
+    if (_bulk) {
+      setState(() {
+        _parsedBulk = _parseBulk(_teamController.text);
+        _bulkValid = _parsedBulk!.isNotEmpty && _parsedBulk!.every((final (Team? team, String comment) entry) => entry.$1 != null && entry.$2.isEmpty);
+      });
+    } else {
+      _parsedBulk = null;
+      _bulkValid = false;
+    }
+  }
+
   void _addTeamToShortlist() {
+    if (_bulk) {
+      throw StateError('Cannot add single team when in bulk mode');
+    }
     if (_team?.hasPortfolio != _hasPortfolio) {
       widget.competition.updatePortfolio(_team!, _hasPortfolio!);
     }
@@ -118,6 +140,36 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
     );
     _addedTrigger.trigger();
     _teamController.clear();
+    _parsedBulk = null;
+    _bulkValid = false;
+    // we intentionally don't clear the nominator field
+    _commentController.clear();
+    _teamFocusNode.requestFocus();
+    setState(() {
+      _team = null;
+      _hasPortfolio = null;
+    });
+  }
+
+  void _addBulkTeamsToShortlist() {
+    if (!_bulk) {
+      throw StateError('Cannot add bulk teams when not in bulk mode');
+    }
+    for (Team team in (_parsedBulk!.map<Team>((final (Team?, String) entry) => entry.$1!))) {
+      widget.competition.addToShortlist(
+        _award!,
+        team,
+        ShortlistEntry(
+          nominator: _nominatorController.text,
+          comment: _commentController.text,
+          lateEntry: widget.lateEntry,
+        ),
+      );
+    }
+    _addedTrigger.trigger();
+    _teamController.clear();
+    _parsedBulk = null;
+    _bulkValid = false;
     // we intentionally don't clear the nominator field
     _commentController.clear();
     _teamFocusNode.requestFocus();
@@ -156,6 +208,57 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                     final Set<Team> shortlistedTeams = widget.competition.shortlistsView[_award]!.entriesView.keys.toSet();
                     final List<Team> remainingTeams = widget.competition.teamsView.where((Team team) => !shortlistedTeams.contains(team) && team.inspireStatus != InspireStatus.exhibition).toList();
                     return InlineScrollableCard(
+                      toolbar: AnimatedContainer(
+                        duration: animationDuration,
+                        curve: Curves.easeInOut,
+                        decoration: ShapeDecoration(
+                          shape: StadiumBorder(),
+                          color: _bulk ? Theme.of(context).colorScheme.tertiaryContainer : Theme.of(context).colorScheme.primaryContainer,
+                        ),
+                        child: AnimatedDefaultTextStyle(
+                          duration: animationDuration,
+                          curve: Curves.easeInOut,
+                          style: DefaultTextStyle.of(context).style.apply(
+                            color: _bulk ? Theme.of(context).colorScheme.onTertiaryContainer : Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                          child: Builder(
+                            builder: (context) { // provides context for DefaultTextStyle below
+                              return Padding(
+                                padding: const EdgeInsets.fromLTRB(spacing / 2.0, spacing / 2.0, spacing, spacing / 2.0),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(maxHeight: DefaultTextStyle.of(context).style.fontSize!),
+                                  child: FittedBox(
+                                    alignment: AlignmentGeometry.centerRight,
+                                    child: MergeSemantics(
+                                      child: Row(
+                                        children: [
+                                          Switch(
+                                            value: _bulk,
+                                            onChanged: (bool? value) {
+                                              setState(() {
+                                                _bulk = value!;
+                                              });
+                                            },
+                                          ),
+                                          SizedBox(width: spacing),
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _bulk = !_bulk;
+                                              });
+                                            },
+                                            child: Text('BULK', style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 2.0)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                          ),
+                        ),
+                      ),
                       children: remainingTeams.isEmpty
                           ? [
                               Text.rich(
@@ -168,121 +271,15 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
                                 ),
                               ),
                             ]
-                          : [
-                              Text.rich(
-                                TextSpan(
-                                  children: [
-                                    const TextSpan(text: 'Nominate team for '),
-                                    TextSpan(text: _award!.name, style: bold),
-                                    TextSpan(text: ' (${_award!.description})${widget.lateEntry ? " as a late entry" : ""}:'),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: spacing),
-                              LayoutBuilder(
-                                builder: (BuildContext context, BoxConstraints constraints) => Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ConstrainedBox(
-                                      constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 7 - spacing),
-                                      child: DropdownList<Team>(
-                                        focusNode: _teamFocusNode,
-                                        controller: _teamController,
-                                        onSelected: _handleTeamChange,
-                                        label: 'Team',
-                                        values: Map<Team, String>.fromIterable(
-                                          widget.competition.teamsView.where((Team team) => !team.shortlistsView.containsKey(_award) && team.inspireStatus != InspireStatus.exhibition),
-                                          value: (dynamic team) => '${team.number} ${team.name}',
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: spacing),
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _nominatorController,
-                                        focusNode: _nominatorFocusNode,
-                                        decoration: const InputDecoration(
-                                          label: Text(
-                                            'Nominator',
-                                            softWrap: false,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        onSubmitted: (String value) {
-                                          if (_team == null) {
-                                            _teamFocusNode.requestFocus();
-                                          } else if (_commentController.text.isEmpty) {
-                                            _commentFocusNode.requestFocus();
-                                          } else if (!_award!.needsPortfolio || (_hasPortfolio == true)) {
-                                            _addTeamToShortlist();
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: spacing),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _commentController,
-                                      focusNode: _commentFocusNode,
-                                      decoration: const InputDecoration(
-                                        label: Text(
-                                          'Comment',
-                                          softWrap: false,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      onSubmitted: (String value) {
-                                        if (_team != null) {
-                                          if (!_award!.needsPortfolio || (_hasPortfolio == true)) {
-                                            _addTeamToShortlist();
-                                          }
-                                        } else {
-                                          _teamFocusNode.requestFocus();
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: spacing),
-                                  MergeSemantics(
-                                    child: Row(
-                                      children: [
-                                        Checkbox(
-                                          value: _hasPortfolio,
-                                          tristate: _hasPortfolio == null,
-                                          onChanged: _hasPortfolio == null ? null : (bool? value) { 
-                                            setState(() {
-                                              _hasPortfolio = value;
-                                            });
-                                          },
-                                        ),
-                                        Text('Team has portfolio', style: _team != null && _award!.needsPortfolio && (_hasPortfolio != true) ? red : null),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: spacing * 2.0),
-                                  IconButton.filledTonal(
-                                    onPressed: _team != null && (!_award!.needsPortfolio || (_hasPortfolio == true)) ? _addTeamToShortlist : null,
-                                    icon: const Icon(
-                                      Symbols.heart_plus,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          : _bulk ? buildBulkNominatorForm() : buildSingleTeamNominatorForm(),
                       onClosed: () {
                         setState(() {
                           _award = null;
                           _team = null;
                           _hasPortfolio = null;
                           _teamController.clear();
+                          _parsedBulk = null;
+                          _bulkValid = false;
                           _nominatorController.clear();
                         });
                       },
@@ -302,6 +299,285 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
           ),
       ],
     );
+  }
+
+  List<Widget> buildSingleTeamNominatorForm() {
+    return [
+      Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: 'Nominate team for '),
+            TextSpan(text: _award!.name, style: bold),
+            TextSpan(text: ' (${_award!.description})${widget.lateEntry ? " as a late entry" : ""}:'),
+          ],
+        ),
+      ),
+      const SizedBox(height: spacing),
+      LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth - indent * 7 - spacing),
+              child: DropdownList<Team>(
+                focusNode: _teamFocusNode,
+                controller: _teamController,
+                onSelected: _handleTeamChange,
+                label: 'Team',
+                values: Map<Team, String>.fromIterable(
+                  widget.competition.teamsView.where((Team team) => !team.shortlistsView.containsKey(_award) && team.inspireStatus != InspireStatus.exhibition),
+                  value: (dynamic team) => '${team.number} ${team.name}',
+                ),
+              ),
+            ),
+            const SizedBox(width: spacing),
+            Expanded(
+              child: TextField(
+                controller: _nominatorController,
+                focusNode: _nominatorFocusNode,
+                decoration: const InputDecoration(
+                  label: Text(
+                    'Nominator',
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (String value) {
+                  if (_team == null) {
+                    _teamFocusNode.requestFocus();
+                  } else if (_commentController.text.isEmpty) {
+                    _commentFocusNode.requestFocus();
+                  } else if (!_award!.needsPortfolio || (_hasPortfolio == true)) {
+                    _addTeamToShortlist();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: spacing),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _commentController,
+              focusNode: _commentFocusNode,
+              decoration: const InputDecoration(
+                label: Text(
+                  'Comment',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (String value) {
+                if (_team != null) {
+                  if (!_award!.needsPortfolio || (_hasPortfolio == true)) {
+                    _addTeamToShortlist();
+                  }
+                } else {
+                  _teamFocusNode.requestFocus();
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: spacing),
+          MergeSemantics(
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _hasPortfolio,
+                  tristate: _hasPortfolio == null,
+                  onChanged: _hasPortfolio == null ? null : (bool? value) { 
+                    setState(() {
+                      _hasPortfolio = value;
+                    });
+                  },
+                ),
+                GestureDetector(
+                  onTap: _hasPortfolio == null ? null : () { 
+                    setState(() {
+                      _hasPortfolio = _hasPortfolio == false;
+                    });
+                  },
+                  child: Text('Team has portfolio', style: _team != null && _award!.needsPortfolio && (_hasPortfolio != true) ? red : null)
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: spacing * 2.0),
+          IconButton.filledTonal(
+            onPressed: _team != null && (!_award!.needsPortfolio || (_hasPortfolio == true)) ? _addTeamToShortlist : null,
+            icon: const Icon(
+              Symbols.heart_plus,
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> buildBulkNominatorForm() {
+    return [
+      Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: 'Nominate teams for '),
+            TextSpan(text: _award!.name, style: bold),
+            TextSpan(text: ' (${_award!.description})${widget.lateEntry ? " as late entries" : ""}:'),
+          ],
+        ),
+      ),
+      const SizedBox(height: spacing),
+      TextField(
+        controller: _teamController,
+        focusNode: _teamFocusNode,
+        decoration: const InputDecoration(
+          label: Text(
+            'Teams (space or comma separated)',
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+          ),
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (String value) {
+          if (!_bulkValid) {
+            _teamFocusNode.requestFocus();
+          } else if (_nominatorController.text.isEmpty) {
+            _nominatorFocusNode.requestFocus();
+          } else if (_commentController.text.isEmpty) {
+            _commentFocusNode.requestFocus();
+          } else {
+            _addBulkTeamsToShortlist();
+          }
+        },
+      ),
+      const SizedBox(height: spacing),
+      TextField(
+        controller: _nominatorController,
+        focusNode: _nominatorFocusNode,
+        decoration: const InputDecoration(
+          label: Text(
+            'Nominator',
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+          ),
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (String value) {
+          if (!_bulkValid) {
+            _teamFocusNode.requestFocus();
+          } else if (_commentController.text.isEmpty) {
+            _commentFocusNode.requestFocus();
+          } else {
+            _addBulkTeamsToShortlist();
+          }
+        },
+      ),
+      const SizedBox(height: spacing),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _commentController,
+              focusNode: _commentFocusNode,
+              decoration: const InputDecoration(
+                label: Text(
+                  'Comment',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (String value) {
+                if (!_bulkValid) {
+                  _teamFocusNode.requestFocus();
+                } else {
+                  _addBulkTeamsToShortlist();
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: spacing),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ListBody(
+              children: [
+                if (_parsedBulk != null)
+                  for (final (Team? team, String comment) in _parsedBulk!)
+                    if (team != null)
+                      Text(' $bullet #${team.number} ${team.name}${comment.isNotEmpty ? " — $comment" : ""}', style: comment.isNotEmpty ? red : null)
+                    else
+                      Text(' $bullet $comment', style: red),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            onPressed: _bulkValid ? () => _addBulkTeamsToShortlist : null,
+            icon: const Icon(
+              Symbols.heart_plus,
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<(Team?, String)> _parseBulk(String input) {
+    final List<(Team?, String)> result = <(Team?, String)>[];
+    final Map<int, Team> teamMap = {
+      for (final Team team in widget.competition.teamsView) team.number: team,
+    };
+    List<int> buffer = <int>[];
+    bool error = false;
+    for (int c in '$input\x00'.runes) {
+      switch (c) {
+        case 0x00:
+        case 0x0A:
+        case 0x0D:
+        case 0x20:
+        case 0x2C: // split
+          if (buffer.isNotEmpty) {
+            if (error) {
+              result.add((null, 'Invalid input: "${String.fromCharCodes(buffer)}"'));
+            } else {
+              int? number = int.tryParse(String.fromCharCodes(buffer));
+              if (number == null) {
+                result.add((null, 'Invalid number: "${String.fromCharCodes(buffer)}"'));
+              } else {
+                Team? team = teamMap[number];
+                if (team == null) {
+                  result.add((null, 'Unknown team: $number'));
+                } else if (team.inspireStatus == InspireStatus.exhibition) {
+                  result.add((team, 'Exhibition team'));
+                } else if (_award!.needsPortfolio && !team.hasPortfolio) {
+                  result.add((team, 'Team has no portfolio'));
+                } else if (team.shortlistsView.containsKey(_award)) {
+                  result.add((team, 'Team already shortlisted for this award'));
+                } else {
+                  result.add((team, ''));
+                }
+              }
+            }
+          }
+          buffer.clear();
+          error = false;
+        case >=0x30 && <=0x39: // 0-9
+          buffer.add(c);
+        default:
+          buffer.add(c);
+          error = true;
+      }
+    }
+    return result;
   }
 }
 
