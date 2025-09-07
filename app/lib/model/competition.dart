@@ -871,11 +871,20 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  bool get pitVisitsExcludeAutovisitedTeams => _pitVisitsExcludeAutovisitedTeams;
-  bool _pitVisitsExcludeAutovisitedTeams = true;
-  set pitVisitsExcludeAutovisitedTeams(bool value) {
-    if (value != _pitVisitsExcludeAutovisitedTeams) {
-      _pitVisitsExcludeAutovisitedTeams = value;
+  bool get pitVisitsIncludeAutovisitedTeams => _pitVisitsIncludeAutovisitedTeams;
+  bool _pitVisitsIncludeAutovisitedTeams = true;
+  set pitVisitsIncludeAutovisitedTeams(bool value) {
+    if (value != _pitVisitsIncludeAutovisitedTeams) {
+      _pitVisitsIncludeAutovisitedTeams = value;
+      notifyListeners();
+    }
+  }
+
+  bool get pitVisitsIncludeExhibitionTeams => _pitVisitsIncludeExhibitionTeams;
+  bool _pitVisitsIncludeExhibitionTeams = true;
+  set pitVisitsIncludeExhibitionTeams(bool value) {
+    if (value != _pitVisitsIncludeExhibitionTeams) {
+      _pitVisitsIncludeExhibitionTeams = value;
       notifyListeners();
     }
   }
@@ -1783,7 +1792,11 @@ class Competition extends ChangeNotifier {
         case 'finalists sort order': 
           _finalistsSortOrder = _parseSortOrder('${row[1]}');
         case 'pit visits - exclude autovisited teams':
-          _pitVisitsExcludeAutovisitedTeams = _parseBool(row[1]);
+          _pitVisitsIncludeAutovisitedTeams = !_parseBool(row[1]); // for backwards compatibilit
+        case 'pit visits - include autovisited teams':
+          _pitVisitsIncludeAutovisitedTeams = _parseBool(row[1]);
+        case 'pit visits - include exhibition teams':
+          _pitVisitsIncludeExhibitionTeams = _parseBool(row[1]);
         case 'pit visits - hide visited teams':
           if (_parseBool(row[1])) {
             _pitVisitsViewMinVisits = 0;
@@ -1833,7 +1846,8 @@ class Competition extends ChangeNotifier {
     _applyFinalistsByAwardRanking = true; // default to true for imported events, but false on fresh startup
     _inspireSortOrder = Team.teamNumberComparator;
     _finalistsSortOrder = Team.rankedCountComparator;
-    _pitVisitsExcludeAutovisitedTeams = true;
+    _pitVisitsIncludeAutovisitedTeams = false;
+    _pitVisitsIncludeExhibitionTeams = false;
     _pitVisitsViewMinVisits = 0;
     _pitVisitsViewMaxVisits = null;
     notifyListeners();
@@ -1862,7 +1876,8 @@ class Competition extends ChangeNotifier {
     data.add(['apply finalists by award ranking', _applyFinalistsByAwardRanking ? 'y' : 'n']);
     data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder)]);
     data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder)]);
-    data.add(['pit visits - exclude autovisited teams', _pitVisitsExcludeAutovisitedTeams ? 'y' : 'n']);
+    data.add(['pit visits - include autovisited teams', _pitVisitsIncludeAutovisitedTeams ? 'y' : 'n']);
+    data.add(['pit visits - include exhibition teams', _pitVisitsIncludeExhibitionTeams ? 'y' : 'n']);
     data.add(['pit visits - min', '$_pitVisitsViewMinVisits']); // numeric
     data.add(['pit visits - max', '$_pitVisitsViewMaxVisits']); // numeric or "null"
     return const ListToCsvConverter().convert(data);
@@ -2135,7 +2150,8 @@ class Competition extends ChangeNotifier {
     _showNominators = randomizer.randomItem(Show.values);
     _expandInspireTable = random.nextBool();
     _showWorkings = random.nextBool();
-    _pitVisitsExcludeAutovisitedTeams = random.nextBool();
+    _pitVisitsIncludeAutovisitedTeams = random.nextBool();
+    _pitVisitsIncludeExhibitionTeams = random.nextBool();
     _pitVisitsViewMinVisits = 0; // needs testing
     _pitVisitsViewMaxVisits = random.nextBool() ? null : 0; // needs testing more deeply
     final List<String> categories = List<String>.generate(4, (int index) => randomizer.generatePhrase(random.nextInt(2) + 1));

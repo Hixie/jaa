@@ -1,6 +1,7 @@
 import 'dart:math' show min;
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../utils/constants.dart';
 import '../utils/io.dart';
@@ -72,7 +73,11 @@ class PitVisitsPane extends StatefulWidget {
 class _PitVisitsPaneState extends State<PitVisitsPane> {
   final Set<Team> _legacyTeams = <Team>{};
 
-  (List<Team>, int, int, int, int, int, int) computeAffectedTeams({required bool filterTeams, required int minVisits, required int maxVisits}) {
+  (List<Team>, int, int, int, int, int, int) computeAffectedTeams({
+    required bool showAutovisitedTeams,
+    required bool showExhibitionTeams,
+    required int minVisits,
+    required int maxVisits}) {
     final List<Team> teams = [];
     int totalCount = 0;
     int visitedCount = 0;
@@ -84,23 +89,27 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
       totalCount += 1;
       if (team.inspireStatus == InspireStatus.exhibition) {
         exhibitionTeams += 1;
+        if (showExhibitionTeams) {
+          teams.add(team);
+        }
         continue;
-      }
-      final bool hasSufficientAutomaticPitVisits = team.shortlistsView.keys
-        .where((Award award) => award.pitVisits == PitVisit.yes)
-        .length >= widget.competition.expectedPitVisits;
-      if (team.visited == widget.competition.expectedPitVisits) {
-        visitedCount += 1;
-      } else if (hasSufficientAutomaticPitVisits) {
-        unvisitedNominatedCount += 1;
-      } else if (team.visitingJudgesNotes.isNotEmpty) {
-        unvisitedAssignedCount += 1;
       } else {
-        unvisitedRemainingCount += 1;
-      }
-      if (((team.visited >= minVisits && min(team.visited, widget.competition.expectedPitVisits) <= maxVisits) || _legacyTeams.contains(team)) &&
-          (!filterTeams || !hasSufficientAutomaticPitVisits)) {
-        teams.add(team);
+        final bool hasSufficientAutomaticPitVisits = team.shortlistsView.keys
+          .where((Award award) => award.pitVisits == PitVisit.yes)
+          .length >= widget.competition.expectedPitVisits;
+        if (team.visited == widget.competition.expectedPitVisits) {
+          visitedCount += 1;
+        } else if (hasSufficientAutomaticPitVisits) {
+          unvisitedNominatedCount += 1;
+        } else if (team.visitingJudgesNotes.isNotEmpty) {
+          unvisitedAssignedCount += 1;
+        } else {
+          unvisitedRemainingCount += 1;
+        }
+        if (((team.visited >= minVisits && min(team.visited, widget.competition.expectedPitVisits) <= maxVisits) || _legacyTeams.contains(team)) &&
+            (showAutovisitedTeams || !hasSufficientAutomaticPitVisits)) {
+          teams.add(team);
+        }
       }
     }
     return (
@@ -132,7 +141,8 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
           int unvisitedRemainingCount,
           int exhibitionTeams,
         ) = computeAffectedTeams(
-          filterTeams: widget.competition.pitVisitsExcludeAutovisitedTeams,
+          showAutovisitedTeams: !widget.competition.pitVisitsIncludeAutovisitedTeams,
+          showExhibitionTeams: widget.competition.pitVisitsIncludeExhibitionTeams,
           minVisits: widget.competition.pitVisitsViewMinVisits,
           maxVisits: widget.competition.pitVisitsViewMaxVisits,
         );
@@ -286,9 +296,9 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               ),
             if (totalCount > 0)
               CheckboxRow(
-                checked: !widget.competition.pitVisitsExcludeAutovisitedTeams,
+                checked: widget.competition.pitVisitsIncludeAutovisitedTeams,
                 onChanged: (bool? value) {
-                  widget.competition.pitVisitsExcludeAutovisitedTeams = !value!;
+                  widget.competition.pitVisitsIncludeAutovisitedTeams = value!;
                   setState(() {
                     _legacyTeams.clear();
                   });
@@ -369,10 +379,10 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   onChanged: (bool? value) {
                     if (value!) {
                       widget.competition.pitVisitsViewMinVisits = 0;
-                      widget.competition.pitVisitsViewMaxVisits = 0;
+                      widget.competition.pitVisitsViewMaxVisits = widget.competition.expectedPitVisits;
                     } else {
                       widget.competition.pitVisitsViewMinVisits = 0;
-                      widget.competition.pitVisitsViewMaxVisits = widget.competition.expectedPitVisits;
+                      widget.competition.pitVisitsViewMaxVisits = 0;
                     }
                     setState(() {
                       _legacyTeams.clear();
@@ -381,6 +391,18 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   tristate: widget.competition.pitVisitsViewMinVisits != 0 || (widget.competition.pitVisitsViewMaxVisits == 0 && _legacyTeams.isNotEmpty),
                   label: 'Include teams that are already marked as visited.',
                 ),
+            if (exhibitionTeams > 0)
+              CheckboxRow(
+                checked: widget.competition.pitVisitsIncludeExhibitionTeams,
+                onChanged: (bool? value) {
+                  widget.competition.pitVisitsIncludeExhibitionTeams = value!;
+                  setState(() {
+                    _legacyTeams.clear();
+                  });
+                },
+                tristate: false,
+                label: 'Include ${count(exhibitionTeams, 'exhibition team')}.',
+              ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
@@ -395,20 +417,20 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
                   widget.competition.expectedPitVisits == 1
-                   ? widget.competition.pitVisitsExcludeAutovisitedTeams
+                   ? !widget.competition.pitVisitsIncludeAutovisitedTeams
                       ? widget.competition.pitVisitsViewMinVisits == 0 && widget.competition.pitVisitsViewMaxVisits == 0
                          ? 'The following teams have not been shortlisted for any awards that always involve pit visits, and have not yet been visited:'
                          : 'The following teams have not been shortlisted for any awards that always involve pit visits:'
                       : widget.competition.pitVisitsViewMinVisits == 0 && widget.competition.pitVisitsViewMaxVisits == 0
                          ? 'The following teams have not yet been visited:'
-                         : exhibitionTeams > 0
+                         : exhibitionTeams > 0 && !widget.competition.pitVisitsIncludeExhibitionTeams
                            ? 'All teams eligible for awards:'
                            : 'All teams:'
-                   : widget.competition.pitVisitsExcludeAutovisitedTeams ||
+                   : !widget.competition.pitVisitsIncludeAutovisitedTeams ||
                      widget.competition.pitVisitsViewMinVisits != 0 ||
                      widget.competition.pitVisitsViewMaxVisits != widget.competition.expectedPitVisits
                        ? 'Filtered teams:'
-                       : exhibitionTeams > 0
+                       : exhibitionTeams > 0 && !widget.competition.pitVisitsIncludeExhibitionTeams
                          ? 'All teams eligible for awards:'
                          : 'All teams:',
                   softWrap: true,
@@ -436,7 +458,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                         children: [
                           TableRow(
                             children: [
-                              Cell(Text('#', style: bold), prototype: Text('${widget.competition.teamsView.last.number}')),
+                              Cell(Text('#', style: bold), prototype: Text('${widget.competition.teamsView.last.number}${widget.competition.pitVisitsIncludeExhibitionTeams ? " WW" : ""}')),
                               for (final Award award in relevantAwards)
                                 ListenableBuilder(
                                   listenable: award,
@@ -456,7 +478,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                   },
                                 ),
                               const Cell(Text('Visited? ✎_', style: bold)),
-                              if (!widget.competition.pitVisitsExcludeAutovisitedTeams) const Cell(Text('Nominations for awards with pit visits')),
+                              if (widget.competition.pitVisitsIncludeAutovisitedTeams) const Cell(Text('Nominations for awards with pit visits')),
                             ],
                           ),
                           for (final Team team in teams)
@@ -470,6 +492,17 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                   message: team.name,
                                   child: Cell(
                                     Text('${team.number}'),
+                                  icons: team.inspireStatus == InspireStatus.exhibition
+                                      ? [
+                                          Tooltip(
+                                            message: 'Team is an exhibition team and is not eligible for any awards!',
+                                            child: Icon(
+                                              Symbols.cruelty_free, // bunny
+                                              size: DefaultTextStyle.of(context).style.fontSize,
+                                            ),
+                                          ),
+                                        ]
+                                      : null,
                                   ),
                                 ),
                                 for (final Award award in relevantAwards)
@@ -481,7 +514,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                                   team: team,
                                   onVisitedChanged: _handleVisitedChanged,
                                 ),
-                                if (!widget.competition.pitVisitsExcludeAutovisitedTeams)
+                                if (widget.competition.pitVisitsIncludeAutovisitedTeams)
                                   Cell(Text(team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '))),
                               ],
                             ),
