@@ -136,6 +136,7 @@ class Award extends ChangeNotifier {
     required this.type,
     required Color color,
     required String comment,
+    required this.competition,
   })  : _color = color,
         _comment = comment,
         assert(count > 0);
@@ -152,6 +153,7 @@ class Award extends ChangeNotifier {
   final PitVisit pitVisits;
   final bool isEventSpecific;
   final int type;
+  final Competition competition;
 
   Color _color;
   Color get color => _color;
@@ -174,13 +176,18 @@ class Award extends ChangeNotifier {
 
   String get description {
     StringBuffer buffer = StringBuffer();
-    if (spreadTheWealth != SpreadTheWealth.no) {
+    if (competition.applyFinalistsByAwardRanking && (spreadTheWealth != SpreadTheWealth.no)) {
       buffer.write('rank $rank ');
     }
-    if (isAdvancing) {
-      buffer.write('advancing award');
-    } else {
-      buffer.write('non-advancing award');
+    switch (kind) {
+      case AwardKind.inspire:
+        buffer.write('advancing award');
+      case AwardKind.advancingInspire:
+        buffer.write('advancing and Inspire-contributing award');
+      case AwardKind.advancingIndependent:
+        buffer.write('independent advancing award');
+      case AwardKind.nonAdvancing:
+        buffer.write('non-advancing award');
     }
     if (category.isNotEmpty) {
       buffer.write(' in the $category category');
@@ -207,6 +214,9 @@ class Award extends ChangeNotifier {
   }
 
   static int categoryBasedComparator(Award a, Award b) {
+    if (a.isInspire != b.isInspire) {
+      return a.isInspire ? -1 : 1;
+    }
     if (a.category != b.category) {
       if (a.category.isEmpty) {
         return 1;
@@ -768,6 +778,7 @@ class Competition extends ChangeNotifier {
       type: 0,
       color: const Color(0xFFFFFFFF),
       comment: '',
+      competition: this,
     );
     // event awards cannot affect Inspire logic:
     assert(award.category == '');
@@ -805,12 +816,17 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
-  int Function(Award a, Award b) get awardSorter => switch (_awardOrder) {
-        AwardOrder.categories => Award.categoryBasedComparator,
-        AwardOrder.rank => Award.rankBasedComparator,
-      };
+  int Function(Award a, Award b) get awardSorter {
+    if (!applyFinalistsByAwardRanking) {
+      return Award.categoryBasedComparator;
+    }
+    switch (_awardOrder) {
+      case AwardOrder.categories: return Award.categoryBasedComparator;
+      case AwardOrder.rank: return Award.rankBasedComparator;
+    }
+  }
 
-  AwardOrder get awardOrder => _awardOrder;
+  AwardOrder get awardOrder => AwardOrder.categories;
   AwardOrder _awardOrder = AwardOrder.categories;
   set awardOrder(AwardOrder value) {
     if (value != _awardOrder) {
@@ -1275,6 +1291,7 @@ class Competition extends ChangeNotifier {
           type: type,
           color: color,
           comment: comment,
+          competition: this,
         );
         _addAward(award);
         rank += 1;
@@ -2148,6 +2165,7 @@ class Competition extends ChangeNotifier {
         color: Color(math.Random(seed ^ category.hashCode).nextInt(0x1000000) + 0xFF000000 |
             (random.nextInt(0x22) + random.nextInt(0x22) << 8 + random.nextInt(0x22) << 16)),
         comment: random.nextInt(7) > 0 ? randomizer.generatePhrase(random.nextInt(5) + 1) : '',
+        competition: this,
       );
       seenInspire = seenInspire || isAdvancing;
       _addAward(award);

@@ -331,8 +331,8 @@ class _SetupPaneState extends State<SetupPane> {
                           Cell(Text('Category', style: bold), prototype: Text('Documentation')),
                           Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
                           Cell(Text('Autonomination', style: bold), prototype: Text('Enabled')),
-                          Cell(Text('Placement', style: bold), prototype: Text('Required')),
-                          Cell(Text('Portfolio', style: bold), prototype: Text('Yes')),
+                          Cell(Text('Placement', style: bold), prototype: Text('Yes')),
+                          Cell(Text('Portfolio', style: bold), prototype: Text('Required')),
                           Cell(Text('Pit Visits', style: bold), prototype: Text('Maybe')),
                           Cell(
                               Row(

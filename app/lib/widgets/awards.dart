@@ -209,59 +209,61 @@ class AwardOrderSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-      child: Row(
-        children: [
-          Expanded(
-            child: ExcludeSemantics(
-              child: GestureDetector(
-                onTap: () {
-                  competition.awardOrder = AwardOrder.rank;
-                },
-                child: const Text(
-                  'Sort awards by rank',
-                  textAlign: TextAlign.end,
-                ),
-              ),
-            ),
-          ),
-          Material(
-            type: MaterialType.transparency,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
-              child: MergeSemantics(
-                child: Semantics(
-                  label: 'Sort awards by category (rather than rank)',
-                  child: ListenableBuilder(
-                    listenable: competition,
-                    builder: (BuildContext context, Widget? child) => Switch.adaptive(
-                      value: competition.awardOrder == AwardOrder.categories,
-                      thumbIcon: WidgetStateProperty.all(const Icon(Symbols.trophy)),
-                      onChanged: (bool value) {
-                        competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
+    return ListenableBuilder(
+      listenable: competition,
+      builder: (BuildContext context, Widget? child) => competition.applyFinalistsByAwardRanking
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ExcludeSemantics(
+                    child: GestureDetector(
+                      onTap: () {
+                        competition.awardOrder = AwardOrder.rank;
                       },
+                      child: const Text(
+                        'Sort awards by rank',
+                        textAlign: TextAlign.end,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ExcludeSemantics(
-              child: GestureDetector(
-                onTap: () {
-                  competition.awardOrder = AwardOrder.categories;
-                },
-                child: const Text(
-                  'Sort awards by category',
-                  textAlign: TextAlign.start,
+                Material(
+                  type: MaterialType.transparency,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
+                    child: MergeSemantics(
+                      child: Semantics(
+                        label: 'Sort awards by category (rather than rank)',
+                        child: Switch.adaptive(
+                          value: competition.awardOrder == AwardOrder.categories,
+                          thumbIcon: WidgetStateProperty.all(const Icon(Symbols.trophy)),
+                          onChanged: (bool value) {
+                            competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: ExcludeSemantics(
+                    child: GestureDetector(
+                      onTap: () {
+                        competition.awardOrder = AwardOrder.categories;
+                      },
+                      child: const Text(
+                        'Sort awards by category',
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
+          )
+        : SizedBox(height: indent),
     );
   }
 }

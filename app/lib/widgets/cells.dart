@@ -13,6 +13,7 @@ class Cell extends StatelessWidget {
     super.key,
     this.prototype,
     this.padPrototype = true,
+    this.alignment = AlignmentDirectional.centerStart,
     this.highlight = false,
     this.icons,
   }) : assert(icons == null || icons.length > 0);
@@ -20,12 +21,21 @@ class Cell extends StatelessWidget {
   final Widget child;
   final Widget? prototype;
   final bool padPrototype;
+  final AlignmentGeometry alignment;
   final bool highlight;
   final List<Widget>? icons;
 
   @override
   Widget build(BuildContext context) {
     Widget result = child;
+    if (icons != null) {
+      result = Row(
+        children: [
+          Expanded(child: result),
+          ...icons!,
+        ],
+      );
+    }
     if (!padPrototype) {
       result = Padding(
         padding: const EdgeInsets.all(spacing),
@@ -34,6 +44,7 @@ class Cell extends StatelessWidget {
     }
     if (prototype != null) {
       result = Stack(
+        alignment: alignment,
         children: [
           Opacity(
             opacity: 0.0,
@@ -51,15 +62,6 @@ class Cell extends StatelessWidget {
     }
     if (highlight) {
       result = ColoredBox(color: Theme.of(context).colorScheme.secondaryContainer, child: result);
-    }
-    if (icons != null) {
-      result = Row(
-        children: [
-          Expanded(child: result),
-          ...icons!,
-          const SizedBox(width: spacing),
-        ],
-      );
     }
     return result;
   }

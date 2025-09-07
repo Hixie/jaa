@@ -494,11 +494,11 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Assign winners:', style: bold),
+                child: Text('Assign winners for place $assignRank:', style: bold),
               ),
             if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent * 2.0, spacing, indent, spacing),
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
                 child: TeamOrderSelector(
                   value: widget.competition.finalistsSortOrder,
                   onChange: (TeamComparatorCallback newValue) {
@@ -508,34 +508,174 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               ),
             if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty && !haveAssignableWinners)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent * 2.0, spacing, indent, spacing),
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text('Use the Ranks pane to assign ranks for teams in award shortlists.', style: italic),
               ),
             if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
-              ScrollableRegion(
-                child: ListBody(
-                  children: [
-                    for (Team team in awardCandidates[assignRank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
-                      TeamAwardAssignmentRow(
-                        competition: widget.competition,
-                        rank: assignRank!,
-                        team: team,
-                        awards: awardCandidates[assignRank]![team]!.toList()..sort(widget.competition.awardSorter),
-                        finalists: finalistsAsMap,
+              HorizontalScrollbar(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+                    child: Table(
+                      border: const TableBorder.symmetric(
+                        inside: BorderSide(),
                       ),
-                  ],
+                      defaultColumnWidth: const IntrinsicCellWidth(),
+                      defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        TableRow(
+                          children: [
+                            Cell(
+                              Text('#', style: bold),
+                              prototype: Text('${widget.competition.teamsView.last.number} WW'), // longest team number plus icon(s)
+                              highlight: widget.competition.finalistsSortOrder == Team.teamNumberComparator,
+                            ),
+                            // ignore: unused_local_variable
+                            for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
+                              ListenableBuilder(
+                                listenable: award,
+                                builder: (BuildContext context, Widget? child) {
+                                  final Color foregroundColor = textColorForColor(award.color);
+                                  return ColoredBox(
+                                    color: award.color,
+                                    child: Cell(
+                                      alignment: Alignment.center,
+                                      Text(
+                                        award.name,
+                                        style: bold.copyWith(
+                                          color: textColorForColor(award.color),
+                                        ),
+                                      ),
+                                      icons: award.comment == '' ? null : <Widget>[
+                                        Padding(
+                                          padding: const EdgeInsetsDirectional.only(start: spacing),
+                                          child: Tooltip(
+                                            message: award.comment,
+                                            child: Icon(
+                                              Symbols.emoji_objects,
+                                              size: DefaultTextStyle.of(context).style.fontSize,
+                                              color: foregroundColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      prototype: const Text('0000 XX'),
+                                    ),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        for (Team team in awardCandidates[assignRank]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
+                          buildTeamAwardAssignmentRow(
+                            context,
+                            competition: widget.competition,
+                            rank: assignRank!,
+                            team: team,
+                            awards: awardCandidates[assignRank]![team]!.toSet(),
+                            finalists: finalistsAsMap,
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
-              AwardOrderSwitch(
-                competition: widget.competition,
-              ),
-            const SizedBox(height: indent)
+            AwardOrderSwitch(
+              competition: widget.competition,
+            ),
           ],
         );
       },
     );
   }
+
+  static TableRow buildTeamAwardAssignmentRow(BuildContext context, {
+    required Competition competition,
+    required int rank,
+    required Team team,
+    required Set<Award> awards,
+    required Map<Award, List<Team?>> finalists,
+  }) {
+    final Map<Award, String> tooltips = {};
+    for (Award award in awards) {
+      for (int index = rank; index < finalists[award]!.length; index += 1) {
+        if (finalists[award]![index] != null && finalists[award]![index]!.shortlistsView[award]!.rank! < team.shortlistsView[award]!.rank!) {
+          final Team other = finalists[award]![index]!;
+          tooltips[award] = 'Team #${other.number} ${team.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
+          break;
+        }
+      }
+    }
+    final Map<Award, Widget> labels = {};
+    for (final Award award in competition.awardsView) {
+      if (team.shortlistsView[award] != null) {
+        if (team.shortlistsView[award]!.rank == null) {
+          labels[award] = Text('—');
+          assert(!tooltips.containsKey(award));
+          tooltips[award] = 'Team was nominated but not ranked for this award.';
+        } else {
+          labels[award] = Text('#${team.shortlistsView[award]!.rank}${tooltips[award] != null ? " ⚠" : ""}');
+        }
+      }
+    }
+    return TableRow(
+      children: [
+        Cell(Text('${team.number}')),
+        for (final Award award in competition.awardsView.toList()..sort(competition.awardSorter))
+          Cell(
+            team.shortlistsView[award] == null
+              ? const Text('—', textAlign: TextAlign.center)
+              : Tooltip(
+                  message: tooltips[award] ?? '',
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: award.color,
+                      foregroundColor: textColorForColor(award.color),
+                      side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+                      padding: EdgeInsets.zero,
+                    ),
+                    onPressed: awards.contains(award) ? () {
+                      competition.addOverride(
+                        award,
+                        team,
+                        rank,
+                        FinalistKind.manual,
+                      );
+                    } : null,
+                    child: (!award.needsPortfolio || team.hasPortfolio) && (team.inspireStatus != InspireStatus.exhibition)
+                        ? labels[award]!
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              labels[award]!,
+                              const SizedBox(width: spacing),
+                              if (team.inspireStatus == InspireStatus.exhibition)
+                                Tooltip(
+                                  message: 'Team is an exhibition team and is not eligible for any awards!',
+                                  child: Icon(
+                                    Symbols.cruelty_free, // bunny
+                                    size: DefaultTextStyle.of(context).style.fontSize,
+                                  ),
+                                ),
+                              if (award.needsPortfolio && !team.hasPortfolio)
+                                Tooltip(
+                                  message: 'Team is missing a portfolio!',
+                                  child: Icon(
+                                    Symbols.content_paste_off, // clipboard crossed out
+                                    size: DefaultTextStyle.of(context).style.fontSize,
+                                  ),
+                                ),
+                            ],
+                        ),
+                  ),
+            ),
+          ),
+      ],
+    );
+  }
+
 }
 
 class ErrorCell extends StatelessWidget {
@@ -851,92 +991,6 @@ class RemoveOverrideCell extends StatelessWidget {
             FinalistKind.override => Symbols.playlist_remove,
           },          
         ),
-      ),
-    );
-  }
-}
-
-class TeamAwardAssignmentRow extends StatelessWidget {
-  const TeamAwardAssignmentRow({
-    super.key,
-    required this.competition,
-    required this.rank,
-    required this.team,
-    required this.awards,
-    required this.finalists,
-  });
-
-  final Competition competition;
-  final int rank;
-  final Team team;
-  final List<Award> awards;
-  final Map<Award, List<Team?>> finalists;
-
-  @override
-  Widget build(BuildContext context) {
-    final Map<Award, String> tooltips = {};
-    for (Award award in awards) {
-      for (int index = rank; index < finalists[award]!.length; index += 1) {
-        if (finalists[award]![index] != null && finalists[award]![index]!.shortlistsView[award]!.rank! < team.shortlistsView[award]!.rank!) {
-          final Team other = finalists[award]![index]!;
-          tooltips[award] = 'Team #${other.number} ${team.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
-          break;
-        }
-      }
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(indent * 2.0, 0.0, indent, spacing),
-      child: Row(
-        children: [
-          Text('${team.number}'),
-          const SizedBox(width: spacing),
-          for (final Award award in awards)
-            Padding(
-              padding: const EdgeInsets.only(left: spacing),
-              child: Tooltip(
-                message: tooltips[award] ?? '',
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: award.color,
-                    foregroundColor: textColorForColor(award.color),
-                    side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
-                  ),
-                  onPressed: () {
-                    competition.addOverride(
-                      award,
-                      team,
-                      rank,
-                      FinalistKind.manual,
-                    );
-                  },
-                  child: (!award.needsPortfolio || team.hasPortfolio) && (team.inspireStatus != InspireStatus.exhibition)
-                    ? Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}')
-                    : Row(
-                        children: [
-                          Text('${award.name} #${team.shortlistsView[award]!.rank}${ tooltips[award] != null ? " ⚠" : ""}'),
-                          const SizedBox(width: spacing),
-                          if (team.inspireStatus == InspireStatus.exhibition)
-                            Tooltip(
-                              message: 'Team is an exhibition team and is not eligible for any awards!',
-                              child: Icon(
-                                Symbols.cruelty_free, // bunny
-                                size: DefaultTextStyle.of(context).style.fontSize,
-                              ),
-                            ),
-                          if (award.needsPortfolio && !team.hasPortfolio)
-                            Tooltip(
-                              message: 'Team is missing a portfolio!',
-                              child: Icon(
-                                Symbols.content_paste_off, // clipboard crossed out
-                                size: DefaultTextStyle.of(context).style.fontSize,
-                              ),
-                            ),
-                        ],
-                    ),
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }
