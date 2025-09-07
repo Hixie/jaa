@@ -210,7 +210,7 @@ class Award extends ChangeNotifier {
 
   // predicate for List.where clauses
   static bool isInspireQualifyingPredicate(Award award) {
-    return !award.isInspire && award.kind == AwardKind.advancingInspire;
+    return award.kind == AwardKind.advancingInspire;
   }
 
   static int categoryBasedComparator(Award a, Award b) {
@@ -544,13 +544,13 @@ class Competition extends ChangeNotifier {
 
   final List<Team> _teams = <Team>[];
   final List<Award> _awards = <Award>[];
-  final List<String> _categories = <String>[];
+  final List<String> _inspireCategories = <String>[];
   final Map<Award, Shortlist> _shortlists = <Award, Shortlist>{};
 
   late final UnmodifiableListView<Team> teamsView = UnmodifiableListView<Team>(_teams);
   late final UnmodifiableListView<Award> awardsView = UnmodifiableListView<Award>(_awards);
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
-  late final UnmodifiableListView<String> categories = UnmodifiableListView(_categories);
+  late final UnmodifiableListView<String> inspireCategories = UnmodifiableListView(_inspireCategories);
 
   int awardsWithKind(Set<AwardKind> kinds) {
     int count = 0;
@@ -584,7 +584,7 @@ class Competition extends ChangeNotifier {
   }
 
   int get minimumInspireCategories {
-    List<String> cachedCategories = categories;
+    List<String> cachedCategories = inspireCategories;
     if (cachedCategories.isEmpty) {
       return 0;
     }
@@ -744,8 +744,6 @@ class Competition extends ChangeNotifier {
 
   void _addAward(Award award) {
     assert(award.rank == (_awards.isEmpty ? 1 : _awards.last.rank + 1));
-    assert(!award.isEventSpecific || award.category == '');
-    assert(!award.isEventSpecific || !award.isAdvancing);
     _awards.add(award);
     if (award.isInspire) {
       assert(award.isAdvancing);
@@ -1196,7 +1194,7 @@ class Competition extends ChangeNotifier {
     _awards.clear();
     _inspireAward = null;
     _shortlists.clear();
-    _categories.clear();
+    _inspireCategories.clear();
     for (final Team team in _teams) {
       team._clearShortlists();
       team._clearBlurbs();
@@ -1308,7 +1306,7 @@ class Competition extends ChangeNotifier {
       if (!seenInspire && expectAwards) {
         throw const FormatException('Parse error in awards file: None of the awards are advancing awards.');
       }
-      _categories
+      _inspireCategories
         ..addAll(awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet())
         ..sort();
     } catch (e) {
@@ -2186,7 +2184,7 @@ class Competition extends ChangeNotifier {
       seenInspire = seenInspire || isAdvancing;
       _addAward(award);
     }
-    _categories
+    _inspireCategories
       ..addAll(awardsView.where(Award.isInspireQualifyingPredicate).map((Award award) => award.category).toSet())
       ..sort();
     final int teamCount = random.nextInt(1024 - 16) + 16;

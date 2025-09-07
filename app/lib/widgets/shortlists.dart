@@ -625,7 +625,7 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
       return '';
     }
     final Map<int, Map<Team, Set<String>>> candidates = widget.competition.computeInspireCandidates();
-    final List<String> categories = widget.competition.categories;
+    final List<String> categories = widget.competition.inspireCategories;
     final int targetCategories = categories.length;
     if (targetCategories == 0) {
       return '';
@@ -639,9 +639,9 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
         requiredAwards = 'any of the ${categories.single} category awards';
       }
     } else if (targetCategories == 2) {
-      requiredAwards = 'awards in both advancing award categories';
+      requiredAwards = 'awards in both Inspire-contributing award categories';
     } else {
-      requiredAwards = 'awards in all $targetCategories advancing award categories';
+      requiredAwards = 'awards in all $targetCategories Inspire-contributing award categories';
     }
     if (!candidates.containsKey(targetCategories)) {
       return 'No teams are nominated for $requiredAwards, '

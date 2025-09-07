@@ -514,8 +514,8 @@ class EventSpecificCell extends StatelessWidget {
     required this.award,
   });
 
-  final Competition? competition;
-  final Award? award;
+  final Competition competition;
+  final Award award;
 
   @override
   Widget build(BuildContext context) {
@@ -523,19 +523,28 @@ class EventSpecificCell extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(spacing, 0.0, 0.0, 0.0),
       child: Row(
         children: [
-          const Expanded(child: Text('Event-Specific')),
+          Expanded(
+            child: Text(
+              switch (award.kind) {
+                AwardKind.inspire => 'Event Inspire!',
+                AwardKind.advancingInspire => 'Inspire Contributor!',
+                AwardKind.advancingIndependent => 'Event Advancing',
+                AwardKind.nonAdvancing => 'Event-Specific',
+              },
+            ),
+          ),
           Material(
             type: MaterialType.transparency,
             child: IconButton(
-              onPressed: competition == null || award == null || !competition!.canDelete(award!)
+              onPressed: !competition.canDelete(award)
                   ? null
                   : () {
-                      competition!.deleteEventAward(award!);
+                      competition.deleteEventAward(award);
                     },
               iconSize: DefaultTextStyle.of(context).style.fontSize,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
-              tooltip: competition != null && award != null && competition!.canDelete(award!)
+              tooltip: competition.canDelete(award)
                   ? 'Delete this event-specific award.'
                   : 'Cannot delete awards that have nominees.',
               icon: const Icon(Icons.delete_forever),

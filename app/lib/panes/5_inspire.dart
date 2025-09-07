@@ -24,7 +24,7 @@ class InspirePane extends StatefulWidget {
     final DateTime now = DateTime.now();
     StringBuffer page = createHtmlPage(competition, 'Inspire', now);
     final Map<int, Map<Team, Set<String>>> candidates = competition.computeInspireCandidates();
-    final List<String> categories = competition.categories;
+    final List<String> categories = competition.inspireCategories;
 
     if (categories.isEmpty) {
       page.writeln('<p>No team qualify for the Inspire award.');
@@ -76,7 +76,7 @@ class _InspirePaneState extends State<InspirePane> {
       listenable: widget.competition,
       builder: (BuildContext context, Widget? child) {
         final Map<int, Map<Team, Set<String>>> candidates = widget.competition.computeInspireCandidates();
-        final List<String> categories = widget.competition.categories;
+        final List<String> categories = widget.competition.inspireCategories;
         final List<int> categoryCounts = (candidates.keys.toList()..sort()).reversed.take(widget.competition.minimumInspireCategories).toList();
         final canShowAnything = widget.competition.teamsView.isNotEmpty && (widget.competition.inspireAward != null) && categoryCounts.isNotEmpty;
         final List<Award> awards = canShowAnything && widget.competition.expandInspireTable
