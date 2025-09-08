@@ -631,7 +631,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           labels[award] = Text('#${team.shortlistsView[award]!.rank}${tooltips[award] != null ? " ⚠" : ""}');
           if (!awards.contains(award) && !tooltips.containsKey(award)) {
             // button is disabled but we haven't yet figured out why
-            if (finalists[award]![place - 1] != null) {
+            if (finalists[award]!.length >= place && finalists[award]![place - 1] != null) {
               Team team = finalists[award]![place - 1]!;
               tooltips[award] = 'Winner for place #$place is already assigned (#${team.number} ${team.name}).';
             } else if (winningTeams.containsKey(team) && award.spreadTheWealth != SpreadTheWealth.no) {
