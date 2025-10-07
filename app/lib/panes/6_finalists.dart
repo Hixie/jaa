@@ -421,7 +421,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                           const ErrorCell(message: 'missing'),
                                         if (team != null &&
                                             (team.inspireStatus == InspireStatus.exhibition ||
-                                             (award.isInspire && team.inspireStatus == InspireStatus.ineligible) ||
+                                             (award.isInspire && (widget.competition.ruleset == Ruleset.rules2024 || rank == 1) && team.inspireStatus == InspireStatus.ineligible) ||
                                              (award.needsPortfolio && !team.hasPortfolio)))
                                           ErrorCell(
                                             message: award.isPlacement
@@ -430,7 +430,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                                       ? 'Invalid Win'
                                                       : 'Invalid Runner-Up',
                                             icons: <Widget>[
-                                              if (team.inspireStatus == InspireStatus.ineligible)
+                                              if ((widget.competition.ruleset == Ruleset.rules2024 || rank == 1) && team.inspireStatus == InspireStatus.ineligible)
                                                 Tooltip(
                                                   message: 'Team has already won the Inspire award this season!',
                                                   child: Icon(

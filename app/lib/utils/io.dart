@@ -32,6 +32,7 @@ StringBuffer createHtmlPage(Competition competition, String header, DateTime now
   final String eventNamePrefix = competition.eventName.isEmpty ? '' : '${competition.eventName} — ';
   return StringBuffer()
     ..writeln('<!DOCTYPE HTML>')
+    ..writeln('<meta charset=utf-8>')
     ..writeln('<style>$css</style>')
     ..writeln('<title>${escapeHtml("$eventNamePrefix$header")}</title>')
     ..writeln('<h1>${escapeHtml("$eventNamePrefix$header")}</h1>')

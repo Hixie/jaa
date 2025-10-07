@@ -490,11 +490,11 @@ class AboutPane extends StatelessWidget {
               children: [
                 RadioRow<Ruleset>(
                   value: Ruleset.rules2024,
-                  label: '2024-2025 season. Awards are ranked, finalists are automatically assigned, and Inspire winners are ineligible for additional Inspire wins.',
+                  label: '2024-2025 season.\nAwards are ranked, finalists are automatically assigned, and Inspire winners are ineligible for any additional Inspire awards.',
                 ),
                 RadioRow<Ruleset>(
                   value: Ruleset.rules2025,
-                  label: '2025-2026 season. Finalists are selected manually. Second-place Inspire winners are still eligible for additional Inspire awards.',
+                  label: '2025-2026 season.\nFinalists are selected manually. Teams who won the Inspire award in previous competitions are still eligible for second place Inspire awards.',
                 ),
               ],
             )

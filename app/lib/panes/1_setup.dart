@@ -794,7 +794,11 @@ class _TeamEditorState extends State<TeamEditor> {
                           '${entry.nominator.isEmpty ? '' : ' (nominated by ${entry.nominator})'}'
                           '${entry.rank != null ? ' — rank ${entry.rank}' : ''}'
                           '${award.needsPortfolio && !_team!.hasPortfolio ? ' (invalid nomination; award requires portfolio!)' : ''}'
-                          '${award.isInspire && _team!.inspireStatus == InspireStatus.ineligible ? ' (invalid nomination; team is not eligible for Inspire!)' : ''}',
+                          '${award.isInspire && _team!.inspireStatus == InspireStatus.ineligible
+                             ? switch (widget.competition.ruleset) {
+                                 Ruleset.rules2024 => ' (invalid nomination; team is not eligible for Inspire!)',
+                                 Ruleset.rules2025 => ' (team is not eligible to win Inspire)',
+                              } : ''}',
                       children: [
                         if (entry.comment.isNotEmpty) TextSpan(text: '\n${entry.comment}', style: italic),
                       ],

@@ -55,7 +55,16 @@ class InspirePane extends StatefulWidget {
             case InspireStatus.hidden:
               page.writeln('<td>${team.shortlistsView[competition.inspireAward!]?.rank ?? "<i>Not placed</i>"}');
             case InspireStatus.ineligible:
-              page.writeln('<td><i>Not eligible</i>');
+              switch (competition.ruleset) {
+                case Ruleset.rules2024:
+                  page.writeln('<td><i>Not eligible</i>');
+                case Ruleset.rules2025:
+                  if (team.shortlistsView[competition.inspireAward!]?.rank == 1) {
+                    page.writeln('<td>1 <i>Not eligible</i>');
+                  } else {
+                    page.writeln('<td>${team.shortlistsView[competition.inspireAward!]?.rank ?? "<i>Not placed</i>"}');
+                  }
+              }
             case InspireStatus.exhibition:
               page.writeln('<td><i>Not competing</i>');
           }
@@ -164,7 +173,10 @@ class _InspirePaneState extends State<InspirePane> {
                   });
                 },
                 tristate: widget.competition.hideInspireHiddenTeams && _legacyTeams.isNotEmpty,
-                label: 'Include ineligible teams and teams marked as hidden.',
+                label: switch (widget.competition.ruleset) {
+                  Ruleset.rules2024 => 'Include ineligible teams and teams marked as hidden.',
+                  Ruleset.rules2025 => 'Include teams marked as hidden.',
+                },
               ),
             if (canShowAnything)
               Padding(
@@ -293,13 +305,13 @@ class _InspirePaneState extends State<InspirePane> {
                                         Cell(Text('${team.rankScore ?? ""}')),
                                         Cell(Text('${team.rankedCount}')),
                                         if (categoryCount >= widget.competition.minimumInspireCategories)
-                                          if ((team.inspireStatus == InspireStatus.ineligible) ||
+                                          if ((widget.competition.ruleset == Ruleset.rules2024 && team.inspireStatus == InspireStatus.ineligible) ||
                                               (team.inspireStatus == InspireStatus.exhibition) ||
                                               (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio))
                                             Cell(
                                               Text('Not eligible'),
                                               icons: [
-                                                if (team.inspireStatus == InspireStatus.ineligible)
+                                                if (widget.competition.ruleset == Ruleset.rules2024 && team.inspireStatus == InspireStatus.ineligible)
                                                   Tooltip(
                                                     message: 'Team has already won the Inspire award this season!',
                                                     child: Icon(
@@ -339,7 +351,7 @@ class _InspirePaneState extends State<InspirePane> {
                                               key: ValueKey<Team>(team),
                                               value: (team.inspireStatus != InspireStatus.eligible) ||
                                                     (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio),
-                                              onChanged: (team.inspireStatus == InspireStatus.ineligible) ||
+                                              onChanged: (widget.competition.ruleset == Ruleset.rules2024 && team.inspireStatus == InspireStatus.ineligible) ||
                                                          (team.inspireStatus == InspireStatus.exhibition) ||
                                                          (widget.competition.inspireAward!.needsPortfolio && !team.hasPortfolio)
                                                   ? null
@@ -455,6 +467,7 @@ class InspirePlacementCell extends StatefulWidget {
 class _InspirePlacementCellState extends State<InspirePlacementCell> {
   final TextEditingController _controller = TextEditingController();
   ShortlistEntry? _entry;
+  bool _inspireWinner = false;
   bool _error = false;
 
   String _placementAsString() {
@@ -498,7 +511,8 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
 
   void _updateError() {
     setState(() {
-      _error = _entry == null || _entry!.rank == null || _entry!.rank! <= 0 || _entry!.rank! > widget.competition.teamsView.length;
+      _inspireWinner = widget.competition.ruleset.index >= Ruleset.rules2025.index && widget.team.inspireStatus == InspireStatus.ineligible;
+      _error = _entry == null || _entry!.rank == null || _entry!.rank! <= 0 || _entry!.rank! > widget.competition.teamsView.length || (_inspireWinner && _entry!.rank! == 1);
     });
   }
 
@@ -543,7 +557,7 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
   @override
   Widget build(BuildContext context) {
     final TextStyle textStyle = DefaultTextStyle.of(context).style;
-    return Material(
+    Widget result = Material(
       type: MaterialType.transparency,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: spacing),
@@ -570,6 +584,22 @@ class _InspirePlacementCellState extends State<InspirePlacementCell> {
         ),
       ),
     );
+    if (_inspireWinner) {
+      result = Row(
+        children: [
+          Expanded(child: result),
+          Tooltip(
+            message: 'Team has already won the Inspire award this season!',
+            child: Icon(
+              Symbols.social_leaderboard, // medal
+              size: DefaultTextStyle.of(context).style.fontSize,
+            ),
+          ),
+          SizedBox(width: spacing),
+        ],
+      );
+    }
+    return result;
   }
 }
 

@@ -277,7 +277,7 @@ class RadioRow<T> extends StatelessWidget {
     );
     if (includePadding) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+        padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
         child: result,
       );
     }

@@ -702,7 +702,7 @@ class Competition extends ChangeNotifier {
                 final List<Set<Team>> candidatesList = awardCandidates[award]!;
                 while (candidatesList.isNotEmpty && !placedTeam) {
                   final Set<Team> candidates = candidatesList.removeAt(0);
-                  candidates.removeWhere((Team team) => (award.isInspire && team.inspireStatus == InspireStatus.ineligible) || team.inspireStatus == InspireStatus.exhibition);
+                  candidates.removeWhere((Team team) => (award.isInspire && ruleset == Ruleset.rules2024 && team.inspireStatus == InspireStatus.ineligible) || team.inspireStatus == InspireStatus.exhibition);
                   final Set<Team> alreadyPlaced = award.spreadTheWealth != SpreadTheWealth.no ? placedTeams.keys.toSet() : {};
                   final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
                   final Set<Team> winners = candidates.difference(ineligible);
@@ -1057,7 +1057,7 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  static Ruleset _parseRuleset(Object? cell) {
+  static Ruleset _parseRuleset(String cell) {
     switch (cell) {
       case '2024':
         return Ruleset.rules2024;
@@ -1812,8 +1812,8 @@ class Competition extends ChangeNotifier {
           _showWorkings = _parseBool(row[1]);
         case 'hide hidden teams':
           _hideInspireHiddenTeams = _parseBool(row[1]);
-        case 'ruleset':
-          _ruleset = _parseRuleset(row[1]);
+        case 'rules':
+          _ruleset = _parseRuleset('${row[1]}');
         case 'show all places for assignment':
           _showAllPlacesForAssignment = _parseBool(row[1]);
         case 'inspire sort order':
