@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'utils/io.dart';
 import 'model/competition.dart';
 
-// TODO: support Android and iOS using https://pub.dev/packages/flutter_file_dialog
-
 Future<void> exportEventState(BuildContext context, Competition competition) async {
   final String? filename = await saveFile(
     context,

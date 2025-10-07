@@ -1981,7 +1981,7 @@ class Competition extends ChangeNotifier {
     final ZipEncoder zip = ZipEncoder();
     final OutputFileStream output = OutputFileStream(filename);
     zip.startEncode(output);
-    zip.addFile(ArchiveFile.string(
+    zip.add(ArchiveFile.string(
       'README',
       'This file contains the judging and award nomination state for a FIRST Tech Challenge event.'
           '\n'
@@ -2000,16 +2000,16 @@ class Competition extends ChangeNotifier {
           'For more information see: https://github.com/Hixie/jaa/',
     ));
     // The following files should be in the same order as listed in the documentation above.
-    zip.addFile(ArchiveFile(filenameTeams, -1, utf8.encode(teamsToCsv())));
-    zip.addFile(ArchiveFile(filenameAwards, -1, utf8.encode(awardsToCsv())));
-    zip.addFile(ArchiveFile(filenameShortlists, -1, utf8.encode(shortlistsToCsv())));
-    zip.addFile(ArchiveFile(filenameBlurbs, -1, utf8.encode(blurbsToCsv())));
-    zip.addFile(ArchiveFile(filenamePitVisitNotes, -1, utf8.encode(pitVisitNotesToCsv())));
-    zip.addFile(ArchiveFile(filenameFinalistOverrides, -1, utf8.encode(finalistOverridesToCsv())));
-    zip.addFile(ArchiveFile(filenameConfiguration, -1, utf8.encode(configurationToCsv())));
-    zip.addFile(ArchiveFile(filenameInspireCandidates, -1, utf8.encode(inspireCandiatesToCsv())));
-    zip.addFile(ArchiveFile(filenameFinalistsTable, -1, utf8.encode(finalistTablesToCsv())));
-    zip.addFile(ArchiveFile(filenameFinalistsLists, -1, utf8.encode(finalistListsToCsv())));
+    zip.add(ArchiveFile(filenameTeams, -1, utf8.encode(teamsToCsv())));
+    zip.add(ArchiveFile(filenameAwards, -1, utf8.encode(awardsToCsv())));
+    zip.add(ArchiveFile(filenameShortlists, -1, utf8.encode(shortlistsToCsv())));
+    zip.add(ArchiveFile(filenameBlurbs, -1, utf8.encode(blurbsToCsv())));
+    zip.add(ArchiveFile(filenamePitVisitNotes, -1, utf8.encode(pitVisitNotesToCsv())));
+    zip.add(ArchiveFile(filenameFinalistOverrides, -1, utf8.encode(finalistOverridesToCsv())));
+    zip.add(ArchiveFile(filenameConfiguration, -1, utf8.encode(configurationToCsv())));
+    zip.add(ArchiveFile(filenameInspireCandidates, -1, utf8.encode(inspireCandiatesToCsv())));
+    zip.add(ArchiveFile(filenameFinalistsTable, -1, utf8.encode(finalistTablesToCsv())));
+    zip.add(ArchiveFile(filenameFinalistsLists, -1, utf8.encode(finalistListsToCsv())));
     zip.endEncode();
     output.closeSync();
   }
