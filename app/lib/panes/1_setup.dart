@@ -474,20 +474,22 @@ class _SetupPaneState extends State<SetupPane> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-          child: Row(
-            children: [
-              Text('Expected number of pit visits per team:'),
-              SizedBox(width: spacing),
-              VisitInput(
-                value: widget.competition.expectedPitVisits,
-                min: 1,
-                onChanged: (int value) {
-                  widget.competition.expectedPitVisits = value;
-                },
-              ),
-            ],
+        ScrollableRegion(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, spacing, 0, indent),
+            child: Row(
+              children: [
+                Text('Expected number of pit visits per team:'),
+                SizedBox(width: spacing),
+                VisitInput(
+                  value: widget.competition.expectedPitVisits,
+                  min: 1,
+                  onChanged: (int value) {
+                    widget.competition.expectedPitVisits = value;
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         if (!kReleaseMode)

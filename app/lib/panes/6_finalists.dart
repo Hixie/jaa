@@ -490,108 +490,24 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   ),
                 ),
               ),
-            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
-                child: Text('Assign winners for place $assignPlace:', style: bold),
-              ),
-            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-                child: TeamOrderSelector(
-                  value: widget.competition.finalistsSortOrder,
-                  onChange: (TeamComparatorCallback newValue) {
-                    widget.competition.finalistsSortOrder = newValue;
-                  },
-                ),
-              ),
             if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty && !haveAssignableWinners)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text('Use the Ranks pane to assign ranks for teams in award shortlists.', style: italic),
               ),
             if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
-              HorizontalScrollbar(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-                    child: Table(
-                      border: const TableBorder.symmetric(
-                        inside: BorderSide(),
-                      ),
-                      defaultColumnWidth: const IntrinsicCellWidth(),
-                      defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        TableRow(
-                          children: [
-                            Cell(
-                              Text('#', style: bold),
-                              prototype: Text('${widget.competition.teamsView.last.number} WW'), // longest team number plus icon(s)
-                              highlight: widget.competition.finalistsSortOrder == Team.teamNumberComparator,
-                            ),
-                            // ignore: unused_local_variable
-                            for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
-                              ListenableBuilder(
-                                listenable: award,
-                                builder: (BuildContext context, Widget? child) {
-                                  final Color foregroundColor = textColorForColor(award.color);
-                                  return ColoredBox(
-                                    color: award.color,
-                                    child: Cell(
-                                      alignment: Alignment.center,
-                                      Text(
-                                        award.name,
-                                        style: bold.copyWith(
-                                          color: textColorForColor(award.color),
-                                        ),
-                                      ),
-                                      icons: award.comment == '' ? null : <Widget>[
-                                        Padding(
-                                          padding: const EdgeInsetsDirectional.only(start: spacing),
-                                          child: Tooltip(
-                                            message: award.comment,
-                                            child: Icon(
-                                              Symbols.emoji_objects,
-                                              size: DefaultTextStyle.of(context).style.fontSize,
-                                              color: foregroundColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      prototype: const Text('0000 XX'),
-                                    ),
-                                  );
-                                },
-                              ),
-                          ],
-                        ),
-                        for (Team team in awardCandidates[assignPlace]!.keys.toList()..sort(widget.competition.finalistsSortOrder))
-                          buildTeamAwardAssignmentRow(
-                            context,
-                            competition: widget.competition,
-                            place: assignPlace!,
-                            team: team,
-                            awardCandidates: awardCandidates,
-                            finalists: finalistsAsMap,
-                            winningTeams: wealthWinners,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
-              // if all assignable winners are only eligible for one award at this place, autoassign all such winners
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
-                child: AutoAssignButton(
+              for (int place = assignPlace!; place <= (widget.competition.showAllPlacesForAssignment ? highestRank : assignPlace); place += 1)
+                AssignWinnersSection(
+                  assignPlace: assignPlace,
+                  place: place,
+                  highestRank: highestRank,
                   competition: widget.competition,
-                  place: assignPlace!,
+                  finalists: finalists,
                   awardCandidates: awardCandidates,
+                  shortlists: shortlists,
+                  finalistsAsMap: finalistsAsMap,
+                  wealthWinners: wealthWinners,
                 ),
-              ),
             AwardOrderSwitch(
               competition: widget.competition,
             ),
@@ -600,6 +516,31 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
       },
     );
   }
+}
+
+class AssignWinnersSection extends StatelessWidget {
+  const AssignWinnersSection({
+    super.key,
+    required this.assignPlace,
+    required this.place,
+    required this.highestRank,
+    required this.competition,
+    required this.finalists,
+    required this.awardCandidates,
+    required this.shortlists,
+    required this.finalistsAsMap,
+    required this.wealthWinners,
+  });
+
+  final int assignPlace;
+  final int place;
+  final int highestRank;
+  final Competition competition;
+  final List<(Award, List<AwardFinalistEntry>)> finalists;
+  final Map<int, Map<Team, Set<Award>>> awardCandidates;
+  final Map<Award, List<Set<Team>>> shortlists;
+  final Map<Award, List<Team?>> finalistsAsMap;
+  final Map<Team, Set<Award>> wealthWinners;
 
   static TableRow buildTeamAwardAssignmentRow(BuildContext context, {
     required Competition competition,
@@ -704,6 +645,155 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   ),
             ),
           ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListBody(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
+          child: assignPlace == place
+            ? Text('Assign winners for place $place:', style: bold)
+            : Text('Potential winners for place $place:', style: bold),
+        ),
+        if (assignPlace == place)
+          ScrollableRegion(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, spacing, 0, indent),
+              child: TeamOrderSelector(
+                value: competition.finalistsSortOrder,
+                onChange: (TeamComparatorCallback newValue) {
+                  competition.finalistsSortOrder = newValue;
+                },
+              ),
+            ),
+          ),
+        if (awardCandidates[place]!.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(indent, 0, indent, spacing),
+            child: Text('No nominated teams remain to be assigned for place $place.'),
+          )
+        else
+          HorizontalScrollbar(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+                child: Table(
+                  border: const TableBorder.symmetric(
+                    inside: BorderSide(),
+                  ),
+                  defaultColumnWidth: const IntrinsicCellWidth(),
+                  defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    TableRow(
+                      children: [
+                        Cell(
+                          Text('#', style: bold),
+                          prototype: Text('${competition.teamsView.last.number} WW'), // longest team number plus icon(s)
+                          highlight: competition.finalistsSortOrder == Team.teamNumberComparator,
+                        ),
+                        // ignore: unused_local_variable
+                        for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
+                          ListenableBuilder(
+                            listenable: award,
+                            builder: (BuildContext context, Widget? child) {
+                              final Color foregroundColor = textColorForColor(award.color);
+                              return ColoredBox(
+                                color: award.color,
+                                child: Cell(
+                                  alignment: Alignment.center,
+                                  Text(
+                                    award.name,
+                                    style: bold.copyWith(
+                                      color: textColorForColor(award.color),
+                                    ),
+                                  ),
+                                  icons: award.comment == '' ? null : <Widget>[
+                                    Padding(
+                                      padding: const EdgeInsetsDirectional.only(start: spacing),
+                                      child: Tooltip(
+                                        message: award.comment,
+                                        child: Icon(
+                                          Symbols.emoji_objects,
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                          color: foregroundColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  prototype: const Text('0000 XX'),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                    for (Team team in awardCandidates[place]!.keys.toList()..sort(competition.finalistsSortOrder))
+                      buildTeamAwardAssignmentRow(
+                        context,
+                        competition: competition,
+                        place: place,
+                        team: team,
+                        awardCandidates: awardCandidates,
+                        finalists: finalistsAsMap,
+                        winningTeams: wealthWinners,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        if (place == assignPlace)
+        // if all assignable winners are only eligible for one award at this place, autoassign all such winners
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
+              child: AutoAssignButton(
+                competition: competition,
+                place: place,
+                awardCandidates: awardCandidates,
+                shortlists: shortlists,
+              ),
+            ),
+          ),
+          if ((place == assignPlace) && (assignPlace < highestRank) && !competition.showAllPlacesForAssignment)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
+                child: FilledButton.icon(
+                  onPressed: () {
+                    competition.showAllPlacesForAssignment = true;
+                  },
+                  icon: const Icon(Icons.expand_more),
+                  label: assignPlace + 1 == highestRank
+                    ? Text('Show potential winners for place $highestRank')
+                    : assignPlace + 2 == highestRank
+                    ? Text('Show potential winners for places ${assignPlace + 1} and $highestRank')
+                    : Text('Show potential winners for places ${assignPlace + 1} to $highestRank')
+                ),
+              ),
+            )
+          else if ((place != assignPlace) && (place == highestRank) && competition.showAllPlacesForAssignment)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
+                child: FilledButton.icon(
+                  onPressed: () {
+                    competition.showAllPlacesForAssignment = false;
+                  },
+                  icon: const Icon(Icons.expand_less),
+                  label: Text('Hide tables except for place $assignPlace'),
+                ),
+              ),
+            ),
       ],
     );
   }
@@ -1032,29 +1122,45 @@ class AutoAssignButton extends StatelessWidget {
     required this.competition,
     required this.place,
     required this.awardCandidates,
+    required this.shortlists,
   });
 
   final Competition competition;
   final int place;
   final Map<int, Map<Team, Set<Award>>> awardCandidates;
+  final Map<Award, List<Set<Team>>> shortlists;
 
   @override
   Widget build(BuildContext context) {
     bool canAutoassign = true;
+    List<(int, String)> reasons = [];
     for (final Team team in awardCandidates[place]!.keys) {
-      if (team.inspireStatus == InspireStatus.exhibition ||
-          awardCandidates[place]![team]!.length > 1) {
+      if (team.inspireStatus == InspireStatus.exhibition) {
         canAutoassign = false;
-        break;
+        reasons.add((team.number, 'Team #${team.number} is an exhibition team.'));
+        continue;
+      }
+      if (awardCandidates[place]![team]!.length > 1) {
+        canAutoassign = false;
+        reasons.add((team.number, 'Team #${team.number} is nominated for multiple awards.'));
+        continue;
       }
       assert(awardCandidates[place]![team]!.isNotEmpty);
       final Award award = awardCandidates[place]![team]!.single;
       if (award.needsPortfolio && !team.hasPortfolio) {
         canAutoassign = false;
-        break;
+        reasons.add((team.number, 'Team #${team.number} is missing a portfolio for the ${award.name} award.'));
+        continue;
       }
     }
-    return FilledButton.icon(
+    for (Award award in shortlists.keys) {
+      if ((shortlists[award]!.length >= place) && (shortlists[award]![place - 1].length > 1)) {
+        canAutoassign = false;
+        reasons.add((0, 'The ${award.name} award has ${shortlists[award]![place - 1].length} teams nominated for place $place.'));
+        continue;
+      }
+    }
+    Widget result = FilledButton.icon(
       onPressed: canAutoassign ? () {
         for (final Team team in awardCandidates[place]!.keys) {
           assert(awardCandidates[place]![team]!.length == 1);
@@ -1070,5 +1176,18 @@ class AutoAssignButton extends StatelessWidget {
       icon: const Icon(Symbols.wand_stars),
       label: Text('Assign each remaining winner to their only eligible award.'),
     );
+    if (!canAutoassign) {
+      reasons.sort(((int, String) a, (int, String) b) {
+        if (a.$1 == b.$1) {
+          return a.$2.compareTo(b.$2);
+        }
+        return a.$1 - b.$1;
+      });
+      result = Tooltip(
+        message: 'Cannot autoassign because:\n${reasons.map(((int, String) reason) => '• ${reason.$2}').join('\n')}',
+        child: result,
+      );
+    }
+    return result;
   }
 }

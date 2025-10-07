@@ -927,6 +927,15 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  bool get showAllPlacesForAssignment => _showAllPlacesForAssignment;
+  bool _showAllPlacesForAssignment = false;
+  set showAllPlacesForAssignment(bool value) {
+    if (value != _showAllPlacesForAssignment) {
+      _showAllPlacesForAssignment = value;
+      notifyListeners();
+    }
+  }
+
   TeamComparatorCallback get inspireSortOrder => _inspireSortOrder;
   TeamComparatorCallback _inspireSortOrder = Team.teamNumberComparator;
   set inspireSortOrder(TeamComparatorCallback value) {
@@ -1785,6 +1794,8 @@ class Competition extends ChangeNotifier {
           _hideInspireHiddenTeams = _parseBool(row[1]);
         case 'apply finalists by award ranking':
           _applyFinalistsByAwardRanking = _parseBool(row[1]);
+        case 'show all places for assignment':
+          _showAllPlacesForAssignment = _parseBool(row[1]);
         case 'inspire sort order':
           _inspireSortOrder = _parseSortOrder('${row[1]}');
         case 'finalists sort order': 
@@ -1842,6 +1853,7 @@ class Competition extends ChangeNotifier {
     _showWorkings = true;
     _hideInspireHiddenTeams = false;
     _applyFinalistsByAwardRanking = true; // default to true for imported events, but false on fresh startup
+    _showAllPlacesForAssignment = false;
     _inspireSortOrder = Team.teamNumberComparator;
     _finalistsSortOrder = Team.rankedCountComparator;
     _pitVisitsIncludeAutovisitedTeams = false;
@@ -1872,6 +1884,7 @@ class Competition extends ChangeNotifier {
     data.add(['show workings', _showWorkings ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
     data.add(['apply finalists by award ranking', _applyFinalistsByAwardRanking ? 'y' : 'n']);
+    data.add(['show all places for assignment', _showAllPlacesForAssignment ? 'y' : 'n']);
     data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder)]);
     data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder)]);
     data.add(['pit visits - include autovisited teams', _pitVisitsIncludeAutovisitedTeams ? 'y' : 'n']);
