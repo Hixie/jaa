@@ -126,7 +126,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         int? assignPlace;
         final Map<Award, List<Team?>> finalistsAsMap = {};
         final Map<Award, List<Set<Team>>> shortlists = {};
-        if (!widget.competition.applyFinalistsByAwardRanking) {
+        if (widget.competition.ruleset.index >= Ruleset.rules2025.index) {
           finalists.sort(((Award, List<AwardFinalistEntry>) a, (Award, List<AwardFinalistEntry>) b) => widget.competition.awardSorter(a.$1, b.$1));
 
           // prepare the result map
@@ -203,7 +203,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           assert(haveAssignableWinners == (assignPlace != null));
         }
         // Remove non-winning finalists if necessary.
-        if (!widget.competition.showWorkings && widget.competition.applyFinalistsByAwardRanking) {
+        if (!widget.competition.showWorkings && widget.competition.ruleset == Ruleset.rules2024) {
           // ignore: unused_local_variable
           for (final (Award award, List<AwardFinalistEntry> results) in finalists) {
             results.removeWhere((AwardFinalistEntry entry) {
@@ -238,7 +238,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               incompleteAwards.add(award);
             }
           }
-          if (!hasAny && (widget.competition.applyFinalistsByAwardRanking || shortlists[award]!.every((Set<Team> group) => group.isEmpty))) {
+          if (!hasAny && (widget.competition.ruleset == Ruleset.rules2024 || shortlists[award]!.every((Set<Team> group) => group.isEmpty))) {
             emptyAwards.add(award);
           }
         }
@@ -336,7 +336,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                 ),
               ),
             if (canShowOverrides && _showOverride) OverrideEditor(competition: widget.competition),
-            if (widget.competition.applyFinalistsByAwardRanking && overriddenAwards.isNotEmpty)
+            if (widget.competition.ruleset == Ruleset.rules2024 && overriddenAwards.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
@@ -350,7 +350,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                 padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
                 child: Text('Finalists:', style: bold),
               ),
-            if (finalists.isNotEmpty && widget.competition.applyFinalistsByAwardRanking)
+            if (finalists.isNotEmpty && widget.competition.ruleset == Ruleset.rules2024)
               CheckboxRow(
                 checked: widget.competition.showWorkings,
                 onChanged: (bool? value) {
@@ -490,12 +490,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   ),
                 ),
               ),
-            if (!widget.competition.applyFinalistsByAwardRanking && incompleteAwards.isNotEmpty && !haveAssignableWinners)
+            if (widget.competition.ruleset.index >= Ruleset.rules2025.index && incompleteAwards.isNotEmpty && !haveAssignableWinners)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text('Use the Ranks pane to assign ranks for teams in award shortlists.', style: italic),
               ),
-            if (!widget.competition.applyFinalistsByAwardRanking && haveAssignableWinners)
+            if (widget.competition.ruleset.index >= Ruleset.rules2025.index && haveAssignableWinners)
               for (int place = assignPlace!; place <= (widget.competition.showAllPlacesForAssignment ? highestRank : assignPlace); place += 1)
                 AssignWinnersSection(
                   assignPlace: assignPlace,

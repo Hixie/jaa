@@ -211,8 +211,8 @@ class AwardOrderSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: competition,
-      builder: (BuildContext context, Widget? child) => competition.applyFinalistsByAwardRanking
-        ? Padding(
+      builder: (BuildContext context, Widget? child) => switch (competition.ruleset) {
+        Ruleset.rules2024 => Padding(
             padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
             child: Row(
               children: [
@@ -262,8 +262,9 @@ class AwardOrderSwitch extends StatelessWidget {
                 ),
               ],
             ),
-          )
-        : SizedBox(height: indent),
+          ),
+        Ruleset.rules2025 => SizedBox(height: indent),
+      },
     );
   }
 }

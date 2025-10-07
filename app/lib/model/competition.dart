@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
 import '../widgets/widgets.dart';
+import '../utils/constants.dart';
 import '../utils/colors.dart';
 import '../utils/randomizer.dart';
 
@@ -176,7 +177,7 @@ class Award extends ChangeNotifier {
 
   String get description {
     StringBuffer buffer = StringBuffer();
-    if (competition.applyFinalistsByAwardRanking && (spreadTheWealth != SpreadTheWealth.no)) {
+    if ((competition.ruleset == Ruleset.rules2024) && (spreadTheWealth != SpreadTheWealth.no)) {
       buffer.write('rank $rank ');
     }
     switch (kind) {
@@ -697,7 +698,7 @@ class Competition extends ChangeNotifier {
                 for (Team team in overrides.keys) {
                   finalists[award]!.add((team, null, rank, tied: overrides.length > 1, kind: overrides[team]!));
                 }
-              } else if (applyFinalistsByAwardRanking || award.isInspire) {
+              } else if (ruleset == Ruleset.rules2024 || award.isInspire) {
                 final List<Set<Team>> candidatesList = awardCandidates[award]!;
                 while (candidatesList.isNotEmpty && !placedTeam) {
                   final Set<Team> candidates = candidatesList.removeAt(0);
@@ -815,7 +816,7 @@ class Competition extends ChangeNotifier {
   }
 
   int Function(Award a, Award b) get awardSorter {
-    if (!applyFinalistsByAwardRanking) {
+    if (ruleset.index >= Ruleset.rules2025.index) {
       return Award.categoryBasedComparator;
     }
     switch (_awardOrder) {
@@ -918,11 +919,11 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  bool get applyFinalistsByAwardRanking => _applyFinalistsByAwardRanking;
-  bool _applyFinalistsByAwardRanking = false;
-  set applyFinalistsByAwardRanking(bool value) {
-    if (value != _applyFinalistsByAwardRanking) {
-      _applyFinalistsByAwardRanking = value;
+  Ruleset get ruleset => _ruleset;
+  Ruleset _ruleset = Ruleset.rules2025;
+  set ruleset(Ruleset value) {
+    if (value != _ruleset) {
+      _ruleset = value;
       notifyListeners();
     }
   }
@@ -1053,6 +1054,25 @@ class Competition extends ChangeNotifier {
         return 'if any';
       case Show.none:
         return 'none';
+    }
+  }
+
+  static Ruleset _parseRuleset(Object? cell) {
+    switch (cell) {
+      case '2024':
+        return Ruleset.rules2024;
+      case '2025':
+        return Ruleset.rules2025;
+    }
+    return Ruleset.rules2024;
+  }
+
+  static String _serializeRuleset(Ruleset value) {
+    switch (value) {
+      case Ruleset.rules2024:
+        return '2024';
+      case Ruleset.rules2025:
+        return '2025';
     }
   }
 
@@ -1792,8 +1812,8 @@ class Competition extends ChangeNotifier {
           _showWorkings = _parseBool(row[1]);
         case 'hide hidden teams':
           _hideInspireHiddenTeams = _parseBool(row[1]);
-        case 'apply finalists by award ranking':
-          _applyFinalistsByAwardRanking = _parseBool(row[1]);
+        case 'ruleset':
+          _ruleset = _parseRuleset(row[1]);
         case 'show all places for assignment':
           _showAllPlacesForAssignment = _parseBool(row[1]);
         case 'inspire sort order':
@@ -1852,7 +1872,7 @@ class Competition extends ChangeNotifier {
     _expandInspireTable = false;
     _showWorkings = true;
     _hideInspireHiddenTeams = false;
-    _applyFinalistsByAwardRanking = true; // default to true for imported events, but false on fresh startup
+    _ruleset = Ruleset.rules2024; // default to old rules for imported events, but current on fresh startup
     _showAllPlacesForAssignment = false;
     _inspireSortOrder = Team.teamNumberComparator;
     _finalistsSortOrder = Team.rankedCountComparator;
@@ -1883,7 +1903,7 @@ class Competition extends ChangeNotifier {
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
     data.add(['show workings', _showWorkings ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
-    data.add(['apply finalists by award ranking', _applyFinalistsByAwardRanking ? 'y' : 'n']);
+    data.add(['rules', _serializeRuleset(_ruleset)]);
     data.add(['show all places for assignment', _showAllPlacesForAssignment ? 'y' : 'n']);
     data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder)]);
     data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder)]);
@@ -1944,7 +1964,7 @@ class Competition extends ChangeNotifier {
       } catch (e) {
         _clearTeams();
         _clearAwards();
-        _applyFinalistsByAwardRanking = false; // _resetConfiguration sets this to true for legacy reasons
+        _ruleset = latestRuleset; // _resetConfiguration sets this to a different default for legacy reasons
         _lastAutosaveMessage = 'Failed to import event state.';
         rethrow;
       }

@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
 
+enum Ruleset {
+  rules2024,
+  rules2025,
+}
+const latestRuleset = Ruleset.rules2025;
+
 const Color background = Color.fromARGB(255, 255, 255, 255);
 const Color control = Color.fromARGB(255, 227, 232, 236);
 const Color scrim = Color.fromARGB(64, 0, 0, 0);
+const Color textColor = Color.fromARGB(255, 0, 0, 0);
 
-const Color primary = Color.fromARGB(255, 101, 89, 245);
-const Color primaryText = Color.fromARGB(255, 0, 0, 0);
+const Map<Ruleset, Color> seasonColors = {
+  Ruleset.rules2024: Color.fromARGB(255, 101, 89, 245),
+  Ruleset.rules2025: Color(0xFFE0B45B),
+};
+
 const TextStyle primaryStyle = TextStyle(
   inherit: false,
   fontFamily: 'Roboto',
-  color: primaryText,
-  fontSize: 14.0,
-);
-
-const Color accent = Color.fromARGB(255, 223, 222, 254);
-const Color accentText = Color.fromARGB(255, 66, 78, 94);
-const TextStyle accentStyle = TextStyle(
-  inherit: false,
-  fontFamily: 'Roboto',
-  color: accentText,
+  color: textColor,
   fontSize: 14.0,
 );
 
 const TextStyle headingStyle = TextStyle(
   inherit: false,
   fontFamily: 'Roboto',
-  color: accentText,
+  color: textColor,
   fontSize: 20.0,
   fontWeight: FontWeight.bold,
 );

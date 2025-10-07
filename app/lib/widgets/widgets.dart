@@ -236,6 +236,55 @@ class CheckboxRow extends StatelessWidget {
   }
 }
 
+class RadioRow<T> extends StatelessWidget {
+  const RadioRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.includePadding = true,
+  });
+
+  final String label;
+  final T value;
+  final bool includePadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget result = MergeSemantics(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Material(
+            type: MaterialType.transparency,
+            child: Radio(
+              value: value,
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                RadioGroup.maybeOf<T>(context)!.onChanged(value);
+              },
+              child: Text(
+                label,
+                softWrap: true,
+                overflow: TextOverflow.clip,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (includePadding) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+        child: result,
+      );
+    }
+    return result;
+  }
+}
+
 class PaneHeader extends StatelessWidget {
   const PaneHeader({
     super.key,
