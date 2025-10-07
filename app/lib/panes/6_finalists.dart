@@ -595,7 +595,14 @@ class AssignWinnersSection extends StatelessWidget {
     }
     return TableRow(
       children: [
-        Cell(Text('${team.number}')),
+        Tooltip(
+          message: team.name,
+          child: Cell(
+            Text(
+              '${team.number}',
+            ),
+          ),
+        ),
         for (final Award award in competition.awardsView.toList()..sort(competition.awardSorter))
           Cell(
             team.shortlistsView[award] == null
