@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../utils/constants.dart';
@@ -521,7 +522,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
             ),
           ),
           IconButton.filledTonal(
-            onPressed: _bulkValid ? () => _addBulkTeamsToShortlist : null,
+            onPressed: _bulkValid ? _addBulkTeamsToShortlist : null, 
             icon: const Icon(
               Symbols.heart_plus,
             ),
