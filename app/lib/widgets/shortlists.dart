@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../utils/constants.dart';

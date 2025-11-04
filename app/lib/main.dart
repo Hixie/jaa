@@ -247,7 +247,9 @@ class _MainAppState extends State<MainApp> {
                                 ),
                               ),
                               builder: (BuildContext content, Widget? child) {
-                                final List<Team> inspireIneligibleTeams = widget.competition.teamsView.where((Team team) => team.inspireStatus == InspireStatus.ineligible).toList();
+                                final List<Team> inspireIneligibleTeams = widget.competition.teamsView.where(
+                                  (Team team) => (team.inspireStatus == InspireStatus.ineligible) || (team.inspireStatus == InspireStatus.exhibition)
+                                ).toList();
                                 return LayoutBuilder(
                                   builder: (BuildContext context, BoxConstraints constraints) {
                                     final int advancingAwardsCount = widget.competition.awardsWithKind(const <AwardKind>{AwardKind.inspire, AwardKind.advancingInspire, AwardKind.advancingIndependent});

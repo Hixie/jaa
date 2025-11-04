@@ -522,7 +522,7 @@ class AdaptiveButton extends StatelessWidget {
   }
 }
 
-class DropdownList<T> extends StatelessWidget {
+class DropdownList<T extends Object> extends StatelessWidget {
   const DropdownList({
     super.key,
     this.focusNode,
