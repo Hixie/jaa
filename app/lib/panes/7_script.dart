@@ -74,10 +74,11 @@ class AwardScriptEditor extends StatelessWidget {
     List<Team> winners = [];
     List<Team> runnersUp = [];
     bool ties = false;
+    bool rankedInspireWins = (competition.ruleset.index >= Ruleset.rules2025.index) && (award.kind == AwardKind.inspire);
     // ignore: unused_local_variable
     for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in entries) {
       if (team != null && otherAward == null) {
-        if (rank == 1 || !award.isPlacement) {
+        if (rank == 1 || !award.isPlacement || rankedInspireWins) {
           ties = ties || tied;
           winners.add(team);
         } else {
@@ -101,7 +102,9 @@ class AwardScriptEditor extends StatelessWidget {
       );
     } else {
       final List<Widget> children = <Widget>[];
-      for (final Team team in winners) {
+      for (int index = 0; index < winners.length; index += 1) {
+        final Team team = winners[index];
+        final String place = (index == 0) || !rankedInspireWins ? 'Winner' : placementDescriptor(index + 1);
         if (children.isNotEmpty) {
           children.add(const SizedBox(height: indent));
         }
@@ -118,7 +121,7 @@ class AwardScriptEditor extends StatelessWidget {
                       Text.rich(
                         TextSpan(
                           children: [
-                            TextSpan(text: 'Winner: ${team.number} '),
+                            TextSpan(text: '$place: ${team.number} '),
                             TextSpan(text: team.name, style: italic),
                             TextSpan(text: ' from ${team.location}'),
                           ],
