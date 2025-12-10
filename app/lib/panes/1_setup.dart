@@ -326,7 +326,8 @@ class _SetupPaneState extends State<SetupPane> {
                             // prototype: EventSpecificCell(competition: null, award: null),
                             // padPrototype: false,
                           ),
-                          Cell(Text('Rank', style: bold), prototype: Text('000')),
+                          if (widget.competition.ruleset.index < Ruleset.rules2025.index)
+                            Cell(Text('Rank', style: bold), prototype: Text('000')),
                           Cell(Text('Winners', style: bold), prototype: Text('000')),
                           Cell(Text('Category', style: bold), prototype: Text('Documentation')),
                           Cell(Text('Spread the wealth', style: bold), prototype: Text('Winner Only')),
@@ -421,7 +422,8 @@ class _SetupPaneState extends State<SetupPane> {
                                       ),
                                     ),
                                   ),
-                            Cell(Text(award.spreadTheWealth != SpreadTheWealth.no ? '${award.rank}' : '')),
+                            if (widget.competition.ruleset.index < Ruleset.rules2025.index)
+                              Cell(Text(award.spreadTheWealth != SpreadTheWealth.no ? '${award.rank}' : '')),
                             Cell(Text('${award.count}')),
                             Cell(Text(award.category)),
                             Cell(Text(switch (award.spreadTheWealth) {

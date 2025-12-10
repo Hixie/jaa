@@ -106,12 +106,17 @@ class AwardFinalistsPane extends StatefulWidget {
 class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
   bool _showOverride = false;
 
+  String describeUndo((Award award, Team team, int rank) undo) {
+    return 'Undo assignment of ${undo.$1.isPlacement ? "${placementDescriptor(undo.$3)} place" : (undo.$3 <= undo.$1.count ? "Win" : "Runner-Up")} for ${undo.$1.name} award to team #${undo.$2.number}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.competition,
       builder: (BuildContext context, Widget? child) {
         final List<(Award, List<AwardFinalistEntry>)> finalists = widget.competition.computeFinalists();
+        finalists.sort(((Award, List<AwardFinalistEntry>) a, (Award, List<AwardFinalistEntry>) b) => widget.competition.awardSorter(a.$1, b.$1));
         final Set<Award> emptyAwards = {};
         final Set<Award> tiedAwards = {};
         final Set<Award> overriddenAwards = {};
@@ -127,7 +132,6 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Map<Award, List<Team?>> finalistsAsMap = {};
         final Map<Award, List<Set<Team>>> shortlists = {};
         if (widget.competition.ruleset.index >= Ruleset.rules2025.index) {
-          finalists.sort(((Award, List<AwardFinalistEntry>) a, (Award, List<AwardFinalistEntry>) b) => widget.competition.awardSorter(a.$1, b.$1));
 
           // prepare the result map
           for (int rank = 1; rank <= highestRank; rank += 1) {
@@ -508,6 +512,43 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   finalistsAsMap: finalistsAsMap,
                   wealthWinners: wealthWinners,
                 ),
+            if (widget.competition.ruleset.index >= Ruleset.rules2025.index)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
+                child: Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    if (haveAssignableWinners && (assignPlace! < highestRank) && !widget.competition.showAllPlacesForAssignment)
+                      FilledButton.icon(
+                        onPressed: () {
+                          widget.competition.showAllPlacesForAssignment = true;
+                        },
+                        icon: const Icon(Icons.expand_more),
+                        label: assignPlace + 1 == highestRank
+                          ? Text('Show potential winners for place $highestRank')
+                          : assignPlace + 2 == highestRank
+                          ? Text('Show potential winners for places ${assignPlace + 1} and $highestRank')
+                          : Text('Show potential winners for places ${assignPlace + 1} to $highestRank')
+                      )
+                    else if (widget.competition.showAllPlacesForAssignment)
+                      FilledButton.icon(
+                        onPressed: () {
+                          widget.competition.showAllPlacesForAssignment = false;
+                        },
+                        icon: const Icon(Icons.expand_less),
+                        label: Text('Hide tables except for place $assignPlace'),
+                      ),
+                    FilledButton.icon(
+                      onPressed: widget.competition.canUndo ? () {
+                        widget.competition.undo();
+                      } : null,
+                      icon: const Icon(Icons.undo),
+                      label: Text(widget.competition.canUndo ? describeUndo(widget.competition.nextUndo) : "Undo last assignment"),
+                    ),
+                  ],
+                ),
+              ),
             AwardOrderSwitch(
               competition: widget.competition,
             ),
@@ -769,38 +810,6 @@ class AssignWinnersSection extends StatelessWidget {
               ),
             ),
           ),
-          if ((place == assignPlace) && (assignPlace < highestRank) && !competition.showAllPlacesForAssignment)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
-                child: FilledButton.icon(
-                  onPressed: () {
-                    competition.showAllPlacesForAssignment = true;
-                  },
-                  icon: const Icon(Icons.expand_more),
-                  label: assignPlace + 1 == highestRank
-                    ? Text('Show potential winners for place $highestRank')
-                    : assignPlace + 2 == highestRank
-                    ? Text('Show potential winners for places ${assignPlace + 1} and $highestRank')
-                    : Text('Show potential winners for places ${assignPlace + 1} to $highestRank')
-                ),
-              ),
-            )
-          else if ((place != assignPlace) && (place == highestRank) && competition.showAllPlacesForAssignment)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0),
-                child: FilledButton.icon(
-                  onPressed: () {
-                    competition.showAllPlacesForAssignment = false;
-                  },
-                  icon: const Icon(Icons.expand_less),
-                  label: Text('Hide tables except for place $assignPlace'),
-                ),
-              ),
-            ),
       ],
     );
   }

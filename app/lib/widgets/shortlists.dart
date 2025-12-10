@@ -613,14 +613,22 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
     super.dispose();
   }
 
-  late String _summary;
+  late String _inspireSummary;
+  late String _overallSummary;
   void _updateSummary() {
     setState(() {
-      _summary = _generateSummary();
+      _inspireSummary = _generateInspireSummary();
+      _overallSummary = _generateOverallSummary();
     });
   }
 
-  String _generateSummary() {
+  @override
+  void reassemble() {
+    super.reassemble();
+    _updateSummary();
+  }
+
+  String _generateInspireSummary() {
     if (widget.competition.inspireAward == null) {
       return '';
     }
@@ -683,15 +691,47 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
     return '$qualifyingNomineeCount teams qualify for the ${widget.competition.inspireAward!.name} award.';
   }
 
+  String _generateOverallSummary() {
+    final List<(Award, List<AwardFinalistEntry>)> finalists = widget.competition.computeFinalists();
+    final List<Award> incompleteAwards = <Award>[];
+    for ((Award, List<AwardFinalistEntry>) entry in finalists) {
+      final Award award = entry.$1;
+      if (award.isInspire) {
+        continue;
+      }
+      final List<AwardFinalistEntry> awardFinalists = entry.$2;
+      int count = 0;
+      for (AwardFinalistEntry finalist in awardFinalists) {
+        final Team? team = finalist.$1;
+        final Award? otherAward = finalist.$2;
+        if (team != null && otherAward == null) {
+          count += 1;
+        }
+      }
+      if (count < award.count) {
+        incompleteAwards.add(award);
+      }
+    }
+    if (incompleteAwards.isEmpty) {
+      return '🏆 Sufficient teams have been ranked to have finalists for all awards.';
+    }
+    incompleteAwards.sort(widget.competition.awardSorter);
+    if (incompleteAwards.length == 1) {
+      return '⚠️ The ${incompleteAwards.single.name} award may not yet have sufficient ranked teams to assign finalists to all placements.';
+    }
+    return '⚠️ The following awards may not yet have sufficient ranked teams to assign finalists to all placements: '
+        '${incompleteAwards.map((Award award) => award.name).join(', ')}.';
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_summary.isEmpty) {
+    if (_inspireSummary.isEmpty) {
       return const SizedBox.shrink();
     }
     return Padding(
       padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
       child: Text(
-        _summary,
+        '$_inspireSummary\n$_overallSummary',
         softWrap: true,
         overflow: TextOverflow.clip,
       ),
