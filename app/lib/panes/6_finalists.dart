@@ -125,7 +125,6 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final bool canShowOverrides = widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty;
         final int highestRank = widget.competition.awardsView.map((Award award) => award.count).fold<int>(0, math.max);
         final Map<int, Map<Team, Set<Award>>> awardCandidates = {};
-        final Map<Award, Set<Team>> awardWinners = {};
         final Map<Team, Set<Award>> wealthWinners = {}; // teams who are no longer eligible for spread-the-wealth awards
         bool haveAssignableWinners = false;
         int? assignPlace;
@@ -168,8 +167,6 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
             for (int index = 0; index < shortlists[award]!.length; index += 1) {
               if (award.spreadTheWealth != SpreadTheWealth.no) {
                 shortlists[award]![index].removeAll(wealthWinners.keys);
-              } else {
-                shortlists[award]![index].removeAll(awardWinners[award]!);
               }
             }
           }
@@ -224,7 +221,6 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in results) {
             if (team != null && otherAward == null) {
               hasAny = true;
-              awardWinners.putIfAbsent(award, () => <Team>{}).add(team);
               if (award.needsPortfolio && !team.hasPortfolio) {
                 invalidAwards.add(award);
               }

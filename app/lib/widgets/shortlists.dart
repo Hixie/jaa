@@ -692,7 +692,7 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
   }
 
   String _generateOverallSummary() {
-    final List<(Award, List<AwardFinalistEntry>)> finalists = widget.competition.computeFinalists();
+    final List<(Award, List<AwardFinalistEntry>)> finalists = widget.competition.computeHypotheticalFinalists();
     final List<Award> incompleteAwards = <Award>[];
     for ((Award, List<AwardFinalistEntry>) entry in finalists) {
       final Award award = entry.$1;
