@@ -687,11 +687,13 @@ class Competition extends ChangeNotifier {
   }
 
   List<(Award, List<AwardFinalistEntry>)> _computeFinalists({ bool hypothetical = false }) {
+    final Map<Award, List<AwardFinalistEntry>> finalists = {}; // this is the output of this function
     final Map<Award, List<Set<Team>>> awardCandidates = {};
-    final Map<Award, List<AwardFinalistEntry>> finalists = {};
+    final Map<Award, Set<Team>> alreadyAssigned = {};
     for (final Award award in awardsView) {
-      awardCandidates[award] = shortlistsView[award]?.asRankedList() ?? [];
       finalists[award] = [];
+      awardCandidates[award] = shortlistsView[award]?.asRankedList() ?? [];
+      alreadyAssigned[award] = {};
     }
     if (hypothetical && inspireAward != null) {
       awardCandidates[inspireAward]!.addAll((teamsView.toList()..sort(Team.inspireCandidateComparator)).map((Team team) => <Team>{team}));
@@ -717,6 +719,10 @@ class Competition extends ChangeNotifier {
               placedTeam = true;
               for (Team team in overrides.keys) {
                 finalists[award]!.add((team, null, rank, tied: overrides.length > 1, kind: overrides[team]!));
+                alreadyAssigned[award]!.add(team);
+                if (award.spreadTheWealth == SpreadTheWealth.allPlaces || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
+                  placedTeams[team] = (award, rank);
+                }
               }
             } else if (ruleset == Ruleset.rules2024 || award.isInspire || hypothetical) {
               final List<Set<Team>> candidatesList = awardCandidates[award]!;
@@ -724,6 +730,9 @@ class Competition extends ChangeNotifier {
                 final Set<Team> candidates = candidatesList.removeAt(0);
                 candidates.removeWhere((Team team) => (award.isInspire && ruleset == Ruleset.rules2024 && team.inspireStatus == InspireStatus.ineligible) || team.inspireStatus == InspireStatus.exhibition);
                 final Set<Team> alreadyPlaced = award.spreadTheWealth != SpreadTheWealth.no ? placedTeams.keys.toSet() : {};
+                if (alreadyAssigned[award]!.isNotEmpty) {
+                  alreadyPlaced.addAll(alreadyAssigned[award]!);
+                }
                 final Set<Team> ineligible = candidates.intersection(alreadyPlaced);
                 final Set<Team> winners = candidates.difference(ineligible);
                 if (ineligible.isNotEmpty) {
@@ -736,6 +745,7 @@ class Competition extends ChangeNotifier {
                   placedTeam = true;
                   for (Team team in winners) {
                     finalists[award]!.add((team, null, rank, tied: winners.length > 1, kind: FinalistKind.automatic));
+                    alreadyAssigned[award]!.add(team);
                     if (award.spreadTheWealth == SpreadTheWealth.allPlaces || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
                       placedTeams[team] = (award, rank);
                     }
