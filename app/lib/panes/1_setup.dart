@@ -192,7 +192,7 @@ class _SetupPaneState extends State<SetupPane> {
                     children: [
                       TableRow(
                         children: [
-                          Cell(Text('Team Number', style: bold), prototype: Text('${widget.competition.teamsView.last.number}')),
+                          Cell(Text('Team Number', style: bold), prototype: Text(widget.competition.longestTeamNumber)),
                           Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
                           Cell(Text('Team Location', style: bold), prototype: Text('Mooselookmeguntic')),
                           Cell(Text('Inspire eligible', style: bold), prototype: Text('Not competiting WW')), // WW represents the icon(s)

@@ -559,6 +559,12 @@ class Competition extends ChangeNotifier {
   late final UnmodifiableMapView<Award, Shortlist> shortlistsView = UnmodifiableMapView<Award, Shortlist>(_shortlists);
   late final UnmodifiableListView<String> inspireCategories = UnmodifiableListView(_inspireCategories);
 
+  String get longestTeamNumber => _longestTeamNumber ??= _computeLongestTeamNumber();
+  String? _longestTeamNumber = '';
+  String _computeLongestTeamNumber() {
+    return '8' * teamsView.last.number.toString().length;
+  }
+
   int awardsWithKind(Set<AwardKind> kinds) {
     int count = 0;
     for (final Award award in _awards) {
@@ -1024,6 +1030,9 @@ class Competition extends ChangeNotifier {
     if (cell is double) {
       return cell != 0.0;
     }
+    if (cell is String) {
+      cell = cell.toLowerCase();
+    }
     switch (cell) {
       case true:
       case 'y':
@@ -1225,6 +1234,7 @@ class Competition extends ChangeNotifier {
       team._clearBlurbs();
     }
     _overrides.clear();
+    _longestTeamNumber = null;
     notifyListeners();
   }
 
@@ -2292,6 +2302,7 @@ class Competition extends ChangeNotifier {
         inspireStatus: inspireStatus,
       );
       _teams.add(team);
+      _longestTeamNumber = null;
       team._visited = random.nextInt(_expectedPitVisits);
       if (random.nextInt(5) > 0) {
         team.visitingJudgesNotes = randomizer.generatePhrase(random.nextInt(30) + 2);
@@ -2329,6 +2340,7 @@ class Competition extends ChangeNotifier {
   void updateTeamNumber(Team team, int newNumber) {
     team._number = newNumber;
     _teams.sort();
+    _longestTeamNumber = null;
     notifyListeners();
   }
 }

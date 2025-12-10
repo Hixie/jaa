@@ -397,7 +397,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                 children: [
                                   TableRow(
                                     children: [
-                                      Cell(Text('#', style: bold), prototype: Text('${widget.competition.teamsView.last.number} WW')), // longest team number plus icon(s)
+                                      Cell(Text('#', style: bold), prototype: Text('${widget.competition.longestTeamNumber} WW')), // longest team number plus icon(s)
                                       Cell(Text('Award', style: bold), prototype: const Text('Invalid 2nd WW')),
                                       if (overriddenAwards.contains(award))
                                         TableCell(

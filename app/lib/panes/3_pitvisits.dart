@@ -458,7 +458,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                         children: [
                           TableRow(
                             children: [
-                              Cell(Text('#', style: bold), prototype: Text('${widget.competition.teamsView.last.number}${widget.competition.pitVisitsIncludeExhibitionTeams ? " WW" : ""}')),
+                              Cell(Text('#', style: bold), prototype: Text('${widget.competition.longestTeamNumber}${widget.competition.pitVisitsIncludeExhibitionTeams ? " WW" : ""}')),
                               for (final Award award in relevantAwards)
                                 ListenableBuilder(
                                   listenable: award,

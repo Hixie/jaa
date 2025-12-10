@@ -237,7 +237,7 @@ class _InspirePaneState extends State<InspirePane> {
                                     children: [
                                       Cell(
                                         Text('#', style: bold),
-                                        prototype: Text('${widget.competition.teamsView.last.number} WW'), // longest team number plus icon(s)
+                                        prototype: Text('${widget.competition.longestTeamNumber} WW'), // longest team number plus icon(s)
                                         highlight: widget.competition.inspireSortOrder == Team.teamNumberComparator,
                                       ),
                                       for (final String category in categories)
