@@ -128,6 +128,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
         final Map<Team, Set<Award>> wealthWinners = {}; // teams who are no longer eligible for spread-the-wealth awards
         bool haveAssignableWinners = false;
         int? assignPlace;
+        final Map<Award, Set<Team>> winners = {};
         final Map<Award, List<Team?>> finalistsAsMap = {};
         final Map<Award, List<Set<Team>>> shortlists = {};
         if (widget.competition.ruleset.index >= Ruleset.rules2025.index) {
@@ -136,10 +137,12 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           for (int rank = 1; rank <= highestRank; rank += 1) {
             awardCandidates[rank] = <Team, Set<Award>>{};
           }
-          // prepare a map where, for each award, we record the ranks that already have an assigned winner
+          // prepare a map where, for each award, we record the ranks that already have an assigned winner,
+          // and a second where we just track who has received the award at all.
           final Map<Award, Set<int>> claimedAwards = {};
           for (final Award award in widget.competition.awardsView) {
             claimedAwards[award] = <int>{};
+            winners[award] = <Team>{};
           }
           // record the teams who have already been assigned an award (either automatically, manually, or via override)
           for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists) {
@@ -149,6 +152,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
               if (team != null && otherAward == null) {
                 claimedAwards[award]!.add(rank);
                 finalistsAsMap[award]!.add(team);
+                winners[award]!.add(team);
                 if ((award.spreadTheWealth == SpreadTheWealth.allPlaces)
                     || (award.spreadTheWealth == SpreadTheWealth.winnerOnly && rank == 1)) {
                   wealthWinners.putIfAbsent(team, () => <Award>{}).add(award);
@@ -162,9 +166,10 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
           for (final Award award in widget.competition.awardsView) {
             shortlists[award] = widget.competition.shortlistsView[award]?.asRankedList() ?? <Set<Team>>[];
           }
-          // remove empty groups
+          // remove teams that are ineligible for awards due to already winning something relevant
           for (final Award award in shortlists.keys) {
             for (int index = 0; index < shortlists[award]!.length; index += 1) {
+              shortlists[award]![index].removeAll(winners[award]!);
               if (award.spreadTheWealth != SpreadTheWealth.no) {
                 shortlists[award]![index].removeAll(wealthWinners.keys);
               }
@@ -490,7 +495,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                   ),
                 ),
               ),
-            if (widget.competition.ruleset.index >= Ruleset.rules2025.index && incompleteAwards.isNotEmpty && !haveAssignableWinners)
+            if (widget.competition.ruleset.index >= Ruleset.rules2025.index && incompleteAwards.isNotEmpty && (incompleteAwards.length > 1 || incompleteAwards.single != widget.competition.inspireAward) && !haveAssignableWinners)
               Padding(
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text('Use the Ranks pane to assign ranks for teams in award shortlists.', style: italic),
@@ -527,7 +532,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                           ? Text('Show potential winners for places ${assignPlace + 1} and $highestRank')
                           : Text('Show potential winners for places ${assignPlace + 1} to $highestRank')
                       )
-                    else if (widget.competition.showAllPlacesForAssignment)
+                    else if (widget.competition.showAllPlacesForAssignment && assignPlace != null && assignPlace < highestRank)
                       FilledButton.icon(
                         onPressed: () {
                           widget.competition.showAllPlacesForAssignment = false;
