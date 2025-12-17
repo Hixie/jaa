@@ -1651,6 +1651,7 @@ class Competition extends ChangeNotifier {
       final FinalistKind kind = (row.length > 3) ? _parseFinalistKind(row[3]) : FinalistKind.override;
       addOverride(award, team, rank, kind);
     }
+    _undo.clear();
     notifyListeners();
   }
 
@@ -2334,6 +2335,7 @@ class Competition extends ChangeNotifier {
         }
       }
     }
+    _undo.clear();
     notifyListeners();
   }
 
