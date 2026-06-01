@@ -592,27 +592,44 @@ class AssignWinnersSection extends StatelessWidget {
     required Map<Award, List<Team?>> finalists,
     required Map<Team, Set<Award>> winningTeams,
   }) {
-    final Set<Award> awards = awardCandidates[place]![team]!;
+    final Set<Award> teamAwards = awardCandidates[place]![team] ?? const <Award>{};
+    final Set<Award> winners = {};
+    final Set<Award> disabledButtons = {};
     final Map<Award, String> tooltips = {};
-    for (Award award in awards) {
+    final Map<Award, Widget> labels = {};
+    for (Award award in finalists.keys) {
+      for (int index = 0; index < finalists[award]!.length; index += 1) {
+        if (finalists[award]![index] == team) {
+          winners.add(award);
+          if (index + 1 == team.shortlistsView[award]!.rank) {
+            labels[award] = Text(placementDescriptor(index + 1), style: bold);
+          } else {
+            labels[award] = Text('${placementDescriptor(index + 1)} (#${team.shortlistsView[award]!.rank})');
+          }
+          tooltips[award] = 'Team ${team.number} ${team.name} was shortlisted for rank #${team.shortlistsView[award]!.rank} and was assigned position #${index + 1}.';
+        }
+      }
+    }
+    for (Award award in teamAwards) {
       for (int index = place; index < finalists[award]!.length; index += 1) {
         if (finalists[award]![index] != null && finalists[award]![index]!.shortlistsView[award]!.rank! < team.shortlistsView[award]!.rank!) {
           final Team other = finalists[award]![index]!;
-          tooltips[award] = 'Team #${other.number} ${team.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
+          tooltips[award] = 'Team #${other.number} ${other.name} was shortlisted for rank #${other.shortlistsView[award]!.rank} and has been assigned position #${index + 1}; assigning ${team.number} ${team.name} ahead of them would inverse the shortlisted positions.';
           break;
         }
       }
     }
-    final Map<Award, Widget> labels = {};
     for (final Award award in competition.awardsView) {
       if (team.shortlistsView[award] != null) {
         if (team.shortlistsView[award]!.rank == null) {
+          disabledButtons.add(award);
           labels[award] = Text(bullet);
           assert(!tooltips.containsKey(award));
           tooltips[award] = 'Team was nominated but not ranked for this award.';
-        } else {
+        } else if (!labels.containsKey(award)) {
           labels[award] = Text('#${team.shortlistsView[award]!.rank}${tooltips[award] != null ? " ⚠" : ""}');
-          if (!awards.contains(award) && !tooltips.containsKey(award)) {
+          if (!teamAwards.contains(award) && !tooltips.containsKey(award)) {
+            disabledButtons.add(award);
             // button is disabled but we haven't yet figured out why
             if (finalists[award]!.length >= place && finalists[award]![place - 1] != null) {
               Team team = finalists[award]![place - 1]!;
@@ -635,6 +652,57 @@ class AssignWinnersSection extends StatelessWidget {
         }
       }
     }
+
+    Widget child(Award award) {
+      return (!award.needsPortfolio || team.hasPortfolio) && (team.inspireStatus != InspireStatus.exhibition)
+        ? labels[award]!
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              labels[award]!,
+              const SizedBox(width: spacing),
+              if (team.inspireStatus == InspireStatus.exhibition)
+                Tooltip(
+                  message: 'Team is an exhibition team and is not eligible for any awards!',
+                  child: Icon(
+                    Symbols.cruelty_free, // bunny
+                    size: DefaultTextStyle.of(context).style.fontSize,
+                  ),
+                ),
+              if (award.needsPortfolio && !team.hasPortfolio)
+                Tooltip(
+                  message: 'Team is missing a portfolio!',
+                  child: Icon(
+                    Symbols.content_paste_off, // clipboard crossed out
+                    size: DefaultTextStyle.of(context).style.fontSize,
+                  ),
+                ),
+            ],
+        );
+    }
+
+    Widget cellContents(Award award) {
+      return FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: award.color,
+          foregroundColor: textColorForColor(award.color),
+          disabledForegroundColor: winners.contains(award) ? Colors.black : null,
+          disabledBackgroundColor: winners.contains(award) ? Colors.transparent : null,
+          side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+          padding: EdgeInsets.zero,
+        ),
+        onPressed: disabledButtons.contains(award) || winners.contains(award) ? null : () {
+          competition.addOverride(
+            award,
+            team,
+            place,
+            FinalistKind.manual,
+          );
+        },
+        child: child(award),
+      );
+    }
+
     return TableRow(
       children: [
         Tooltip(
@@ -651,47 +719,7 @@ class AssignWinnersSection extends StatelessWidget {
               ? SizedBox.shrink()
               : Tooltip(
                   message: tooltips[award] ?? '',
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: award.color,
-                      foregroundColor: textColorForColor(award.color),
-                      side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
-                      padding: EdgeInsets.zero,
-                    ),
-                    onPressed: awards.contains(award) ? () {
-                      competition.addOverride(
-                        award,
-                        team,
-                        place,
-                        FinalistKind.manual,
-                      );
-                    } : null,
-                    child: (!award.needsPortfolio || team.hasPortfolio) && (team.inspireStatus != InspireStatus.exhibition)
-                        ? labels[award]!
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              labels[award]!,
-                              const SizedBox(width: spacing),
-                              if (team.inspireStatus == InspireStatus.exhibition)
-                                Tooltip(
-                                  message: 'Team is an exhibition team and is not eligible for any awards!',
-                                  child: Icon(
-                                    Symbols.cruelty_free, // bunny
-                                    size: DefaultTextStyle.of(context).style.fontSize,
-                                  ),
-                                ),
-                              if (award.needsPortfolio && !team.hasPortfolio)
-                                Tooltip(
-                                  message: 'Team is missing a portfolio!',
-                                  child: Icon(
-                                    Symbols.content_paste_off, // clipboard crossed out
-                                    size: DefaultTextStyle.of(context).style.fontSize,
-                                  ),
-                                ),
-                            ],
-                        ),
-                  ),
+                  child: cellContents(award),
             ),
           ),
       ],
@@ -700,6 +728,20 @@ class AssignWinnersSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Set<Team> teams = <Team>{};
+    for (Map<Team, Set<Award>> candidates in awardCandidates.values) {
+      teams.addAll(candidates.keys);
+      // ignore: unused_local_variable
+      for (var (Award award, List<AwardFinalistEntry> awardFinalists) in finalists) {
+        // ignore: unused_local_variable
+        for (final (Team? team, Award? otherAward, int rank, tied: bool tied, kind: FinalistKind kind) in awardFinalists) {
+          if (team != null) {
+            teams.add(team);
+          }
+        }
+      }
+    }
+    final List<Team> sortedTeams = teams.toList()..sort(competition.finalistsSortOrder);
     return ListBody(
       children: [
         Padding(
@@ -775,14 +817,14 @@ class AssignWinnersSection extends StatelessWidget {
                                       ),
                                     ),
                                   ],
-                                  prototype: const Text('0000 XX'),
+                                  prototype: const Text('00th (#XX)'),
                                 ),
                               );
                             },
                           ),
                       ],
                     ),
-                    for (Team team in awardCandidates[place]!.keys.toList()..sort(competition.finalistsSortOrder))
+                    for (Team team in sortedTeams)
                       buildTeamAwardAssignmentRow(
                         context,
                         competition: competition,
