@@ -752,14 +752,21 @@ class AssignWinnersSection extends StatelessWidget {
         ),
         if (assignPlace == place)
           ScrollableRegion(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, spacing, 0, indent),
-              child: TeamOrderSelector(
-                value: competition.finalistsSortOrder,
-                onChange: (TeamComparatorCallback newValue) {
-                  competition.finalistsSortOrder = newValue;
-                },
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, spacing, spacing, indent),
+                  child: TeamOrderSelector(
+                    value: competition.finalistsSortOrder,
+                    onChange: (TeamComparatorCallback newValue) {
+                      competition.finalistsSortOrder = newValue;
+                    },
+                  ),
+                ),
+                Text('or select a column below.'),
+              ],
             ),
           ),
         if (awardCandidates[place]!.isEmpty)
@@ -787,6 +794,9 @@ class AssignWinnersSection extends StatelessWidget {
                           Text('#', style: bold),
                           prototype: Text('${competition.teamsView.last.number} WW'), // longest team number plus icon(s)
                           highlight: competition.finalistsSortOrder == Team.teamNumberComparator,
+                          onTap: () {
+                            competition.finalistsSortOrder = Team.teamNumberComparator;
+                          },
                         ),
                         // ignore: unused_local_variable
                         for (final (Award award, List<AwardFinalistEntry> awardFinalists) in finalists)
@@ -797,11 +807,15 @@ class AssignWinnersSection extends StatelessWidget {
                               return ColoredBox(
                                 color: award.color,
                                 child: Cell(
+                                  highlight: competition.finalistsSortOrder == award.teamRankComparator,
+                                  onTap: () {
+                                    competition.finalistsSortOrder = award.teamRankComparator;
+                                  },
                                   alignment: Alignment.center,
                                   Text(
                                     award.name,
                                     style: bold.copyWith(
-                                      color: textColorForColor(award.color),
+                                      color: competition.finalistsSortOrder == award.teamRankComparator ? null : textColorForColor(award.color),
                                     ),
                                   ),
                                   icons: award.comment == '' ? null : <Widget>[

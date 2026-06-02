@@ -234,6 +234,32 @@ class Award extends ChangeNotifier {
     return a.rank.compareTo(b.rank);
   }
 
+  int teamRankComparator(Team a, Team b) {
+    final ShortlistEntry? entryA = a.shortlistsView[this];
+    final ShortlistEntry? entryB = b.shortlistsView[this];
+    if (entryA == null && entryB == null) {
+      return Team.teamNumberComparator(a, b);
+    }
+    if (entryA == null) {
+      return 1;
+    }
+    if (entryB == null) {
+      return -1;
+    }
+    final int? rankA = entryA.rank;
+    final int? rankB = entryB.rank;
+    if (rankA == null) {
+      return 1;
+    }
+    if (rankB == null) {
+      return -1;
+    }
+    if (rankA == rankB) {
+      return Team.teamNumberComparator(a, b);
+    }
+    return rankA - rankB;
+  }
+
   @override
   String toString() => '🏆 "$name"';
 }
@@ -1203,20 +1229,37 @@ class Competition extends ChangeNotifier {
     }
   }
 
-  static TeamComparatorCallback _parseSortOrder(String cell) {
+  static TeamComparatorCallback _parseSortOrder(String cell, List<Award> awards) {
      switch (cell) {
        case 'rank score': return Team.inspireCandidateComparator;
        case 'rank count': return Team.rankedCountComparator;
        case 'team number': return Team.teamNumberComparator;
+       default:
+         if (cell.endsWith(' rank')) {
+           final List<TeamComparatorCallback> matches = awards
+             .where((Award award) => '${award.name} rank' == cell)
+             .map((Award award) => award.teamRankComparator)
+             .toList();
+           if (matches.isNotEmpty) {
+             return matches.single;
+           }
+           return Team.teamNumberComparator;
+         }
      }
      throw FormatException('Unknown sort order name: "$cell". Must be one of "rank score", "rank count", or "team number".');
   }
 
-  static String _serializeSortOrder(TeamComparatorCallback value) {
+  static String _serializeSortOrder(TeamComparatorCallback value, List<Award> awards) {
     switch (value) {
       case Team.inspireCandidateComparator: return 'rank score';
       case Team.rankedCountComparator: return 'rank count';
       case Team.teamNumberComparator: return 'team number';
+      default:
+        for (Award award in awards) {
+          if (value == award.teamRankComparator) {
+            return '${award.name} rank';
+          }
+        }
     }
     throw StateError('Unexpected sort order comparator function.');
   }
@@ -1888,9 +1931,9 @@ class Competition extends ChangeNotifier {
         case 'show all places for assignment':
           _showAllPlacesForAssignment = _parseBool(row[1]);
         case 'inspire sort order':
-          _inspireSortOrder = _parseSortOrder('${row[1]}');
+          _inspireSortOrder = _parseSortOrder('${row[1]}', _awards);
         case 'finalists sort order': 
-          _finalistsSortOrder = _parseSortOrder('${row[1]}');
+          _finalistsSortOrder = _parseSortOrder('${row[1]}', _awards);
         case 'pit visits - exclude autovisited teams':
           _pitVisitsIncludeAutovisitedTeams = !_parseBool(row[1]); // for backwards compatibilit
         case 'pit visits - include autovisited teams':
@@ -1976,8 +2019,8 @@ class Competition extends ChangeNotifier {
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
     data.add(['rules', _serializeRuleset(_ruleset)]);
     data.add(['show all places for assignment', _showAllPlacesForAssignment ? 'y' : 'n']);
-    data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder)]);
-    data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder)]);
+    data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder, _awards)]);
+    data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder, _awards)]);
     data.add(['pit visits - include autovisited teams', _pitVisitsIncludeAutovisitedTeams ? 'y' : 'n']);
     data.add(['pit visits - include exhibition teams', _pitVisitsIncludeExhibitionTeams ? 'y' : 'n']);
     data.add(['pit visits - min', '$_pitVisitsViewMinVisits']); // numeric
@@ -2028,6 +2071,7 @@ class Competition extends ChangeNotifier {
         if (zip.findFile(filenameFinalistOverrides) != null) {
           await importFinalistOverrides(zip.findFile(filenameFinalistOverrides)!.content);
         }
+        // must happen after awards are imported
         if (zip.findFile(filenameConfiguration) != null) {
           await importConfiguration(zip.findFile(filenameConfiguration)!.content);
         }

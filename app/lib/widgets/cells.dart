@@ -16,6 +16,7 @@ class Cell extends StatelessWidget {
     this.alignment = AlignmentDirectional.centerStart,
     this.highlight = false,
     this.icons,
+    this.onTap,
   }) : assert(icons == null || icons.length > 0);
 
   final Widget child;
@@ -24,6 +25,7 @@ class Cell extends StatelessWidget {
   final AlignmentGeometry alignment;
   final bool highlight;
   final List<Widget>? icons;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +64,13 @@ class Cell extends StatelessWidget {
     }
     if (highlight) {
       result = ColoredBox(color: Theme.of(context).colorScheme.secondaryContainer, child: result);
+    }
+    if (onTap != null) {
+      result = GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: result,
+      );
     }
     return result;
   }
