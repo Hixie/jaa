@@ -331,39 +331,56 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                           },
                         ),
                       ),
-                      Text('Filter view to only show teams that have been visited between '),
-                      VisitInput(
-                        min: 0,
-                        max: widget.competition.expectedPitVisits,
-                        highlightThreshold: widget.competition.expectedPitVisits,
-                        value: widget.competition.pitVisitsViewMinVisits,
-                        onChanged: (int value) {
-                          widget.competition.pitVisitsViewMinVisits = value;
-                          if (widget.competition.pitVisitsViewMinVisits > widget.competition.pitVisitsViewMaxVisits) {
-                            widget.competition.pitVisitsViewMaxVisits = widget.competition.pitVisitsViewMinVisits;
-                          }
-                          setState(() {
-                            _legacyTeams.clear();
-                          });
-                        },
+                      Expanded(
+                        child: Text.rich(
+                          softWrap: true,
+                          overflow: TextOverflow.clip,
+                          TextSpan(
+                            text: 'Filter view to only show teams that have been visited between ',
+                            children: <InlineSpan>[
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.baseline,
+                              baseline: TextBaseline.alphabetic,
+                              child: VisitInput(
+                                min: 0,
+                                max: widget.competition.expectedPitVisits,
+                                highlightThreshold: widget.competition.expectedPitVisits,
+                                value: widget.competition.pitVisitsViewMinVisits,
+                                onChanged: (int value) {
+                                  widget.competition.pitVisitsViewMinVisits = value;
+                                  if (widget.competition.pitVisitsViewMinVisits > widget.competition.pitVisitsViewMaxVisits) {
+                                    widget.competition.pitVisitsViewMaxVisits = widget.competition.pitVisitsViewMinVisits;
+                                  }
+                                  setState(() {
+                                    _legacyTeams.clear();
+                                  });
+                                },
+                              ),
+                            ),
+                            TextSpan(text: ' and '),
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.baseline,
+                              baseline: TextBaseline.alphabetic,
+                              child: VisitInput(
+                                min: 0,
+                                max: widget.competition.expectedPitVisits,
+                                highlightThreshold: widget.competition.expectedPitVisits,
+                                value: widget.competition.pitVisitsViewMaxVisits,
+                                onChanged: (int value) {
+                                  widget.competition.pitVisitsViewMaxVisits = value;
+                                  if (widget.competition.pitVisitsViewMaxVisits < widget.competition.pitVisitsViewMinVisits) {
+                                    widget.competition.pitVisitsViewMinVisits = widget.competition.pitVisitsViewMaxVisits;
+                                  }
+                                  setState(() {
+                                    _legacyTeams.clear();
+                                  });
+                                },
+                              ),
+                            ),
+                            TextSpan(text: ' times.'),
+                          ],
+                        )),
                       ),
-                      Text(' and '),
-                      VisitInput(
-                        min: 0,
-                        max: widget.competition.expectedPitVisits,
-                        highlightThreshold: widget.competition.expectedPitVisits,
-                        value: widget.competition.pitVisitsViewMaxVisits,
-                        onChanged: (int value) {
-                          widget.competition.pitVisitsViewMaxVisits = value;
-                          if (widget.competition.pitVisitsViewMaxVisits < widget.competition.pitVisitsViewMinVisits) {
-                            widget.competition.pitVisitsViewMinVisits = widget.competition.pitVisitsViewMaxVisits;
-                          }
-                          setState(() {
-                            _legacyTeams.clear();
-                          });
-                        },
-                      ),
-                      Text(' times.'),
                     ],
                   ),
                 )

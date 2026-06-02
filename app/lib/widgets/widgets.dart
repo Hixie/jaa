@@ -720,6 +720,7 @@ class VisitInput extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: spacing / 2.0),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           SizedBox(
             width: size * 1.5,

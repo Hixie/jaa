@@ -179,13 +179,15 @@ class _InspirePaneState extends State<InspirePane> {
                 },
               ),
             if (canShowAnything)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
-                child: TeamOrderSelector(
-                  value: widget.competition.inspireSortOrder,
-                  onChange: (TeamComparatorCallback newValue) {
-                    widget.competition.inspireSortOrder = newValue;
-                  },
+              ScrollableRegion(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                  child: TeamOrderSelector(
+                    value: widget.competition.inspireSortOrder,
+                    onChange: (TeamComparatorCallback newValue) {
+                      widget.competition.inspireSortOrder = newValue;
+                    },
+                  ),
                 ),
               ),
             if (widget.competition.inspireAward != null) const SizedBox(height: indent),
