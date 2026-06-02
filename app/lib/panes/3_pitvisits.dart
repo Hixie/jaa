@@ -141,7 +141,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
           int unvisitedRemainingCount,
           int exhibitionTeams,
         ) = computeAffectedTeams(
-          showAutovisitedTeams: !widget.competition.pitVisitsIncludeAutovisitedTeams,
+          showAutovisitedTeams: widget.competition.pitVisitsIncludeAutovisitedTeams,
           showExhibitionTeams: widget.competition.pitVisitsIncludeExhibitionTeams,
           minVisits: widget.competition.pitVisitsViewMinVisits,
           maxVisits: widget.competition.pitVisitsViewMaxVisits,
@@ -308,10 +308,22 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                     ? 'Include teams that are nominated for an award that always involves a pit visit from the judges.'
                     : 'Include teams that are nominated for sufficient awards that involve pit visits from the judges to reach the expected pit visit count.',
               ),
+            if (exhibitionTeams > 0)
+              CheckboxRow(
+                checked: widget.competition.pitVisitsIncludeExhibitionTeams,
+                onChanged: (bool? value) {
+                  widget.competition.pitVisitsIncludeExhibitionTeams = value!;
+                  setState(() {
+                    _legacyTeams.clear();
+                  });
+                },
+                tristate: false,
+                label: 'Include ${count(exhibitionTeams, 'exhibition team')}.',
+              ),
             if (totalCount > 0)
               if (widget.competition.expectedPitVisits > 1)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(indent, 0, indent, spacing),
+                  padding: const EdgeInsets.fromLTRB(indent, 0, indent, 0),
                   child: Row(
                     children: [
                       Material(
@@ -408,17 +420,38 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   tristate: widget.competition.pitVisitsViewMinVisits != 0 || (widget.competition.pitVisitsViewMaxVisits == 0 && _legacyTeams.isNotEmpty),
                   label: 'Include teams that are already marked as visited.',
                 ),
-            if (exhibitionTeams > 0)
-              CheckboxRow(
-                checked: widget.competition.pitVisitsIncludeExhibitionTeams,
-                onChanged: (bool? value) {
-                  widget.competition.pitVisitsIncludeExhibitionTeams = value!;
-                  setState(() {
-                    _legacyTeams.clear();
-                  });
-                },
-                tristate: false,
-                label: 'Include ${count(exhibitionTeams, 'exhibition team')}.',
+            if (totalCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
+                child: ScrollableRegion(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('View:'),
+                      SizedBox(width: indent),
+                      SegmentedButton<bool>(
+                        showSelectedIcon: false,
+                        segments: const <ButtonSegment<bool>>[
+                          ButtonSegment<bool>(
+                            value: true,
+                            label: Text('Grid'),
+                          ),
+                          ButtonSegment<bool>(
+                            value: false,
+                            label: Text('Full list'),
+                          ),
+                        ],
+                        selected: <bool>{widget.competition.pitVisitsShowQuickGrid},
+                        onSelectionChanged: (Set<bool> newSelection) {
+                          widget.competition.pitVisitsShowQuickGrid = newSelection.single;
+                          setState(() {
+                            _legacyTeams.clear();
+                          });
+                        },
+                      ),
+                    ],
+                  )
+                ),
               ),
             if (widget.competition.teamsView.isNotEmpty && widget.competition.awardsView.isNotEmpty && teams.isEmpty)
               Padding(
@@ -431,7 +464,7 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
               ),
             if (teams.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
+                padding: const EdgeInsets.fromLTRB(indent, indent, indent, spacing),
                 child: Text(
                   widget.competition.expectedPitVisits == 1
                    ? !widget.competition.pitVisitsIncludeAutovisitedTeams
@@ -454,102 +487,245 @@ class _PitVisitsPaneState extends State<PitVisitsPane> {
                   overflow: TextOverflow.clip,
                 ),
               ),
-            if (teams.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
-                child: HorizontalScrollbar(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
-                      child: Table(
-                        border: const TableBorder.symmetric(
-                          inside: BorderSide(),
-                        ),
-                        columnWidths: <int, TableColumnWidth>{
-                          relevantAwards.length + 1: const MaxColumnWidth(IntrinsicCellWidth(), IntrinsicCellWidth(row: 1))
-                        },
-                        defaultColumnWidth: const IntrinsicCellWidth(),
-                        defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          TableRow(
-                            children: [
-                              Cell(Text('#', style: bold), prototype: Text('${widget.competition.longestTeamNumber}${widget.competition.pitVisitsIncludeExhibitionTeams ? " WW" : ""}')),
-                              for (final Award award in relevantAwards)
-                                ListenableBuilder(
-                                  listenable: award,
-                                  builder: (BuildContext context, Widget? child) {
-                                    return ColoredBox(
-                                      color: award.color,
-                                      child: Cell(
-                                        Text(
-                                          '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
-                                          style: bold.copyWith(
-                                            color: textColorForColor(award.color),
-                                          ),
-                                        ),
-                                        prototype: const Text('Yes'),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              const Cell(Text('Visited? ✎_', style: bold)),
-                              if (widget.competition.pitVisitsIncludeAutovisitedTeams) const Cell(Text('Nominations for awards with pit visits')),
-                            ],
-                          ),
-                          for (final Team team in teams)
-                            TableRow(
-                              decoration: (team.visited < widget.competition.pitVisitsViewMinVisits || (team.visited > widget.competition.pitVisitsViewMaxVisits && widget.competition.pitVisitsViewMaxVisits < widget.competition.expectedPitVisits)) &&
-                                      _legacyTeams.contains(team)
-                                  ? BoxDecoration(color: Colors.grey.shade100)
-                                  : null,
-                              children: [
-                                Tooltip(
-                                  message: team.name,
-                                  child: Cell(
-                                    Text('${team.number}'),
-                                  icons: team.inspireStatus == InspireStatus.exhibition
-                                      ? [
-                                          Tooltip(
-                                            message: 'Team is an exhibition team and is not eligible for any awards!',
-                                            child: Icon(
-                                              Symbols.cruelty_free, // bunny
-                                              size: DefaultTextStyle.of(context).style.fontSize,
-                                            ),
-                                          ),
-                                        ]
-                                      : null,
-                                  ),
-                                ),
-                                for (final Award award in relevantAwards)
-                                  Cell(
-                                    Text(team.shortlistsView.keys.contains(award) ? 'Yes' : ''),
-                                  ),
-                                VisitedCell(
-                                  competition: widget.competition,
-                                  team: team,
-                                  onVisitedChanged: _handleVisitedChanged,
-                                ),
-                                if (widget.competition.pitVisitsIncludeAutovisitedTeams)
-                                  Cell(Text(team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '))),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            if (teams.isNotEmpty && !widget.competition.pitVisitsShowQuickGrid)
+              PitVisitsListView(
+                relevantAwards: relevantAwards,
+                competition: widget.competition,
+                teams: teams, 
+                legacyTeams: _legacyTeams,
+                onVisitedChanged: _handleVisitedChanged,
               ),
-            if (widget.competition.teamsView.isNotEmpty && relevantAwards.where((Award award) => award.pitVisits == PitVisit.maybe).isNotEmpty)
+            if (!widget.competition.pitVisitsShowQuickGrid && widget.competition.teamsView.isNotEmpty && relevantAwards.where((Award award) => award.pitVisits == PitVisit.maybe).isNotEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
                 child: Text('* This award may involve pit visits.', style: italic),
+              ),
+            if (teams.isNotEmpty && widget.competition.pitVisitsShowQuickGrid)
+              PitVisitsGridView(
+                relevantAwards: relevantAwards,
+                competition: widget.competition,
+                teams: teams, 
+                legacyTeams: _legacyTeams,
+                onVisitedChanged: _handleVisitedChanged,
               ),
             const SizedBox(height: indent),
           ],
         );
       },
+    );
+  }
+}
+
+class PitVisitsListView extends StatelessWidget {
+  const PitVisitsListView({
+    super.key,
+    required this.relevantAwards,
+    required this.competition,
+    required this.teams,
+    required Set<Team> legacyTeams,
+    required this.onVisitedChanged,
+  }) : _legacyTeams = legacyTeams;
+
+  final List<Award> relevantAwards;
+  final Competition competition;
+  final List<Team> teams;
+  final Set<Team> _legacyTeams;
+  final ValueSetter<Team> onVisitedChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0.0, spacing, 0.0, 0.0),
+      child: HorizontalScrollbar(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+            child: Table(
+              border: const TableBorder.symmetric(
+                inside: BorderSide(),
+              ),
+              columnWidths: <int, TableColumnWidth>{
+                relevantAwards.length + 1: const MaxColumnWidth(IntrinsicCellWidth(), IntrinsicCellWidth(row: 1))
+              },
+              defaultColumnWidth: const IntrinsicCellWidth(),
+              defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                TableRow(
+                  children: [
+                    Cell(Text('#', style: bold), prototype: Text('${competition.longestTeamNumber}${competition.pitVisitsIncludeExhibitionTeams ? " WW" : ""}')),
+                    for (final Award award in relevantAwards)
+                      ListenableBuilder(
+                        listenable: award,
+                        builder: (BuildContext context, Widget? child) {
+                          return ColoredBox(
+                            color: award.color,
+                            child: Cell(
+                              Text(
+                                '${award.name}${award.pitVisits == PitVisit.maybe ? "*" : ""}',
+                                style: bold.copyWith(
+                                  color: textColorForColor(award.color),
+                                ),
+                              ),
+                              prototype: const Text('Yes'),
+                            ),
+                          );
+                        },
+                      ),
+                    const Cell(Text('Visited? ✎_', style: bold)),
+                    if (competition.pitVisitsIncludeAutovisitedTeams) const Cell(Text('Nominations for awards with pit visits')),
+                  ],
+                ),
+                for (final Team team in teams)
+                  TableRow(
+                    decoration: (team.visited < competition.pitVisitsViewMinVisits || (team.visited > competition.pitVisitsViewMaxVisits && competition.pitVisitsViewMaxVisits < competition.expectedPitVisits)) &&
+                            _legacyTeams.contains(team)
+                        ? BoxDecoration(color: Colors.grey.shade100)
+                        : null,
+                    children: [
+                      Tooltip(
+                        message: team.name,
+                        child: Cell(
+                          Text('${team.number}'),
+                        icons: team.inspireStatus == InspireStatus.exhibition
+                            ? [
+                                Tooltip(
+                                  message: 'Team is an exhibition team and is not eligible for any awards!',
+                                  child: Icon(
+                                    Symbols.cruelty_free, // bunny
+                                    size: DefaultTextStyle.of(context).style.fontSize,
+                                  ),
+                                ),
+                              ]
+                            : null,
+                        ),
+                      ),
+                      for (final Award award in relevantAwards)
+                        Cell(
+                          Text(team.shortlistsView.keys.contains(award) ? 'Yes' : ''),
+                        ),
+                      VisitedCell(
+                        competition: competition,
+                        team: team,
+                        onVisitedChanged: onVisitedChanged,
+                      ),
+                      if (competition.pitVisitsIncludeAutovisitedTeams)
+                        Cell(Text(team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '))),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PitVisitsGridView extends StatelessWidget {
+  const PitVisitsGridView({
+    super.key,
+    required this.relevantAwards,
+    required this.competition,
+    required this.teams,
+    required Set<Team> legacyTeams,
+    required this.onVisitedChanged,
+  }) : _legacyTeams = legacyTeams;
+
+  final List<Award> relevantAwards;
+  final Competition competition;
+  final List<Team> teams;
+  final Set<Team> _legacyTeams;
+  final ValueSetter<Team> onVisitedChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    double fontSize = DefaultTextStyle.of(context).style.fontSize! * 0.75;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
+      child: Wrap(
+        runSpacing: spacing,
+        children: [
+          for (final Team team in teams)
+            SizedBox(
+              key: ObjectKey(team),
+              width: spacing * 12,
+              height: spacing * 16,
+              child: Container(
+                foregroundDecoration: BoxDecoration(
+                  border: Border.all(width: 2.0),
+                ),
+                decoration: BoxDecoration(
+                   color: (team.visited < competition.pitVisitsViewMinVisits || (team.visited > competition.pitVisitsViewMaxVisits && competition.pitVisitsViewMaxVisits < competition.expectedPitVisits)) &&
+                            _legacyTeams.contains(team) ? Colors.grey.shade100 : null,
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ColoredBox(
+                        color: team.visited == 0 ? Colors.red.shade200 : team.visited < competition.expectedPitVisits ? Colors.yellow.shade100 : Colors.green.shade100,
+                        child: Center(
+                          child: Tooltip(
+                            message: team.name,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text('${team.number}', style: bold, textAlign: TextAlign.center),
+                                if (team.inspireStatus == InspireStatus.exhibition)
+                                  Tooltip(
+                                    message: 'Team is an exhibition team and is not eligible for any awards!',
+                                    child: Icon(
+                                      Symbols.cruelty_free, // bunny
+                                      size: DefaultTextStyle.of(context).style.fontSize,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: BoxBorder.symmetric(
+                            horizontal: BorderSide(width: 2.0),
+                          )
+                        ),
+                        child: Center(
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: VisitInput(
+                              min: 0,
+                              highlightThreshold: competition.expectedPitVisits,
+                              value: team.visited,
+                              onChanged: (int value) {
+                                competition.updateTeamVisited(team, visited: value);
+                                onVisitedChanged.call(team);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '),
+                          softWrap: true,
+                          overflow: TextOverflow.clip,
+                          textAlign: TextAlign.center,
+                          style: italic.copyWith(fontSize: fontSize),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

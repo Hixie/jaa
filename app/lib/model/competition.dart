@@ -962,6 +962,15 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  bool get pitVisitsShowQuickGrid => _pitVisitsShowQuickGrid;
+  bool _pitVisitsShowQuickGrid = true;
+  set pitVisitsShowQuickGrid(bool value) {
+    if (value != _pitVisitsShowQuickGrid) {
+      _pitVisitsShowQuickGrid = value;
+      notifyListeners();
+    }
+  }
+
   bool get pitVisitsIncludeAutovisitedTeams => _pitVisitsIncludeAutovisitedTeams;
   bool _pitVisitsIncludeAutovisitedTeams = true;
   set pitVisitsIncludeAutovisitedTeams(bool value) {
@@ -1934,13 +1943,15 @@ class Competition extends ChangeNotifier {
           _inspireSortOrder = _parseSortOrder('${row[1]}', _awards);
         case 'finalists sort order': 
           _finalistsSortOrder = _parseSortOrder('${row[1]}', _awards);
+        case 'pit visits - show quick grid':
+          _pitVisitsShowQuickGrid = _parseBool(row[1]);
         case 'pit visits - exclude autovisited teams':
-          _pitVisitsIncludeAutovisitedTeams = !_parseBool(row[1]); // for backwards compatibilit
+          _pitVisitsIncludeAutovisitedTeams = !_parseBool(row[1]); // for backwards compatibility
         case 'pit visits - include autovisited teams':
           _pitVisitsIncludeAutovisitedTeams = _parseBool(row[1]);
         case 'pit visits - include exhibition teams':
           _pitVisitsIncludeExhibitionTeams = _parseBool(row[1]);
-        case 'pit visits - hide visited teams':
+        case 'pit visits - hide visited teams': // for backwards compatibility
           if (_parseBool(row[1])) {
             _pitVisitsViewMinVisits = 0;
             _pitVisitsViewMaxVisits = 0;
@@ -1990,6 +2001,7 @@ class Competition extends ChangeNotifier {
     _showAllPlacesForAssignment = false;
     _inspireSortOrder = Team.teamNumberComparator;
     _finalistsSortOrder = Team.rankedCountComparator;
+    _pitVisitsShowQuickGrid = true;
     _pitVisitsIncludeAutovisitedTeams = false;
     _pitVisitsIncludeExhibitionTeams = false;
     _pitVisitsViewMinVisits = 0;
@@ -2021,6 +2033,7 @@ class Competition extends ChangeNotifier {
     data.add(['show all places for assignment', _showAllPlacesForAssignment ? 'y' : 'n']);
     data.add(['inspire sort order', _serializeSortOrder(_inspireSortOrder, _awards)]);
     data.add(['finalists sort order', _serializeSortOrder(_finalistsSortOrder, _awards)]);
+    data.add(['pit visits - show quick grid', _pitVisitsShowQuickGrid ? 'y' : 'n']);
     data.add(['pit visits - include autovisited teams', _pitVisitsIncludeAutovisitedTeams ? 'y' : 'n']);
     data.add(['pit visits - include exhibition teams', _pitVisitsIncludeExhibitionTeams ? 'y' : 'n']);
     data.add(['pit visits - min', '$_pitVisitsViewMinVisits']); // numeric
@@ -2297,6 +2310,7 @@ class Competition extends ChangeNotifier {
     _showNominators = randomizer.randomItem(Show.values);
     _expandInspireTable = random.nextBool();
     _showWorkings = random.nextBool();
+    _pitVisitsShowQuickGrid = random.nextBool();
     _pitVisitsIncludeAutovisitedTeams = random.nextBool();
     _pitVisitsIncludeExhibitionTeams = random.nextBool();
     _pitVisitsViewMinVisits = 0; // needs testing

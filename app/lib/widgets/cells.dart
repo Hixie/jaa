@@ -63,6 +63,7 @@ class Cell extends StatelessWidget {
       );
     }
     if (highlight) {
+      // TODO: set DefaultTextStyle? then fix call sites that do this manually
       result = ColoredBox(color: Theme.of(context).colorScheme.secondaryContainer, child: result);
     }
     if (onTap != null) {
