@@ -73,11 +73,21 @@ class RanksPane extends StatelessWidget {
                 label: 'Show nomination comments (always, if any, never).',
               ),
             if (awards.isNotEmpty)
+              CheckboxRow(
+                checked: competition.showUnrankedTeamsOnRanksPane,
+                onChanged: (bool? value) {
+                  competition.showUnrankedTeamsOnRanksPane = value!;
+                },
+                tristate: false,
+                label: 'Show unranked teams.',
+              ),              
+            if (awards.isNotEmpty)
               RankTables(
                 sortedAwards: awards,
                 competition: competition,
                 showNominators: competition.showNominators,
                 showComments: competition.showNominationComments,
+                showUnrankedTeams: competition.showUnrankedTeamsOnRanksPane,
               ),
             if (awards.isNotEmpty && competition.teamsView.isNotEmpty)
               Padding(
@@ -181,12 +191,14 @@ class RankTables extends StatelessWidget {
     required this.competition,
     required this.showNominators,
     required this.showComments,
+    required this.showUnrankedTeams,
   });
 
   final List<Award> sortedAwards;
   final Competition competition;
   final Show showNominators;
   final Show showComments;
+  final bool showUnrankedTeams;
 
   static ({Map<Award, Set<Team>> winningTeams, Map<Award, Set<Team>> disqualifiedTeams}) computeWinnersAndLosers(Competition competition) {
     final List<(Award, List<AwardFinalistEntry>)> finalists = competition.computeFinalists();
@@ -207,6 +219,21 @@ class RankTables extends StatelessWidget {
     return (winningTeams: winningTeams, disqualifiedTeams: disqualifiedTeams);
   }
 
+  static Widget? annotateMissingCount(Widget? table, int? count) {
+    if (count == null || count == 0) {
+      return table;
+    }
+    return ListBody(
+      children: [
+        ?table,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(indent, 0.0, indent, 0.0),
+          child: Text('+$count unranked teams', style: italic),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -219,17 +246,27 @@ class RankTables extends StatelessWidget {
           competition: competition,
           builder: (BuildContext context, Award award, Shortlist shortlist) {
             final Color foregroundColor = textColorForColor(award.color);
-            final List<MapEntry<Team, ShortlistEntry>> entries = shortlist.entriesView.entries.toList()
+            Iterable<MapEntry<Team, ShortlistEntry>> entriesIntermediate = shortlist.entriesView.entries;
+            int? fullCount;
+            if (!showUnrankedTeams) {
+              fullCount = entriesIntermediate.length;
+              entriesIntermediate = entriesIntermediate.where((MapEntry<Team, ShortlistEntry> element) => element.value.rank != null);
+            }
+            final List<MapEntry<Team, ShortlistEntry>> entries = entriesIntermediate.toList()
               ..sort((MapEntry<Team, ShortlistEntry> a, MapEntry<Team, ShortlistEntry> b) {
                 return a.key.compareTo(b.key);
               });
+            int? missingCount;
+            if (!showUnrankedTeams) {
+              missingCount = fullCount! - entries.length;
+            }
             final bool includeNominatorColumn = (showNominators == Show.all) ||
                 (showNominators == Show.ifNeeded && entries.any((MapEntry<Team, ShortlistEntry> entry) => entry.value.nominator.isNotEmpty));
             final bool includeCommentsColumn = (showComments == Show.all) ||
                 (showComments == Show.ifNeeded && entries.any((MapEntry<Team, ShortlistEntry> entry) => entry.value.comment.isNotEmpty));
             return ShortlistCard(
               award: award,
-              child: shortlist.entriesView.isEmpty
+              child: annotateMissingCount(shortlist.entriesView.isEmpty
                   ? null
                   : Table(
                       border: TableBorder.symmetric(
@@ -371,6 +408,8 @@ class RankTables extends StatelessWidget {
                           ),
                       ],
                     ),
+                missingCount,
+              ),
             );
           },
         );

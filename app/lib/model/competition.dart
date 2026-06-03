@@ -941,6 +941,15 @@ class Competition extends ChangeNotifier {
     }
   }
 
+  bool get showUnrankedTeamsOnRanksPane => _showUnrankedTeamsOnRanksPane;
+  bool _showUnrankedTeamsOnRanksPane = true;
+  set showUnrankedTeamsOnRanksPane(bool value) {
+    if (value != _showUnrankedTeamsOnRanksPane) {
+      _showUnrankedTeamsOnRanksPane = value;
+      notifyListeners();
+    }
+  }
+
   bool get expandInspireTable => _expandInspireTable;
   bool _expandInspireTable = false;
   set expandInspireTable(bool value) {
@@ -1926,6 +1935,8 @@ class Competition extends ChangeNotifier {
           _showNominationComments = _parseShow(row[1]);
         case 'show nominators':
           _showNominators = _parseShow(row[1]);
+        case 'show unranked teams on ranks pane':
+          _showUnrankedTeamsOnRanksPane = _parseBool(row[1]);
         case 'expand inspire table':
           _expandInspireTable = _parseBool(row[1]);
         case 'show workings':
@@ -1991,6 +2002,7 @@ class Competition extends ChangeNotifier {
     _awardOrder = AwardOrder.categories;
     _showNominationComments = Show.none;
     _showNominators = Show.none;
+    _showUnrankedTeamsOnRanksPane = true;
     _expandInspireTable = false;
     _showWorkings = true;
     _hideInspireHiddenTeams = false;
@@ -2023,6 +2035,7 @@ class Competition extends ChangeNotifier {
     ]);
     data.add(['show nomination comments', _serializeShow(_showNominationComments)]);
     data.add(['show nominators', _serializeShow(_showNominators)]);
+    data.add(['show unranked teams on ranks pane', _showUnrankedTeamsOnRanksPane ? 'y' : 'n']);
     data.add(['expand inspire table', _expandInspireTable ? 'y' : 'n']);
     data.add(['show workings', _showWorkings ? 'y' : 'n']);
     data.add(['hide hidden teams', _hideInspireHiddenTeams ? 'y' : 'n']);
@@ -2305,6 +2318,7 @@ class Competition extends ChangeNotifier {
     }
     _showNominationComments = randomizer.randomItem(Show.values);
     _showNominators = randomizer.randomItem(Show.values);
+    _showUnrankedTeamsOnRanksPane = random.nextBool();
     _expandInspireTable = random.nextBool();
     _showWorkings = random.nextBool();
     _pitVisitsShowQuickGrid = random.nextBool();
