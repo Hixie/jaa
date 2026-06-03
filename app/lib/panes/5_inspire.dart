@@ -217,6 +217,9 @@ class _InspirePaneState extends State<InspirePane> {
                               if (teams.isEmpty) {
                                 return const Text('All eligible teams are hidden.');
                               }
+                              int leftColumns = 1 + categories.length + 3
+                                                  + (categoryCount >= widget.competition.minimumInspireCategories ? 1 : 0)
+                                                  + (widget.competition.inspireSortOrder == Team.nominationCountComparator ? 1 : 0);
                               return Table(
                                 border: awards.isEmpty
                                     ? const TableBorder.symmetric(
@@ -224,13 +227,12 @@ class _InspirePaneState extends State<InspirePane> {
                                       )
                                     : SkipColumnTableBorder.symmetric(
                                         inside: const BorderSide(),
-                                        skippedColumn: 1 + categories.length + 3 + (categoryCount >= widget.competition.minimumInspireCategories ? 1 : 0),
+                                        skippedColumn: leftColumns,
                                       ),
                                 defaultColumnWidth: const IntrinsicCellWidth(),
                                 columnWidths: {
                                   if (awards.isNotEmpty)
-                                    1 + categories.length + 3 + (categoryCount >= widget.competition.minimumInspireCategories ? 1 : 0):
-                                        const FixedColumnWidth(indent * 2.0),
+                                    leftColumns: const FixedColumnWidth(indent * 2.0),
                                 },
                                 defaultVerticalAlignment: TableCellVerticalAlignment.baseline,
                                 textBaseline: TextBaseline.alphabetic,
@@ -241,16 +243,32 @@ class _InspirePaneState extends State<InspirePane> {
                                         Text('#', style: bold),
                                         prototype: Text('${widget.competition.longestTeamNumber} WW'), // longest team number plus icon(s)
                                         highlight: widget.competition.inspireSortOrder == Team.teamNumberComparator,
+                                        onTap: () { widget.competition.inspireSortOrder = Team.teamNumberComparator; },
                                       ),
                                       for (final String category in categories)
                                         Cell(
                                           Text(category, style: bold),
                                           prototype: const Text('unranked'),
                                         ),
-                                      Cell(Text('Rank Score', style: bold),
-                                          prototype: Text('000'), highlight: widget.competition.inspireSortOrder == Team.inspireCandidateComparator),
-                                      Cell(Text('Rank Count', style: bold),
-                                          prototype: Text('000'), highlight: widget.competition.inspireSortOrder == Team.rankedCountComparator),
+                                      Cell(
+                                        Text('Rank Score', style: bold),
+                                        prototype: Text('000'),
+                                        highlight: widget.competition.inspireSortOrder == Team.inspireCandidateComparator,
+                                        onTap: () { widget.competition.inspireSortOrder = Team.inspireCandidateComparator; },
+                                      ),
+                                      Cell(
+                                        Text('Rank Count', style: bold),
+                                        prototype: Text('000'),
+                                        highlight: widget.competition.inspireSortOrder == Team.rankedCountComparator,
+                                        onTap: () { widget.competition.inspireSortOrder = Team.rankedCountComparator; },
+                                      ),
+                                      if (widget.competition.inspireSortOrder == Team.nominationCountComparator)
+                                        Cell(
+                                          Text('Noms', style: bold),
+                                          prototype: Text('00'),
+                                          highlight: widget.competition.inspireSortOrder == Team.nominationCountComparator,
+                                          onTap: () { widget.competition.inspireSortOrder = Team.nominationCountComparator; },
+                                        ),
                                       if (categoryCount >= widget.competition.minimumInspireCategories)
                                         const Cell(Text('Inspire Placement ✎_', style: bold), prototype: Text('Not eligible WW')), // WW represents the icon(s)
                                       const Cell(Text('Hide?', style: bold), prototype: SizedBox(width: kMinInteractiveDimension)),
@@ -306,6 +324,8 @@ class _InspirePaneState extends State<InspirePane> {
                                         for (final String category in categories) Cell(Text(team.bestInspireContributingRankFor(category, 'unranked', ''))),
                                         Cell(Text('${team.rankScore ?? ""}')),
                                         Cell(Text('${team.rankedCount}')),
+                                        if (widget.competition.inspireSortOrder == Team.nominationCountComparator)
+                                          Cell(Text('${team.nominationCount}')),
                                         if (categoryCount >= widget.competition.minimumInspireCategories)
                                           if ((widget.competition.ruleset == Ruleset.rules2024 && team.inspireStatus == InspireStatus.ineligible) ||
                                               (team.inspireStatus == InspireStatus.exhibition) ||
@@ -391,7 +411,8 @@ class _InspirePaneState extends State<InspirePane> {
                 padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
                 child: Text(
                   'Rank Score: Sum of the highest rank in each shortlisted category (if they are all ranked); lower is better.\n'
-                  'Rank Count: Number of categories in which the team is ranked in one or more awards; higher is better.',
+                  'Rank Count: Number of categories in which the team is ranked in one or more awards; higher is better.\n'
+                  'Nominations (Noms): Number of ${widget.competition.inspireAward?.name ?? "Inspire"}-contributing awards for which the team was nominated.',
                   softWrap: true,
                   overflow: TextOverflow.visible,
                 ),

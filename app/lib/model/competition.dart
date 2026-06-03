@@ -317,6 +317,8 @@ class Team extends ChangeNotifier implements Comparable<Team> {
                           .map((Award award) => _shortlists[award]!)
                           .where((ShortlistEntry entry) => entry.rank != null).length;
 
+  int get nominationCount => _shortlists.keys.where(Award.isInspireQualifyingPredicate).length;
+
   InspireStatus get inspireStatus => _inspireStatus;
   InspireStatus _inspireStatus;
 
@@ -439,6 +441,13 @@ class Team extends ChangeNotifier implements Comparable<Team> {
       return inspireCandidateComparator(a, b);
     }
     return b.rankedCount - a.rankedCount;
+  }
+
+  static int nominationCountComparator(Team a, Team b) {
+    if (a.nominationCount == b.nominationCount) {
+      return rankedCountComparator(a, b);
+    }
+    return b.nominationCount - a.nominationCount;
   }
 
   static int teamNumberComparator(Team a, Team b) {
@@ -1248,6 +1257,7 @@ class Competition extends ChangeNotifier {
      switch (cell) {
        case 'rank score': return Team.inspireCandidateComparator;
        case 'rank count': return Team.rankedCountComparator;
+       case 'nomination count': return Team.nominationCountComparator;
        case 'team number': return Team.teamNumberComparator;
        default:
          if (cell.endsWith(' rank')) {
@@ -1268,6 +1278,7 @@ class Competition extends ChangeNotifier {
     switch (value) {
       case Team.inspireCandidateComparator: return 'rank score';
       case Team.rankedCountComparator: return 'rank count';
+      case Team.nominationCountComparator: return 'nomination count';
       case Team.teamNumberComparator: return 'team number';
       default:
         for (Award award in awards) {

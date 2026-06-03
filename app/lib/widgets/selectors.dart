@@ -34,6 +34,10 @@ class TeamOrderSelector extends StatelessWidget {
               value: Team.rankedCountComparator,
               label: Text('Ranked Count'),
             ),
+            ButtonSegment<TeamComparatorCallback>(
+              value: Team.nominationCountComparator,
+              label: Text('Nominations'),
+            ),
           ],
           selected: <TeamComparatorCallback>{value},
           onSelectionChanged: (Set<TeamComparatorCallback> newSelection) {
