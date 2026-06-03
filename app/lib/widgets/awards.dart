@@ -219,60 +219,57 @@ class AwardOrderSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: competition,
-      builder: (BuildContext context, Widget? child) => switch (competition.ruleset) {
-        Ruleset.rules2024 => Padding(
-            padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ExcludeSemantics(
-                    child: GestureDetector(
-                      onTap: () {
-                        competition.awardOrder = AwardOrder.rank;
-                      },
-                      child: const Text(
-                        'Sort awards by rank',
-                        textAlign: TextAlign.end,
-                      ),
-                    ),
+      builder: (BuildContext context, Widget? child) => Padding(
+        padding: const EdgeInsets.fromLTRB(indent, spacing, indent, indent),
+        child: Row(
+          children: [
+            Expanded(
+              child: ExcludeSemantics(
+                child: GestureDetector(
+                  onTap: () {
+                    competition.awardOrder = AwardOrder.rank;
+                  },
+                  child: const Text(
+                    'Sort awards by rank',
+                    textAlign: TextAlign.end,
                   ),
                 ),
-                Material(
-                  type: MaterialType.transparency,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
-                    child: MergeSemantics(
-                      child: Semantics(
-                        label: 'Sort awards by category (rather than rank)',
-                        child: Switch.adaptive(
-                          value: competition.awardOrder == AwardOrder.categories,
-                          thumbIcon: WidgetStateProperty.all(const Icon(Symbols.trophy)),
-                          onChanged: (bool value) {
-                            competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: ExcludeSemantics(
-                    child: GestureDetector(
-                      onTap: () {
-                        competition.awardOrder = AwardOrder.categories;
-                      },
-                      child: const Text(
-                        'Sort awards by category',
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        Ruleset.rules2025 => SizedBox(height: indent),
-      },
+            Material(
+              type: MaterialType.transparency,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(spacing, 0.0, spacing, 0.0),
+                child: MergeSemantics(
+                  child: Semantics(
+                    label: 'Sort awards by category (rather than rank)',
+                    child: Switch.adaptive(
+                      value: competition.awardOrder == AwardOrder.categories,
+                      thumbIcon: WidgetStateProperty.all(const Icon(Symbols.trophy)),
+                      onChanged: (bool value) {
+                        competition.awardOrder = value ? AwardOrder.categories : AwardOrder.rank;
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ExcludeSemantics(
+                child: GestureDetector(
+                  onTap: () {
+                    competition.awardOrder = AwardOrder.categories;
+                  },
+                  child: const Text(
+                    'Sort awards by category',
+                    textAlign: TextAlign.start,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

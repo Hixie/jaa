@@ -908,9 +908,6 @@ class Competition extends ChangeNotifier {
   }
 
   int Function(Award a, Award b) get awardSorter {
-    if (ruleset.index >= Ruleset.rules2025.index) {
-      return Award.categoryBasedComparator;
-    }
     switch (_awardOrder) {
       case AwardOrder.categories: return Award.categoryBasedComparator;
       case AwardOrder.rank: return Award.rankBasedComparator;
