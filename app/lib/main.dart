@@ -496,7 +496,7 @@ class AboutPane extends StatelessWidget {
                 ),
                 RadioRow<Ruleset>(
                   value: Ruleset.rules2025,
-                  label: '2025-2026 season.\nFinalists are selected manually. Teams who won the Inspire award in previous competitions are still eligible for second place Inspire awards.',
+                  label: '2025-2026 and 2026-2027 seasons.\nFinalists are selected manually. Teams who won the Inspire award in previous competitions are still eligible for second place Inspire awards.',
                 ),
               ],
             )
@@ -514,7 +514,7 @@ class AboutPane extends StatelessWidget {
                   context: context,
                   applicationName: appInfo.appName,
                   applicationVersion: appInfo.version,
-                  applicationLegalese: 'Created for Playing at Learning\n© copyright 2025 Ian Hickson',
+                  applicationLegalese: 'Created for Playing at Learning\n© copyright 2026 Ian Hickson',
                 );
               },
             ),
