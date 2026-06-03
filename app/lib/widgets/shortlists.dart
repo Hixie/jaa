@@ -583,8 +583,9 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
 }
 
 class ShortlistSummary extends StatefulWidget {
-  const ShortlistSummary({super.key, required this.competition});
+  const ShortlistSummary({super.key, required this.expectRanks, required this.competition});
 
+  final bool expectRanks;
   final Competition competition;
 
   @override
@@ -614,12 +615,10 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
     super.dispose();
   }
 
-  late String _inspireSummary;
-  late String _overallSummary;
+  late String _summary;
   void _updateSummary() {
     setState(() {
-      _inspireSummary = _generateInspireSummary();
-      _overallSummary = _generateOverallSummary();
+      _summary = '${_generateInspireSummary()}${widget.expectRanks ? "\n${_generateOverallSummary()}" : ""}';
     });
   }
 
@@ -726,13 +725,13 @@ class _ShortlistSummaryState extends State<ShortlistSummary> {
 
   @override
   Widget build(BuildContext context) {
-    if (_inspireSummary.isEmpty) {
+    if (_summary.isEmpty) {
       return const SizedBox.shrink();
     }
     return Padding(
       padding: const EdgeInsets.fromLTRB(indent, spacing, indent, spacing),
       child: Text(
-        '$_inspireSummary\n$_overallSummary',
+        _summary,
         softWrap: true,
         overflow: TextOverflow.clip,
       ),

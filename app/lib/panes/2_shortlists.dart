@@ -55,6 +55,7 @@ class ShortlistsPane extends StatelessWidget {
             if (competition.teamsView.isNotEmpty)
               ShortlistSummary(
                 competition: competition,
+                expectRanks: false,
               ),
             if (awards.isNotEmpty)
               const Padding(
