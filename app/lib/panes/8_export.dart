@@ -49,6 +49,7 @@ class ExportPane extends StatelessWidget {
                   label: 'Export shortlists (HTML) for:',
                   awards: sortedAwards,
                   onPressed: (Award award) => ShortlistsPane.exportShortlistsHTML(context, competition, [award]),
+                  selection: null,
                 ),
               ),
             ExportButton(
@@ -70,6 +71,7 @@ class ExportPane extends StatelessWidget {
                   label: 'Export ranked list (HTML) for:',
                   awards: sortedAwards,
                   onPressed: (Award award) => RanksPane.exportRanksHTML(context, competition, [award]),
+                  selection: null,
                 ),
               ),
             ExportButton(

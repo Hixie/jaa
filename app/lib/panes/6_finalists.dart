@@ -1042,6 +1042,7 @@ class _OverrideEditorState extends State<OverrideEditor> {
               label: 'Override rankings for:',
               awards: widget.competition.awardsView,
               onPressed: _handleAwardSelection,
+              selection: _award,
             ),
           ),
         if (_award != null)

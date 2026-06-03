@@ -11,11 +11,13 @@ class AwardSelector extends StatelessWidget {
     required this.label,
     required this.awards,
     required this.onPressed,
+    required this.selection,
   });
 
   final String label;
   final List<Award> awards;
   final ValueSetter<Award> onPressed;
+  final Award? selection;
 
   @override
   Widget build(BuildContext context) {
@@ -34,11 +36,17 @@ class AwardSelector extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             builder: (BuildContext context, Widget? child) {
+              final HSLColor color = HSLColor.fromColor(award.color);
+              final Color darker = color
+                .withSaturation((1 - (1 - color.saturation) * 0.75))
+                .withLightness(color.lightness * 0.25).toColor();
               return FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: award.color,
                   foregroundColor: textColorForColor(award.color),
-                  side: award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+                  side: award == selection ? BorderSide(color: darker, width: 4.0)
+                    : award.color.computeLuminance() > 0.9 ? const BorderSide(color: Colors.black, width: 0.0) : null,
+                  elevation: award == selection ? 4.0 : null,
                 ),
                 onPressed: () => onPressed(award),
                 child: child,

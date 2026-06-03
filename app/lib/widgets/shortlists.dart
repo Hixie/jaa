@@ -192,6 +192,7 @@ class _ShortlistEditorState extends State<ShortlistEditor> {
               label: 'Nominate for:',
               awards: widget.sortedAwards,
               onPressed: _handleAwardSelection,
+              selection: _award,
             ),
           ),
         if (_award != null)
