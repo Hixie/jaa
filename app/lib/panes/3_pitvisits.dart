@@ -641,7 +641,7 @@ class PitVisitsGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double fontSize = DefaultTextStyle.of(context).style.fontSize! * 0.75;
+    double fontSize = DefaultTextStyle.of(context).style.fontSize! * 0.66;
     return Padding(
       padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
       child: Wrap(
@@ -710,13 +710,16 @@ class PitVisitsGridView extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Center(
-                        child: Text(
-                          team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '),
-                          softWrap: true,
-                          overflow: TextOverflow.clip,
-                          textAlign: TextAlign.center,
-                          style: italic.copyWith(fontSize: fontSize),
+                      child: Padding(
+                        padding: const EdgeInsets.all(spacing / 2.0),
+                        child: Center(
+                          child: Text(
+                            team.shortlistedAwardsWithPitVisits.map((Award award) => award.name).join(', '),
+                            softWrap: true,
+                            overflow: TextOverflow.clip,
+                            textAlign: TextAlign.center,
+                            style: italic.copyWith(fontSize: fontSize, height: kTextHeightNone),
+                          ),
                         ),
                       ),
                     ),
