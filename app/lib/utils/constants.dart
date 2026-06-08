@@ -40,6 +40,8 @@ const Duration animationDuration = Duration(milliseconds: 150);
 const TextStyle bold = TextStyle(fontWeight: FontWeight.bold);
 const TextStyle italic = TextStyle(fontStyle: FontStyle.italic);
 const TextStyle red = TextStyle(color: Colors.red);
+TextStyle small(BuildContext context) => DefaultTextStyle.of(context).style.apply(fontSizeFactor: 0.75);
+TextStyle tiny(BuildContext context) => DefaultTextStyle.of(context).style.apply(fontSizeFactor: 0.66);
 
 const double teamListElevation = 3.0;
 const ShapeBorder teamListCardShape = BeveledRectangleBorder(

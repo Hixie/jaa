@@ -327,3 +327,41 @@ class IntrinsicCellWidth extends TableColumnWidth {
   @override
   String toString() => '${objectRuntimeType(this, 'IntrinsicCellWidth')}(flex: ${_flex?.toStringAsFixed(1)})';
 }
+
+const String aliasPrototype = 'ALIASA';
+const String iconsPrototype = 'W';
+
+class TeamNumberCell extends StatelessWidget {
+  const TeamNumberCell(
+    this.team, {
+    super.key,
+    this.icons,
+    this.style,
+  });
+
+  final Team team;
+  final List<Widget>? icons;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: team.name,
+      child: Cell(
+        Row(
+          children: <Widget>[
+            Text('${team.number}', style: style),
+            SizedBox(width: spacing),
+            Expanded(child: Text(
+              team.alias,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.fade,
+              style: small(context),
+            )),
+          ],
+        ),
+        icons: icons,
+      ),
+    );
+  }
+}

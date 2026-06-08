@@ -15,6 +15,7 @@ import '../widgets/widgets.dart';
 import '../utils/constants.dart';
 import '../utils/colors.dart';
 import '../utils/randomizer.dart';
+import 'aliases.dart';
 
 enum FinalistKind { automatic, manual, override }
 
@@ -273,12 +274,14 @@ class Team extends ChangeNotifier implements Comparable<Team> {
   Team({
     required int number,
     required String name,
+    required String? aliasOverride,
     required String location,
     required bool hasPortfolio,
     required InspireStatus inspireStatus,
     int visited = 0,
   })  : _number = number,
         _name = name,
+        _aliasOverride = aliasOverride,
         _location = location,
         _hasPortfolio = hasPortfolio,
         _visited = visited,
@@ -289,6 +292,14 @@ class Team extends ChangeNotifier implements Comparable<Team> {
 
   String get name => _name;
   String _name;
+
+  String get alias => _aliasOverride ?? _autoalias ?? name;
+
+  String? get aliasOverride => _aliasOverride;
+  String? _aliasOverride;
+
+  String? get autoalias => _autoalias;
+  String? _autoalias;
 
   String get location => _location;
   String _location;
@@ -642,9 +653,14 @@ class Competition extends ChangeNotifier {
     return cachedCategories.length - 1;
   }
 
-  void updateTeam(Team team, String name, String location) {
+  void updateTeam(Team team, String name, String? aliasOverride, String location) {
+    final bool update = team._name != name || team._aliasOverride != aliasOverride;
     team._name = name;
+    team._aliasOverride = aliasOverride;
     team._location = location;
+    if (update) {
+      _generateAliases();
+    }
     notifyListeners();
   }
 
@@ -1307,6 +1323,17 @@ class Competition extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _generateAliases() { // call notifyListeners after calling this
+    final List<(int, String)> teamNames = <(int, String)>[];
+    for (Team team in _teams) {
+      teamNames.add((team.number, team.name));
+    }
+    final Map<int, String> aliases = generateAliases(teamNames);
+    for (Team team in _teams) {
+      team._autoalias = aliases[team.number];
+    }
+  }
+
   Future<void> importTeams(List<int> csvFile, {bool expectTeams = true}) async {
     _clearTeams();
     final String csvText = utf8.decode(csvFile).replaceAll('\r\n', '\n');
@@ -1325,9 +1352,11 @@ class Competition extends ChangeNotifier {
         }
         final InspireStatus inspireStatus = _parseInspireStatus(row[3]);
         final bool hasPortfolio = row.length > 4 ? _parseBool(row[4]) : true;
+        final dynamic aliasOverride = row.length > 5 ? row[5] : null;
         final Team team = Team(
           number: row[0] as int,
           name: '${row[1]}',
+          aliasOverride: aliasOverride != null && aliasOverride != '' ? '$aliasOverride' : null,
           location: '${row[2]}',
           hasPortfolio: hasPortfolio,
           inspireStatus: inspireStatus,
@@ -1336,6 +1365,7 @@ class Competition extends ChangeNotifier {
         rowNumber += 1;
       }
       _teams.sort();
+      _generateAliases();
     } catch (e) {
       _clearTeams();
       rethrow;
@@ -1351,9 +1381,10 @@ class Competition extends ChangeNotifier {
       'Team location', // string
       'Eligible for Inspire award', // 'eligible', 'ineligible', 'hidden', 'exhibition'
       'Team has portfolio', // 'y' or 'n'
+      'alias', // very short name (overrides automatically generated alias)
     ]);
     for (final Team team in _teams) {
-      data.add(['${team.number}', team.name, team.location, _serializeInspireStatus(team.inspireStatus), team.hasPortfolio ? 'y' : 'n']);
+      data.add(['${team.number}', team.name, team.location, _serializeInspireStatus(team.inspireStatus), team.hasPortfolio ? 'y' : 'n', team.aliasOverride ?? '']);
     }
     return const ListToCsvConverter().convert(data);
   }
@@ -2378,6 +2409,7 @@ class Competition extends ChangeNotifier {
       final Team team = Team(
         number: random.nextInt(100000),
         name: randomizer.generatePhrase(),
+        aliasOverride: null, // autogenerate
         location: randomizer.generatePhrase(),
         hasPortfolio: true, // needs testing
         inspireStatus: inspireStatus,
@@ -2389,6 +2421,7 @@ class Competition extends ChangeNotifier {
         team.visitingJudgesNotes = randomizer.generatePhrase(random.nextInt(30) + 2);
       }
     }
+    _generateAliases();
     final List<String> judges = List<String>.generate(random.nextInt(12) + 1, (int index) => randomizer.generatePhrase(random.nextInt(4) + 1));
     for (Award award in _awards) {
       for (Team team in _teams) {

@@ -554,7 +554,7 @@ class PitVisitsListView extends StatelessWidget {
               children: [
                 TableRow(
                   children: [
-                    Cell(Text('#', style: bold), prototype: Text('${competition.longestTeamNumber}${competition.pitVisitsIncludeExhibitionTeams ? " WW" : ""}')),
+                    Cell(Text('#', style: bold), prototype: Text('${competition.longestTeamNumber} $aliasPrototype${competition.pitVisitsIncludeExhibitionTeams ? "WW" : ""}')),
                     for (final Award award in relevantAwards)
                       ListenableBuilder(
                         listenable: award,
@@ -584,22 +584,19 @@ class PitVisitsListView extends StatelessWidget {
                         ? BoxDecoration(color: Colors.grey.shade100)
                         : null,
                     children: [
-                      Tooltip(
-                        message: team.name,
-                        child: Cell(
-                          Text('${team.number}'),
+                      TeamNumberCell(
+                        team,
                         icons: team.inspireStatus == InspireStatus.exhibition
-                            ? [
-                                Tooltip(
-                                  message: 'Team is an exhibition team and is not eligible for any awards!',
-                                  child: Icon(
-                                    Symbols.cruelty_free, // bunny
-                                    size: DefaultTextStyle.of(context).style.fontSize,
-                                  ),
+                          ? [
+                              Tooltip(
+                                message: 'Team is an exhibition team and is not eligible for any awards!',
+                                child: Icon(
+                                  Symbols.cruelty_free, // bunny
+                                  size: DefaultTextStyle.of(context).style.fontSize,
                                 ),
-                              ]
-                            : null,
-                        ),
+                              ),
+                            ]
+                          : null,
                       ),
                       for (final Award award in relevantAwards)
                         Cell(
@@ -641,7 +638,8 @@ class PitVisitsGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double fontSize = DefaultTextStyle.of(context).style.fontSize! * 0.66;
+    final TextStyle aliasStyle = small(context);
+    final TextStyle awardNameStyle = italic.copyWith(height: kTextHeightNone).merge(tiny(context));
     return Padding(
       padding: const EdgeInsets.fromLTRB(indent, spacing, indent, 0.0),
       child: Wrap(
@@ -668,18 +666,24 @@ class PitVisitsGridView extends StatelessWidget {
                         child: Center(
                           child: Tooltip(
                             message: team.name,
-                            child: Row(
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Text('${team.number}', style: bold, textAlign: TextAlign.center),
-                                if (team.inspireStatus == InspireStatus.exhibition)
-                                  Tooltip(
-                                    message: 'Team is an exhibition team and is not eligible for any awards!',
-                                    child: Icon(
-                                      Symbols.cruelty_free, // bunny
-                                      size: DefaultTextStyle.of(context).style.fontSize,
-                                    ),
-                                  ),
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Text('${team.number}', style: bold, textAlign: TextAlign.center),
+                                    if (team.inspireStatus == InspireStatus.exhibition)
+                                      Tooltip(
+                                        message: 'Team is an exhibition team and is not eligible for any awards!',
+                                        child: Icon(
+                                          Symbols.cruelty_free, // bunny
+                                          size: DefaultTextStyle.of(context).style.fontSize,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                Text(team.alias, style: aliasStyle),
                               ],
                             ),
                           ),
@@ -718,7 +722,7 @@ class PitVisitsGridView extends StatelessWidget {
                             softWrap: true,
                             overflow: TextOverflow.clip,
                             textAlign: TextAlign.center,
-                            style: italic.copyWith(fontSize: fontSize, height: kTextHeightNone),
+                            style: awardNameStyle,
                           ),
                         ),
                       ),

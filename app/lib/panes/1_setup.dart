@@ -193,7 +193,7 @@ class _SetupPaneState extends State<SetupPane> {
                       TableRow(
                         children: [
                           Cell(Text('Team Number', style: bold), prototype: Text(widget.competition.longestTeamNumber)),
-                          Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Kittens')),
+                          Cell(Text('Team Name', style: bold), prototype: Text('Wonderful Robotic Kittens')),
                           Cell(Text('Team Location', style: bold), prototype: Text('Mooselookmeguntic')),
                           Cell(Text('Inspire eligible', style: bold), prototype: Text('Not competiting WW')), // WW represents the icon(s)
                         ],
@@ -201,7 +201,7 @@ class _SetupPaneState extends State<SetupPane> {
                       for (final Team? team in SetupPane._subsetTable(widget.competition.teamsView, 4, null))
                         TableRow(
                           children: [
-                            Cell(Text('${team?.number ?? '...'}')),
+                            team != null ? TeamNumberCell(team) : const Cell(Text('...')),
                             Cell(Text(team?.name ?? '...')),
                             Cell(Text(team?.location ?? '...')),
                             Cell(
@@ -578,6 +578,7 @@ class TeamEditor extends StatefulWidget {
 class _TeamEditorState extends State<TeamEditor> {
   final TextEditingController _teamController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _aliasController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _newTeamNumberController = TextEditingController();
 
@@ -590,6 +591,7 @@ class _TeamEditorState extends State<TeamEditor> {
   void initState() {
     super.initState();
     _nameController.addListener(_handleTeamDetailsTextChange);
+    _aliasController.addListener(_handleTeamDetailsTextChange);
     _locationController.addListener(_handleTeamDetailsTextChange);
   }
 
@@ -597,6 +599,7 @@ class _TeamEditorState extends State<TeamEditor> {
   void dispose() {
     _teamController.dispose();
     _nameController.dispose();
+    _aliasController.dispose();
     _locationController.dispose();
     super.dispose();
   }
@@ -606,6 +609,7 @@ class _TeamEditorState extends State<TeamEditor> {
       _team = null;
       _editTeamNumber = false;
       _nameController.text = team?.name ?? '';
+      _aliasController.text = team?.aliasOverride ?? team?.autoalias ?? '';
       _locationController.text = team?.location ?? '';
       _team = team;
     });
@@ -613,7 +617,8 @@ class _TeamEditorState extends State<TeamEditor> {
 
   void _handleTeamDetailsTextChange() {
     if (_team != null) {
-      widget.competition.updateTeam(_team!, _nameController.text, _locationController.text);
+      String? alias = (_aliasController.text == _team!.autoalias) || _aliasController.text.isEmpty ? null : _aliasController.text;
+      widget.competition.updateTeam(_team!, _nameController.text, alias, _locationController.text);
       _teamController.text = _currentTeamLabel;
     }
   }
@@ -652,6 +657,18 @@ class _TeamEditorState extends State<TeamEditor> {
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Team Location',
+                      ),
+                      enabled: _team != null,
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: indent * 5.0),
+                    child: TextField(
+                      controller: _aliasController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Alias',
+                        hintText: _team?.autoalias ?? '',
                       ),
                       enabled: _team != null,
                     ),

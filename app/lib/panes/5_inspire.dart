@@ -241,7 +241,7 @@ class _InspirePaneState extends State<InspirePane> {
                                     children: [
                                       Cell(
                                         Text('#', style: bold),
-                                        prototype: Text('${widget.competition.longestTeamNumber} WW'), // longest team number plus icon(s)
+                                        prototype: Text('${widget.competition.longestTeamNumber} $aliasPrototype$iconsPrototype'), // longest team number plus icon(s)
                                         highlight: widget.competition.inspireSortOrder == Team.teamNumberComparator,
                                         onTap: () { widget.competition.inspireSortOrder = Team.teamNumberComparator; },
                                       ),
@@ -317,10 +317,7 @@ class _InspirePaneState extends State<InspirePane> {
                                               ? BoxDecoration(color: Colors.grey.shade100)
                                               : null,
                                       children: [
-                                        Tooltip(
-                                          message: team.name,
-                                          child: Cell(Text('${team.number}')),
-                                        ),
+                                        TeamNumberCell(team),
                                         for (final String category in categories) Cell(Text(team.bestInspireContributingRankFor(category, 'unranked', ''))),
                                         Cell(Text('${team.rankScore ?? ""}')),
                                         Cell(Text('${team.rankedCount}')),

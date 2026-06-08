@@ -290,7 +290,7 @@ class RankTables extends StatelessWidget {
                         TableRow(
                           children: [
                             const Cell(Text('Rank ✎_', style: bold), prototype: Text('000')),
-                            Cell(Text('#', style: bold), prototype: Text('${competition.teamsView.last.number} WW')), // longest team number plus icon(s)
+                            Cell(Text('#', style: bold), prototype: Text('${competition.teamsView.last.number} $aliasPrototype$iconsPrototype')), // longest team number plus icon(s)
                             if (includeNominatorColumn) const Cell(Text('Nominator ✎_', style: bold), prototype: Text('Autonominated')),
                             if (includeCommentsColumn) const Cell(Text('Comments ✎_', style: bold), prototype: Text('This is a medium-length comment.')),
                             TableCell(
@@ -341,22 +341,15 @@ class RankTables extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Tooltip(
-                                message: team.name,
-                                child: Cell(
-                                  ListenableBuilder(
-                                    listenable: entry,
-                                    builder: (BuildContext context, Widget? child) {
-                                      return Text(
-                                        '${team.number}',
-                                        style: _styleFor(
-                                          context,
-                                          lateEntry: entry.lateEntry,
-                                          winner: winningTeams[award]!.contains(team),
-                                          disqualified: disqualifiedTeams[award]!.contains(team),
-                                        ),
-                                      );
-                                    },
+                              ListenableBuilder(
+                                listenable: entry,
+                                builder: (BuildContext context, Widget? child) => TeamNumberCell(
+                                  team,
+                                  style: _styleFor(
+                                    context,
+                                    lateEntry: entry.lateEntry,
+                                    winner: winningTeams[award]!.contains(team),
+                                    disqualified: disqualifiedTeams[award]!.contains(team),
                                   ),
                                   icons: (award.needsPortfolio && !team.hasPortfolio) || (team.inspireStatus == InspireStatus.exhibition)
                                       ? [

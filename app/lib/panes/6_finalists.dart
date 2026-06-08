@@ -397,7 +397,7 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                 children: [
                                   TableRow(
                                     children: [
-                                      Cell(Text('#', style: bold), prototype: Text('${widget.competition.longestTeamNumber} WW')), // longest team number plus icon(s)
+                                      Cell(Text('#', style: bold), prototype: Text('${widget.competition.longestTeamNumber} $aliasPrototype$iconsPrototype')), // longest team number plus icon(s)
                                       Cell(Text('Award', style: bold), prototype: const Text('Invalid 2nd WW')),
                                       if (overriddenAwards.contains(award))
                                         TableCell(
@@ -413,14 +413,9 @@ class _AwardFinalistsPaneState extends State<AwardFinalistsPane> {
                                     TableRow(
                                       children: [
                                         if (team != null)
-                                          Tooltip(
-                                            message: team.name,
-                                            child: Cell(
-                                              Text(
-                                                '${team.number}',
-                                                style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
-                                              ),
-                                            ),
+                                          TeamNumberCell(
+                                            team,
+                                            style: otherAward != null || (award.isInspire && rank > 1) ? null : bold,
                                           )
                                         else
                                           const ErrorCell(message: 'missing'),
@@ -705,14 +700,7 @@ class AssignWinnersSection extends StatelessWidget {
 
     return TableRow(
       children: [
-        Tooltip(
-          message: team.name,
-          child: Cell(
-            Text(
-              '${team.number}',
-            ),
-          ),
-        ),
+        TeamNumberCell(team),
         for (final Award award in competition.awardsView.toList()..sort(competition.awardSorter))
           Cell(
             team.shortlistsView[award] == null
@@ -792,7 +780,7 @@ class AssignWinnersSection extends StatelessWidget {
                       children: [
                         Cell(
                           Text('#', style: bold),
-                          prototype: Text('${competition.teamsView.last.number} WW'), // longest team number plus icon(s)
+                          prototype: Text('${competition.teamsView.last.number} $aliasPrototype$iconsPrototype'), // longest team number plus icon(s)
                           highlight: competition.finalistsSortOrder == Team.teamNumberComparator,
                           onTap: () {
                             competition.finalistsSortOrder = Team.teamNumberComparator;
